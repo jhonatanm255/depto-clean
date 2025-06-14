@@ -22,18 +22,18 @@ const MOCK_EMPLOYEE_USER: User = { id: 'emp001', email: 'employee@cleansweep.com
 
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser, storageLoading] = useLocalStorage<User | null>('currentUser', null);
+  const [currentUser, setCurrentUser, storageInitialized] = useLocalStorage<User | null>('currentUser', null);
   const router = useRouter();
 
-  const loading = storageLoading;
+  const loading = !storageInitialized; // Auth is loading if storage is NOT yet initialized
 
   const login = useCallback((email: string, role: UserRole) => {
     if (role === 'admin' && email.toLowerCase() === MOCK_ADMIN_USER.email.toLowerCase()) {
       setCurrentUser(MOCK_ADMIN_USER);
-      router.push('/'); // Use push for explicit navigation
+      router.push('/'); 
     } else if (role === 'employee' && email.toLowerCase() === MOCK_EMPLOYEE_USER.email.toLowerCase()) {
       setCurrentUser(MOCK_EMPLOYEE_USER);
-       router.push('/'); // Use push for explicit navigation
+       router.push('/'); 
     } else {
       console.error('Login failed: Invalid credentials or role.');
       toast({
@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     setCurrentUser(null);
-    router.push('/login'); // Use push for explicit navigation
+    router.push('/login'); 
   }, [setCurrentUser, router]);
   
   const value = useMemo(() => ({ currentUser, setCurrentUser, login, logout, loading }), 
