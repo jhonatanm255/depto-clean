@@ -11,22 +11,14 @@ import {
   SidebarHeader,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
 import { 
   LayoutDashboard, 
   Building2, 
-  Users, 
-  ClipboardList, 
-  Settings, 
-  LogOut,
   ClipboardEdit,
-  UserCog,
+  Briefcase,
+  LogOut,
   ShieldCheck,
-  Briefcase
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -39,11 +31,10 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'employee'] },
-  { href: '/admin/departments', label: 'Departments', icon: Building2, roles: ['admin'] },
-  { href: '/admin/assignments', label: 'Assign Tasks', icon: ClipboardEdit, roles: ['admin'] },
-  // { href: '/admin/employees', label: 'Manage Employees', icon: UserCog, roles: ['admin'] }, // Optional
-  { href: '/employee/tasks', label: 'My Tasks', icon: Briefcase, roles: ['employee'] },
+  { href: '/', label: 'Panel Principal', icon: LayoutDashboard, roles: ['admin', 'employee'] },
+  { href: '/admin/departments', label: 'Departamentos', icon: Building2, roles: ['admin'] },
+  { href: '/admin/assignments', label: 'Asignar Tareas', icon: ClipboardEdit, roles: ['admin'] },
+  { href: '/employee/tasks', label: 'Mis Tareas', icon: Briefcase, roles: ['employee'] },
 ];
 
 export function AppSidebar() {
@@ -61,7 +52,7 @@ export function AppSidebar() {
            <ShieldCheck className="h-7 w-7 text-primary" />
           <span className="font-headline text-lg font-semibold text-primary">CleanSweep</span>
         </Link>
-        <SidebarTrigger className="group-data-[collapsible=icon]:hidden" />
+        {/* <SidebarTrigger className="group-data-[collapsible=icon]:hidden" /> */}
       </SidebarHeader>
       
       <SidebarContent className="p-2">
@@ -93,11 +84,11 @@ export function AppSidebar() {
       <SidebarFooter className="p-4 mt-auto border-t border-sidebar-border">
          <SidebarMenuButton
             onClick={logout}
-            tooltip="Log Out"
+            tooltip="Cerrar Sesión"
             className="w-full justify-start hover:bg-destructive/20 hover:text-destructive group-data-[collapsible=icon]:justify-center"
           >
             <LogOut className="h-5 w-5" />
-            <span className="group-data-[collapsible=icon]:hidden">Log Out</span>
+            <span className="group-data-[collapsible=icon]:hidden">Cerrar Sesión</span>
           </SidebarMenuButton>
       </SidebarFooter>
     </Sidebar>

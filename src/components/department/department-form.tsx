@@ -1,10 +1,10 @@
 
 "use client";
+import React from 'react';
 import type { Department } from '@/lib/types';
 import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,8 +13,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { toast } from '@/hooks/use-toast';
 
 const departmentSchema = z.object({
-  name: z.string().min(3, "Name must be at least 3 characters"),
-  accessCode: z.string().min(1, "Access code is required"),
+  name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
+  accessCode: z.string().min(1, "Se requiere el código de acceso"),
 });
 
 type DepartmentFormData = z.infer<typeof departmentSchema>;
@@ -33,12 +33,13 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
     defaultValues: department ? { name: department.name, accessCode: department.accessCode } : { name: '', accessCode: '' },
   });
 
-  // Reset form when department prop changes (e.g., opening dialog for different department or new)
   React.useEffect(() => {
-    if (department) {
-      form.reset({ name: department.name, accessCode: department.accessCode });
-    } else {
-      form.reset({ name: '', accessCode: '' });
+    if (isOpen) { // Reset form only when dialog opens for a specific or new department
+      if (department) {
+        form.reset({ name: department.name, accessCode: department.accessCode });
+      } else {
+        form.reset({ name: '', accessCode: '' });
+      }
     }
   }, [department, form, isOpen]);
 
@@ -47,26 +48,32 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
     try {
       if (department) {
         updateDepartment({ ...department, ...data });
-        toast({ title: "Department Updated", description: `${data.name} has been updated.` });
+        toast({ title: "Departamento Actualizado", description: `"${data.name}" ha sido actualizado.` });
       } else {
         addDepartment(data);
-        toast({ title: "Department Added", description: `${data.name} has been added.` });
+        toast({ title: "Departamento Agregado", description: `"${data.name}" ha sido agregado.` });
       }
-      form.reset();
+      // form.reset(); // Resetting is handled by useEffect on isOpen or by DialogClose
       onClose();
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Could not save department." });
+      toast({ variant: "destructive", title: "Error", description: "No se pudo guardar el departamento." });
       console.error(error);
     }
   };
 
+  const handleCloseDialog = () => {
+    form.reset({ name: department ? department.name : '', accessCode: department ? department.accessCode : '' }); // Reset to original or empty
+    onClose();
+  };
+
+
   if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { form.reset(); onClose(); } }}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { handleCloseDialog(); } }}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{department ? 'Edit Department' : 'Add New Department'}</DialogTitle>
+          <DialogTitle>{department ? 'Editar Departamento' : 'Agregar Nuevo Departamento'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
@@ -75,9 +82,9 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Department Name</FormLabel>
+                  <FormLabel>Nombre del Departamento</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Apartment 101" {...field} />
+                    <Input placeholder="Ej: Apartamento 101" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -88,9 +95,9 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
               name="accessCode"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Access Code</FormLabel>
+                  <FormLabel>Código de Acceso</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., 1234#" {...field} />
+                    <Input placeholder="Ej: 1234#" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -98,9 +105,9 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
             />
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="outline" onClick={() => { form.reset(); onClose();}}>Cancel</Button>
+                <Button type="button" variant="outline" onClick={handleCloseDialog}>Cancelar</Button>
               </DialogClose>
-              <Button type="submit">{department ? 'Save Changes' : 'Add Department'}</Button>
+              <Button type="submit">{department ? 'Guardar Cambios' : 'Agregar Departamento'}</Button>
             </DialogFooter>
           </form>
         </Form>
@@ -108,6 +115,3 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
     </Dialog>
   );
 }
-
-// Ensure React is imported
-import React from 'react';

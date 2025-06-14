@@ -8,7 +8,6 @@ import { ClipboardEdit } from 'lucide-react';
 export default function AssignmentsPage() {
   const { tasks, departments, employees } = useData();
   
-  // Sort tasks by most recently assigned first
   const sortedTasks = [...tasks].sort((a, b) => new Date(b.assignedAt).getTime() - new Date(a.assignedAt).getTime());
 
   return (
@@ -16,7 +15,7 @@ export default function AssignmentsPage() {
       <header className="mb-8">
         <h1 className="text-3xl font-bold font-headline text-foreground flex items-center">
           <ClipboardEdit className="mr-3 h-8 w-8 text-primary" />
-          Assign & View Tasks
+          Asignar y Ver Tareas
         </h1>
       </header>
 

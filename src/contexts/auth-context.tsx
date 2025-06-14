@@ -5,6 +5,7 @@ import useLocalStorage from '@/hooks/use-local-storage';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
+import { toast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -17,19 +18,17 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Mock users for demonstration
-const MOCK_ADMIN_USER: User = { id: 'admin001', email: 'admin@cleansweep.com', role: 'admin', name: 'Admin User' };
-const MOCK_EMPLOYEE_USER: User = { id: 'emp001', email: 'employee@cleansweep.com', role: 'employee', name: 'Cleaning Staff' };
+const MOCK_ADMIN_USER: User = { id: 'admin001', email: 'admin@cleansweep.com', role: 'admin', name: 'Usuario Admin' };
+const MOCK_EMPLOYEE_USER: User = { id: 'emp001', email: 'employee@cleansweep.com', role: 'employee', name: 'Personal Limpieza' };
 
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser, storageLoading] = useLocalStorage<User | null>('currentUser', null);
   const router = useRouter();
 
-  // The main loading state is now directly from useLocalStorage's third return value (storageLoading)
   const loading = storageLoading;
 
   const login = (email: string, role: UserRole) => {
-    // In a real app, you'd verify credentials against a backend
     if (role === 'admin' && email.toLowerCase() === MOCK_ADMIN_USER.email.toLowerCase()) {
       setCurrentUser(MOCK_ADMIN_USER);
       router.push('/');
@@ -37,9 +36,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCurrentUser(MOCK_EMPLOYEE_USER);
        router.push('/');
     } else {
-      // Handle login failure (e.g., show an error message)
       console.error('Login failed: Invalid credentials or role.');
-      alert('Login failed. Check email and role.');
+      toast({
+          variant: "destructive",
+          title: "Error de inicio de sesión",
+          description: "Credenciales inválidas. Por favor, verifica tu email, contraseña y rol.",
+      });
     }
   };
 
@@ -60,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth debe usarse dentro de un AuthProvider');
   }
   return context;
 }

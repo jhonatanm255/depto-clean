@@ -13,16 +13,25 @@ interface AssignmentListProps {
   employees: Employee[];
 }
 
+function translateStatus(status: CleaningTask['status']) {
+  switch (status) {
+    case 'completed': return 'Completada';
+    case 'in_progress': return 'En Progreso';
+    case 'pending': return 'Pendiente';
+    default: return status;
+  }
+}
+
 export function AssignmentList({ tasks, departments, employees }: AssignmentListProps) {
   if (tasks.length === 0) {
     return (
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="font-headline text-2xl">Current Assignments</CardTitle>
-          <CardDescription>No tasks are currently assigned.</CardDescription>
+          <CardTitle className="font-headline text-2xl">Asignaciones Actuales</CardTitle>
+          <CardDescription>No hay tareas asignadas actualmente.</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-center text-muted-foreground py-4">Assign tasks using the form above.</p>
+          <p className="text-center text-muted-foreground py-4">Asigna tareas usando el formulario.</p>
         </CardContent>
       </Card>
     );
@@ -49,8 +58,8 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <CardTitle className="font-headline text-2xl">Current Assignments</CardTitle>
-        <CardDescription>Overview of all assigned cleaning tasks.</CardDescription>
+        <CardTitle className="font-headline text-2xl">Asignaciones Actuales</CardTitle>
+        <CardDescription>Resumen de todas las tareas de limpieza asignadas.</CardDescription>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[400px] pr-3">
@@ -68,14 +77,14 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                     </h3>
                     <Badge variant="default" className={cn("text-primary-foreground capitalize mt-2 sm:mt-0", getStatusBadgeVariant(task.status))}>
                       {getStatusIcon(task.status)}
-                      {task.status.replace('_', ' ')}
+                      {translateStatus(task.status)}
                     </Badge>
                   </div>
                   <div className="text-sm text-muted-foreground space-y-1">
-                    <p className="flex items-center"><User className="mr-2 h-4 w-4"/> Assigned to: {employee.name}</p>
-                    <p className="flex items-center"><CalendarDays className="mr-2 h-4 w-4"/> Assigned on: {new Date(task.assignedAt).toLocaleDateString()}</p>
+                    <p className="flex items-center"><User className="mr-2 h-4 w-4"/> Asignado a: {employee.name}</p>
+                    <p className="flex items-center"><CalendarDays className="mr-2 h-4 w-4"/> Asignado el: {new Date(task.assignedAt).toLocaleDateString()}</p>
                     {task.status === 'completed' && task.completedAt && (
-                      <p className="flex items-center text-green-600"><CheckCircle2 className="mr-2 h-4 w-4"/> Completed on: {new Date(task.completedAt).toLocaleDateString()}</p>
+                      <p className="flex items-center text-green-600"><CheckCircle2 className="mr-2 h-4 w-4"/> Completado el: {new Date(task.completedAt).toLocaleDateString()}</p>
                     )}
                   </div>
                 </li>

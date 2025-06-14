@@ -31,7 +31,11 @@ export default function DepartmentsPage() {
   
   const filteredDepartments = departments
     .filter(dept => dept.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .filter(dept => statusFilter === 'all' || dept.status === statusFilter)
+    .filter(dept => {
+        if (statusFilter === 'all') return true;
+        if (statusFilter === 'pending_assignment' && dept.status === 'pending' && !dept.assignedTo) return true;
+        return dept.status === statusFilter;
+    })
     .sort((a, b) => {
         switch (sortOrder) {
             case 'name_asc': return a.name.localeCompare(b.name);
@@ -47,40 +51,41 @@ export default function DepartmentsPage() {
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <h1 className="text-3xl font-bold font-headline text-foreground flex items-center">
             <Building2 className="mr-3 h-8 w-8 text-primary" />
-            Manage Departments
+            Gestionar Departamentos
           </h1>
           <Button onClick={() => handleOpenForm()} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-            <PlusCircle className="mr-2 h-5 w-5" /> Add New Department
+            <PlusCircle className="mr-2 h-5 w-5" /> Agregar Nuevo Departamento
           </Button>
         </div>
       </header>
 
       <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg bg-card shadow">
         <Input 
-            placeholder="Search departments..."
+            placeholder="Buscar departamentos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="md:col-span-1"
         />
         <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="md:col-span-1">
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder="Filtrar por estado" />
             </SelectTrigger>
             <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="all">Todos los Estados</SelectItem>
+                <SelectItem value="pending">Pendiente</SelectItem>
+                <SelectItem value="pending_assignment">Pendiente (Sin Asignar)</SelectItem>
+                <SelectItem value="in_progress">En Progreso</SelectItem>
+                <SelectItem value="completed">Completado</SelectItem>
             </SelectContent>
         </Select>
         <Select value={sortOrder} onValueChange={setSortOrder}>
             <SelectTrigger className="md:col-span-1">
-                <SelectValue placeholder="Sort by" />
+                <SelectValue placeholder="Ordenar por" />
             </SelectTrigger>
             <SelectContent>
-                <SelectItem value="name_asc">Name (A-Z)</SelectItem>
-                <SelectItem value="name_desc">Name (Z-A)</SelectItem>
-                <SelectItem value="status">Status</SelectItem>
+                <SelectItem value="name_asc">Nombre (A-Z)</SelectItem>
+                <SelectItem value="name_desc">Nombre (Z-A)</SelectItem>
+                <SelectItem value="status">Estado</SelectItem>
             </SelectContent>
         </Select>
       </div>
@@ -88,12 +93,12 @@ export default function DepartmentsPage() {
       {departments.length === 0 ? (
         <div className="text-center py-10">
           <Building2 className="mx-auto h-16 w-16 text-muted-foreground" />
-          <p className="mt-4 text-lg text-muted-foreground">No departments found.</p>
-          <p className="text-sm text-muted-foreground">Get started by adding a new department.</p>
+          <p className="mt-4 text-lg text-muted-foreground">No se encontraron departamentos.</p>
+          <p className="text-sm text-muted-foreground">Comienza agregando un nuevo departamento.</p>
         </div>
       ) : filteredDepartments.length === 0 ? (
         <div className="text-center py-10">
-           <p className="mt-4 text-lg text-muted-foreground">No departments match your filters.</p>
+           <p className="mt-4 text-lg text-muted-foreground">Ningún departamento coincide con tus filtros.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

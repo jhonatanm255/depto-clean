@@ -25,8 +25,17 @@ interface DepartmentCardProps {
   employees: Employee[];
 }
 
+function translateStatus(status: Department['status']) {
+  switch (status) {
+    case 'completed': return 'Completado';
+    case 'in_progress': return 'En Progreso';
+    case 'pending': return 'Pendiente';
+    default: return status;
+  }
+}
+
 export function DepartmentCard({ department, onEdit, employees }: DepartmentCardProps) {
-  const { deleteDepartment, updateDepartment } = useData();
+  const { deleteDepartment } = useData();
   const assignedEmployee = employees.find(emp => emp.id === department.assignedTo);
 
   const getStatusBadgeVariant = (status: Department['status']) => {
@@ -47,7 +56,6 @@ export function DepartmentCard({ department, onEdit, employees }: DepartmentCard
     }
   };
 
-
   const handleDelete = () => {
     deleteDepartment(department.id);
   };
@@ -62,55 +70,55 @@ export function DepartmentCard({ department, onEdit, employees }: DepartmentCard
           </CardTitle>
           <Badge variant="default" className={cn("text-primary-foreground capitalize", getStatusBadgeVariant(department.status))}>
             {getStatusIcon(department.status)}
-            {department.status.replace('_', ' ')}
+            {translateStatus(department.status)}
           </Badge>
         </div>
         <CardDescription className="flex items-center pt-1">
           <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />
-          Access Code: {department.accessCode}
+          Código de Acceso: {department.accessCode}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow space-y-2">
         {assignedEmployee && (
           <div className="flex items-center text-sm text-muted-foreground">
             <User className="mr-2 h-4 w-4" />
-            Assigned to: {assignedEmployee.name}
+            Asignado a: {assignedEmployee.name}
           </div>
         )}
         {!assignedEmployee && department.status === 'pending' && (
            <div className="flex items-center text-sm text-yellow-600">
              <AlertTriangle className="mr-2 h-4 w-4" />
-             Needs assignment
+             Necesita asignación
            </div>
         )}
          {department.lastCleanedAt && (
           <p className="text-xs text-muted-foreground">
-            Last Cleaned: {new Date(department.lastCleanedAt).toLocaleDateString()}
+            Última Limpieza: {new Date(department.lastCleanedAt).toLocaleDateString()}
           </p>
         )}
       </CardContent>
       <CardFooter className="flex justify-end gap-2 border-t pt-4">
-        <Button variant="outline" size="sm" onClick={() => onEdit(department)} aria-label={`Edit ${department.name}`}>
-          <Edit3 className="mr-1 h-4 w-4" /> Edit
+        <Button variant="outline" size="sm" onClick={() => onEdit(department)} aria-label={`Editar ${department.name}`}>
+          <Edit3 className="mr-1 h-4 w-4" /> Editar
         </Button>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm" aria-label={`Delete ${department.name}`}>
-              <Trash2 className="mr-1 h-4 w-4" /> Delete
+            <Button variant="destructive" size="sm" aria-label={`Eliminar ${department.name}`}>
+              <Trash2 className="mr-1 h-4 w-4" /> Eliminar
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the
-                department "{department.name}" and all associated tasks.
+                Esta acción no se puede deshacer. Esto eliminará permanentemente el
+                departamento "{department.name}" y todas las tareas asociadas.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-                Delete
+                Eliminar
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

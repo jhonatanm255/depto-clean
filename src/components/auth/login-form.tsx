@@ -9,6 +9,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useState, type FormEvent } from 'react';
 import { Building, UserCog, Users } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -24,12 +25,16 @@ export function LoginForm() {
     } else if (role === 'employee' && email === 'employee@cleansweep.com' && password === 'emp123') {
         login(email, role);
     } else {
-        alert('Invalid credentials. Please use admin@cleansweep.com (admin123) or employee@cleansweep.com (emp123).');
+        toast({
+          variant: "destructive",
+          title: "Error de inicio de sesión",
+          description: "Credenciales inválidas. Por favor, verifica tu email, contraseña y rol.",
+        });
     }
   };
 
   if (loading) {
-    return <p>Loading...</p>;
+    return <p>Cargando...</p>;
   }
 
   return (
@@ -38,25 +43,25 @@ export function LoginForm() {
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
           <Building size={32} />
         </div>
-        <CardTitle className="font-headline text-3xl">Welcome Back!</CardTitle>
-        <CardDescription>Log in to manage your cleaning tasks.</CardDescription>
+        <CardTitle className="font-headline text-3xl">¡Bienvenido de Nuevo!</CardTitle>
+        <CardDescription>Inicia sesión para gestionar tus tareas de limpieza.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Correo Electrónico</Label>
             <Input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder="tu@ejemplo.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              aria-label="Email Address"
+              aria-label="Dirección de Correo Electrónico"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Contraseña</Label>
             <Input
               id="password"
               type="password"
@@ -64,38 +69,38 @@ export function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              aria-label="Password"
+              aria-label="Contraseña"
             />
           </div>
           <div className="space-y-3">
-            <Label>Log in as</Label>
+            <Label>Ingresar como</Label>
             <RadioGroup
               defaultValue="employee"
               onValueChange={(value: string) => setRole(value as UserRole)}
               className="flex gap-4"
-              aria-label="Select your role"
+              aria-label="Selecciona tu rol"
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="admin" id="role-admin" />
                 <Label htmlFor="role-admin" className="flex items-center gap-2 cursor-pointer">
-                  <UserCog className="h-5 w-5 text-muted-foreground" /> Admin
+                  <UserCog className="h-5 w-5 text-muted-foreground" /> Administrador
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="employee" id="role-employee" />
                 <Label htmlFor="role-employee" className="flex items-center gap-2 cursor-pointer">
-                  <Users className="h-5 w-5 text-muted-foreground" /> Employee
+                  <Users className="h-5 w-5 text-muted-foreground" /> Empleado
                 </Label>
               </div>
             </RadioGroup>
           </div>
           <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-            Log In
+            Iniciar Sesión
           </Button>
         </form>
       </CardContent>
       <CardFooter className="text-center text-sm text-muted-foreground">
-        <p>Use admin@cleansweep.com (pw: admin123) or employee@cleansweep.com (pw: emp123).</p>
+        <p>Usa admin@cleansweep.com (pass: admin123) o employee@cleansweep.com (pass: emp123).</p>
       </CardFooter>
     </Card>
   );

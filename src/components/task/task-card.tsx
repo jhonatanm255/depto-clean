@@ -14,12 +14,21 @@ interface TaskCardProps {
   department?: Department;
 }
 
+function translateStatus(status: CleaningTask['status']) {
+  switch (status) {
+    case 'completed': return 'Completada';
+    case 'in_progress': return 'En Progreso';
+    case 'pending': return 'Pendiente';
+    default: return status;
+  }
+}
+
 export function TaskCard({ task, department }: TaskCardProps) {
   const { updateTaskStatus } = useData();
 
   const handleUpdateStatus = (status: 'pending' | 'in_progress' | 'completed') => {
     updateTaskStatus(task.id, status);
-    toast({ title: "Task Updated", description: `Task status set to ${status.replace('_', ' ')}.` });
+    toast({ title: "Tarea Actualizada", description: `Estado de la tarea cambiado a ${translateStatus(status)}.` });
   };
 
   const getStatusBadgeVariant = (status: CleaningTask['status']) => {
@@ -40,15 +49,14 @@ export function TaskCard({ task, department }: TaskCardProps) {
     }
   };
 
-
   if (!department) {
     return (
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Task Error</CardTitle>
+          <CardTitle>Error de Tarea</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Department details not found for this task.</p>
+          <p>Detalles del departamento no encontrados para esta tarea.</p>
         </CardContent>
       </Card>
     );
@@ -64,21 +72,21 @@ export function TaskCard({ task, department }: TaskCardProps) {
           </CardTitle>
           <Badge variant="default" className={cn("text-primary-foreground capitalize", getStatusBadgeVariant(task.status))}>
             {getStatusIcon(task.status)}
-            {task.status.replace('_', ' ')}
+            {translateStatus(task.status)}
           </Badge>
         </div>
         <CardDescription className="flex items-center pt-1">
           <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />
-          Access Code: {department.accessCode}
+          Código de Acceso: {department.accessCode}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow space-y-2">
          <p className="flex items-center text-sm text-muted-foreground">
-            <CalendarDays className="mr-2 h-4 w-4"/> Assigned: {new Date(task.assignedAt).toLocaleDateString()}
+            <CalendarDays className="mr-2 h-4 w-4"/> Asignada: {new Date(task.assignedAt).toLocaleDateString()}
         </p>
         {task.status === 'completed' && task.completedAt && (
            <p className="flex items-center text-sm text-green-600">
-             <CheckCircle2 className="mr-2 h-4 w-4"/> Completed: {new Date(task.completedAt).toLocaleDateString()}
+             <CheckCircle2 className="mr-2 h-4 w-4"/> Completada: {new Date(task.completedAt).toLocaleDateString()}
            </p>
         )}
       </CardContent>
@@ -86,20 +94,20 @@ export function TaskCard({ task, department }: TaskCardProps) {
         {task.status === 'pending' && (
           <>
             <Button variant="outline" size="sm" onClick={() => handleUpdateStatus('in_progress')}>
-              <Loader2 className="mr-1 h-4 w-4" /> Start Cleaning
+              <Loader2 className="mr-1 h-4 w-4" /> Iniciar Limpieza
             </Button>
             <Button size="sm" onClick={() => handleUpdateStatus('completed')} className="bg-green-500 hover:bg-green-600 text-white">
-              <CheckCircle2 className="mr-1 h-4 w-4" /> Mark Completed
+              <CheckCircle2 className="mr-1 h-4 w-4" /> Marcar Completada
             </Button>
           </>
         )}
         {task.status === 'in_progress' && (
           <Button size="sm" onClick={() => handleUpdateStatus('completed')} className="bg-green-500 hover:bg-green-600 text-white">
-            <CheckCircle2 className="mr-1 h-4 w-4" /> Mark Completed
+            <CheckCircle2 className="mr-1 h-4 w-4" /> Marcar Completada
           </Button>
         )}
         {task.status === 'completed' && (
-          <p className="text-sm text-green-600 font-medium">Task Completed!</p>
+          <p className="text-sm text-green-600 font-medium">¡Tarea Completada!</p>
         )}
       </CardFooter>
     </Card>

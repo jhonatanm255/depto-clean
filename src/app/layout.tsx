@@ -5,8 +5,8 @@ import { DataProvider } from '@/contexts/data-context';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'CleanSweep Manager',
-  description: 'Manage cleaning assignments and track progress.',
+  title: 'CleanSweep Manager - Gestión de Limpieza',
+  description: 'Gestiona asignaciones de limpieza y sigue el progreso.',
 };
 
 export default function RootLayout({
@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es-CL">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

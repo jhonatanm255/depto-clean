@@ -3,7 +3,7 @@ import { LoginForm } from '@/components/auth/login-form';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Login - CleanSweep Manager',
+  title: 'Iniciar Sesión - CleanSweep Manager',
 };
 
 export default function LoginPage() {

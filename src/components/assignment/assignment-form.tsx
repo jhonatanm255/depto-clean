@@ -1,11 +1,10 @@
 
 "use client";
-import type { Department, Employee } from '@/lib/types';
 import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -13,8 +12,8 @@ import { toast } from '@/hooks/use-toast';
 import { ClipboardEdit } from 'lucide-react';
 
 const assignmentSchema = z.object({
-  departmentId: z.string().min(1, "Department is required"),
-  employeeId: z.string().min(1, "Employee is required"),
+  departmentId: z.string().min(1, "Se requiere el departamento"),
+  employeeId: z.string().min(1, "Se requiere el empleado"),
 });
 
 type AssignmentFormData = z.infer<typeof assignmentSchema>;
@@ -35,10 +34,10 @@ export function AssignmentForm() {
   const onSubmit: SubmitHandler<AssignmentFormData> = (data) => {
     try {
       assignTask(data.departmentId, data.employeeId);
-      toast({ title: "Task Assigned", description: `Department assigned to employee.` });
+      toast({ title: "Tarea Asignada", description: `Departamento asignado al empleado.` });
       form.reset();
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Could not assign task."});
+      toast({ variant: "destructive", title: "Error", description: "No se pudo asignar la tarea."});
       console.error(error);
     }
   };
@@ -47,9 +46,9 @@ export function AssignmentForm() {
     <Card className="w-full shadow-lg">
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center">
-          <ClipboardEdit className="mr-2 h-6 w-6 text-primary" /> Assign New Task
+          <ClipboardEdit className="mr-2 h-6 w-6 text-primary" /> Asignar Nueva Tarea
         </CardTitle>
-        <CardDescription>Select a department and an employee to assign a cleaning task.</CardDescription>
+        <CardDescription>Selecciona un departamento y un empleado para asignar una tarea de limpieza.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -59,16 +58,16 @@ export function AssignmentForm() {
               name="departmentId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Department</FormLabel>
+                  <FormLabel>Departamento</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a department" />
+                        <SelectValue placeholder="Selecciona un departamento" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectGroup>
-                        <SelectLabel>Available Departments</SelectLabel>
+                        <SelectLabel>Departamentos Disponibles</SelectLabel>
                         {availableDepartments.length > 0 ? (
                             availableDepartments.map((dept) => (
                                 <SelectItem key={dept.id} value={dept.id}>
@@ -76,7 +75,7 @@ export function AssignmentForm() {
                                 </SelectItem>
                             ))
                         ) : (
-                            <SelectItem value="no-dept" disabled>No departments available for assignment</SelectItem>
+                            <SelectItem value="no-dept" disabled>No hay departamentos disponibles para asignar</SelectItem>
                         )}
                       </SelectGroup>
                     </SelectContent>
@@ -90,16 +89,16 @@ export function AssignmentForm() {
               name="employeeId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Employee</FormLabel>
+                  <FormLabel>Empleado</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select an employee" />
+                        <SelectValue placeholder="Selecciona un empleado" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                        <SelectGroup>
-                        <SelectLabel>Employees</SelectLabel>
+                        <SelectLabel>Empleados</SelectLabel>
                         {employees.map((emp) => (
                             <SelectItem key={emp.id} value={emp.id}>
                             {emp.name}
@@ -113,7 +112,7 @@ export function AssignmentForm() {
               )}
             />
             <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={availableDepartments.length === 0}>
-              Assign Task
+              Asignar Tarea
             </Button>
           </form>
         </Form>
