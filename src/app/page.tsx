@@ -3,14 +3,17 @@
 // This page will effectively become the dashboard if the user is logged in,
 // due to the (app) layout structure.
 // If not logged in, (app)/layout.tsx will redirect to /login.
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart, Users, Building2, ClipboardCheck, AlertTriangle } from 'lucide-react';
-import { Department } from '@/lib/types';
+import { BarChart, Users, Building2, ClipboardCheck, AlertTriangle, Briefcase } from 'lucide-react';
+import type { Department } from '@/lib/types';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { LoadingSpinner } from '@/components/core/loading-spinner';
 
 function AdminDashboard() {
   const { departments, employees } = useData();
@@ -192,15 +195,30 @@ function EmployeeDashboard() {
 
 
 export default function DashboardPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth();
+  const router = useRouter();
 
-  if (!currentUser) {
-    // This should ideally be handled by the layout, but as a fallback:
-    return <p className="text-center mt-10">Redirecting to login...</p>;
+  useEffect(() => {
+    // If auth is done loading and there's no current user, redirect to login
+    if (!authLoading && !currentUser) {
+      router.replace('/login');
+    }
+  }, [authLoading, currentUser, router]);
+
+  // If auth is loading, OR if we are about to redirect (auth loaded, no user), show a loading spinner
+  if (authLoading || (!currentUser && !authLoading)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <LoadingSpinner size={48} />
+      </div>
+    );
   }
 
-  return currentUser.role === 'admin' ? <AdminDashboard /> : <EmployeeDashboard />;
+  // If currentUser exists (authLoading is false here), render the dashboard
+  if (currentUser) {
+    return currentUser.role === 'admin' ? <AdminDashboard /> : <EmployeeDashboard />;
+  }
+  
+  // Fallback, should generally not be reached if logic above is correct
+  return null; 
 }
-
-// Ensure Briefcase is imported if not already.
-import { Briefcase } from 'lucide-react';

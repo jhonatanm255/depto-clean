@@ -22,15 +22,11 @@ const MOCK_EMPLOYEE_USER: User = { id: 'emp001', email: 'employee@cleansweep.com
 
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser, isLoadingStorage] = useLocalStorage<User | null>('currentUser', null);
-  const [loading, setLoading] = React.useState(true);
+  const [currentUser, setCurrentUser, storageLoading] = useLocalStorage<User | null>('currentUser', null);
   const router = useRouter();
 
-  useEffect(() => {
-    if (!isLoadingStorage) {
-      setLoading(false);
-    }
-  }, [isLoadingStorage]);
+  // The main loading state is now directly from useLocalStorage's third return value (storageLoading)
+  const loading = storageLoading;
 
   const login = (email: string, role: UserRole) => {
     // In a real app, you'd verify credentials against a backend

@@ -1,18 +1,29 @@
+
 import { useState, useEffect } from 'react';
 
-function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    if (typeof window === 'undefined') {
-      return initialValue;
-    }
+function useLocalStorage<T>(
+  key: string,
+  initialValue: T
+): [T, (value: T | ((val: T) => T)) => void, boolean] {
+  const [isLoading, setIsLoading] = useState(true);
+  const [storedValue, setStoredValue] = useState<T>(initialValue);
+
+  useEffect(() => {
+    // This effect runs only on the client, after the initial render.
+    // Set storedValue from localStorage here.
     try {
       const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
+      if (item) {
+        setStoredValue(JSON.parse(item));
+      }
+      // If no item, storedValue remains initialValue, which is correct.
     } catch (error) {
-      console.error(error);
-      return initialValue;
+      console.error("Error reading localStorage key “" + key + "”:", error);
+      // If error, storedValue remains initialValue, which is correct.
+    } finally {
+      setIsLoading(false); // Signal that loading from localStorage is complete.
     }
-  });
+  }, [key]); // Only depend on key, initialValue is handled by useState initializer.
 
   const setValue = (value: T | ((val: T) => T)) => {
     try {
@@ -22,27 +33,11 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val
         window.localStorage.setItem(key, JSON.stringify(valueToStore));
       }
     } catch (error) {
-      console.error(error);
+      console.error("Error setting localStorage key “" + key + "”:", error);
     }
   };
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const item = window.localStorage.getItem(key);
-      if (item) {
-        try {
-          setStoredValue(JSON.parse(item));
-        } catch (error) {
-          console.error("Error parsing localStorage item:", error);
-          // If parsing fails, perhaps reset to initialValue or keep current state
-          // For now, we keep the state derived from initialValue or previous successful parse
-        }
-      }
-    }
-  }, [key]);
-
-
-  return [storedValue, setValue];
+  return [storedValue, setValue, isLoading];
 }
 
 export default useLocalStorage;
