@@ -6,14 +6,17 @@ import { getFirestore } from "firebase/firestore";
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
-// IMPORTANT: Replace with your actual Firebase project configuration
+// ######################################################################
+// #  IMPORTANTE: REEMPLAZA ESTO CON LA CONFIGURACIÓN REAL DE TU PROYECTO FIREBASE  #
+// #  Puedes encontrarla en la consola de Firebase > Configuración del Proyecto    #
+// ######################################################################
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "YOUR_API_KEY", // <-- REEMPLAZAR
+  authDomain: "YOUR_AUTH_DOMAIN", // <-- REEMPLAZAR
+  projectId: "YOUR_PROJECT_ID", // <-- REEMPLAZAR - ESTE ES EL QUE CAUSA EL ERROR 400
+  storageBucket: "YOUR_STORAGE_BUCKET", // <-- REEMPLAZAR
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // <-- REEMPLAZAR
+  appId: "YOUR_APP_ID" // <-- REEMPLAZAR
 };
 
 // Initialize Firebase
