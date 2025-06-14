@@ -1,18 +1,18 @@
 
 "use client";
-import type { UserRole } from '@/lib/types';
+// import type { UserRole } from '@/lib/types'; // No longer needed here
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useState, type FormEvent } from 'react';
-import { Building, UserCog, Users, Info, KeyRound, ShieldAlert, TriangleAlert } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { Building, TriangleAlert, KeyRound } from 'lucide-react';
+// import { toast } from '@/hooks/use-toast'; // Errors handled in AuthContext
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-const ADMIN_EMAIL_CHECK = "admin@cleansweep.com";
+const ADMIN_EMAIL_CHECK = "admin@cleansweep.com"; // For display in alert
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -21,10 +21,8 @@ export function LoginForm() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    // Para el login, el tercer parámetro 'role' y el cuarto 'passwordForNewUser' no se usan realmente
-    // en la función login del AuthContext si el usuario ya existe.
-    // El 'actualPassword' es el que se usa, que es 'password' del estado del formulario.
-    await login(email, password, 'employee', password); 
+    // Call the simplified login function from AuthContext
+    await login(email, password); 
   };
 
   if (loading && !email) { 
@@ -51,11 +49,11 @@ export function LoginForm() {
             <AlertTitle className="font-bold text-red-900">¡ACCIÓN REQUERIDA PARA ADMIN!</AlertTitle>
             <AlertDescription className="text-red-700 text-xs space-y-1">
               <p><strong>Para acceder como Administrador:</strong><br />
-              Asegúrate de que el usuario <code className="font-mono text-xs p-0.5 bg-red-100 rounded">{ADMIN_EMAIL_CHECK}</code> con contraseña <code className="font-mono text-xs p-0.5 bg-red-100 rounded">admin123</code> 
-              <strong className="text-red-900"> EXISTA en tu panel de Firebase Authentication.</strong>
+              Asegúrate de que el usuario <code className="font-mono text-xs p-0.5 bg-red-100 rounded">{ADMIN_EMAIL_CHECK}</code> con la contraseña (por ejemplo: <code className="font-mono text-xs p-0.5 bg-red-100 rounded">admin123</code>)
+              <strong className="text-red-900"> EXISTA en tu panel de Firebase Authentication y esté HABILITADO.</strong>
               <br />
-              Ve a tu consola de Firebase -> Authentication -> Users y crea este usuario si no está allí. 
-              <strong className="text-red-900"> La aplicación NO lo creará por ti.</strong>
+              Ve a tu consola de Firebase -> Authentication -> Users y crea este usuario si no está allí, o restablece su contraseña.
+              <strong className="text-red-900"> La aplicación NO creará este usuario administrador por ti.</strong>
               </p>
               <p className="mt-2"><strong>Empleadas:</strong><br />
               Usa el email y contraseña que el administrador te asignó al crear tu perfil desde el panel de esta aplicación.

@@ -18,14 +18,15 @@ import { doc, getDoc, query, collection, where, getDocs } from 'firebase/firesto
 interface AuthContextType {
   currentUser: AppUser | null;
   loading: boolean;
-  login: (email: string, password_unused: string, role_unused: UserRole, actualPassword?: string) => Promise<void>;
+  login: (email: string, actualPassword?: string) => Promise<void>; // Simplified parameters
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const ADMIN_EMAIL = "admin@cleansweep.com";
-const ADMIN_PASSWORD = "admin123"; 
+// ADMIN_PASSWORD constant is no longer used for the login check itself,
+// but the instruction to use 'admin123' (or similar) in Firebase setup remains crucial.
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
@@ -59,21 +60,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             userName = employeeData.name;
             employeeProfileId = employeeDoc.id;
             userRole = 'employee';
+             setCurrentUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              role: userRole,
+              name: userName,
+              employeeProfileId: employeeProfileId,
+            });
           } else {
             console.warn("Usuario de Firebase Auth sin perfil de empleado en Firestore:", firebaseUser.uid);
-            await signOut(auth);
+            // Consider logging out the user if no profile is found after successful auth
+            // This prevents a partially logged-in state.
+            await signOut(auth); 
             setCurrentUser(null);
-            setLoading(false);
-            router.push('/login');
-            return;
+            // router.push('/login'); // Avoid push here if it causes loops with AppLayout
           }
-           setCurrentUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            role: userRole,
-            name: userName,
-            employeeProfileId: employeeProfileId,
-          });
         }
       } else {
         setCurrentUser(null);
@@ -81,39 +82,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [auth, router]);
+  }, [auth]); // Removed router from dependencies here as push was removed from this effect
 
-  const login = useCallback(async (email: string, password_unused: string, role_unused: UserRole, actualPassword?: string) => {
+  // Simplified login function: always uses email and password from form.
+  // Firebase Auth is the sole decider of validity.
+  const login = useCallback(async (email: string, password?: string) => {
     setLoading(true);
     const providedEmail = email.toLowerCase();
-    const providedPassword = actualPassword || password_unused;
+    
+    if (!password) {
+      toast({
+        variant: "destructive",
+        title: "Error de inicio de sesión",
+        description: "Se requiere contraseña.",
+      });
+      setLoading(false);
+      return;
+    }
 
     try {
-      if (providedEmail === ADMIN_EMAIL) {
-        // Primero, una verificación local de la contraseña del admin (esto es opcional si Firebase Auth es la única fuente de verdad)
-        if (providedPassword === ADMIN_PASSWORD) {
-          // Luego, el intento real de inicio de sesión con Firebase Authentication
-          await signInWithEmailAndPassword(auth, ADMIN_EMAIL, ADMIN_PASSWORD);
-          // onAuthStateChanged se encargará de setear currentUser y la lógica de redirección ya está en AppLayout/DashboardPage
-          router.push('/dashboard'); 
-        } else {
-          // La contraseña local no coincide, no es necesario llamar a Firebase Auth
-          throw new Error("Contraseña de administrador incorrecta.");
-        }
-      } else {
-        if (!providedPassword) { // Asegurar que haya contraseña para empleados
-           throw new Error("Contraseña requerida para empleados.");
-        }
-        await signInWithEmailAndPassword(auth, providedEmail, providedPassword);
-        router.push('/dashboard');
-      }
+      await signInWithEmailAndPassword(auth, providedEmail, password);
+      // Successful login will trigger onAuthStateChanged, which updates currentUser.
+      // AppLayout or DashboardPage will handle redirection based on currentUser.
+      // We can push to dashboard here as a direct consequence of successful login action.
+      router.push('/dashboard');
     } catch (error: any) {
       console.error('Error de inicio de sesión:', error);
       let description = "Credenciales inválidas o error de red.";
-      if (error.code === 'auth/user-not-found' || 
-          error.code === 'auth/wrong-password' || 
-          error.code === 'auth/invalid-credential' || // Cubre varios casos de credenciales incorrectas
-          error.message.includes("incorrecta")) { // Para el error local de admin
+      // auth/invalid-credential covers user-not-found, wrong-password, etc.
+      if (error.code === 'auth/invalid-credential') {
         description = "Email o contraseña incorrectos.";
       }
       toast({
@@ -121,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Error de inicio de sesión",
         description: description,
       });
-      setCurrentUser(null); 
+      setCurrentUser(null); // Clear user on failed login
     } finally {
       setLoading(false);
     }
@@ -131,7 +128,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       await signOut(auth);
-      router.push('/login');
+      // onAuthStateChanged will set currentUser to null
+      router.push('/login'); // Redirect to login after sign out
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
       toast({
