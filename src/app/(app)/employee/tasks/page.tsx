@@ -8,19 +8,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 
 export default function EmployeeTasksPage() {
-  const { currentUser } = useAuth();
-  const { getTasksForEmployee, getDepartmentById } = useData();
+  const { currentUser, loading: authLoading } = useAuth();
+  const { getTasksForEmployee, getDepartmentById, dataLoading: appDataLoading } = useData();
 
-  if (!currentUser) {
+  if (authLoading || (!currentUser && appDataLoading)) {
     return (
       <div className="flex flex-grow items-center justify-center">
         <LoadingSpinner size={32} /> 
-        <p className="ml-2 text-muted-foreground">Cargando datos de usuario...</p>
+        <p className="ml-2 text-muted-foreground">Cargando datos de usuario y tareas...</p>
       </div>
     );
   }
 
-  const tasks = getTasksForEmployee(currentUser.id)
+  if (!currentUser || !currentUser.employeeProfileId) {
+     return <p className="text-center text-muted-foreground">No se pudo identificar el perfil de empleado. Por favor, contacta al administrador.</p>;
+  }
+
+  // Usar employeeProfileId de AppUser para obtener tareas
+  const tasks = getTasksForEmployee(currentUser.employeeProfileId)
     .sort((a,b) => new Date(b.assignedAt).getTime() - new Date(a.assignedAt).getTime());
   
   const pendingTasks = tasks.filter(task => task.status === 'pending' || task.status === 'in_progress');

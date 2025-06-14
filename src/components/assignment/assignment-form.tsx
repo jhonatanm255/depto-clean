@@ -8,13 +8,13 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { toast } from '@/hooks/use-toast';
+// import { toast } from '@/hooks/use-toast'; // Toast se maneja en DataContext
 import { ClipboardEdit } from 'lucide-react';
 import { LoadingSpinner } from '@/components/core/loading-spinner'; 
 
 const assignmentSchema = z.object({
   departmentId: z.string().min(1, "Se requiere el departamento"),
-  employeeId: z.string().min(1, "Se requiere el empleado"),
+  employeeId: z.string().min(1, "Se requiere el empleado"), // Este será el ID del EmployeeProfile
 });
 
 type AssignmentFormData = z.infer<typeof assignmentSchema>;
@@ -37,6 +37,7 @@ export function AssignmentForm() {
       form.reset(); 
     } catch (error) {
       // Error toast is handled by DataContext due to re-throw
+      // react-hook-form's isSubmitting state will automatically reset on promise rejection
       console.error("Submit error in AssignmentForm:", error);
     }
   };
@@ -63,7 +64,7 @@ export function AssignmentForm() {
         <CardTitle className="font-headline text-2xl flex items-center">
           <ClipboardEdit className="mr-2 h-6 w-6 text-primary" /> Asignar Nueva Tarea
         </CardTitle>
-        <CardDescription>Selecciona un departamento y un empleado para asignar una tarea de limpieza.</CardDescription>
+        <CardDescription>Selecciona un departamento y una empleada para asignar una tarea de limpieza.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -108,7 +109,7 @@ export function AssignmentForm() {
               name="employeeId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Empleado</FormLabel>
+                  <FormLabel>Empleada</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
                     value={field.value || ""} 
@@ -116,20 +117,20 @@ export function AssignmentForm() {
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecciona un empleado" />
+                        <SelectValue placeholder="Selecciona una empleada" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                        <SelectGroup>
-                        <SelectLabel>Empleados</SelectLabel>
+                        <SelectLabel>Empleadas</SelectLabel>
                         {employees.length > 0 ? (
-                            employees.map((emp) => (
-                                <SelectItem key={emp.id} value={emp.id}>
-                                {emp.name}
+                            employees.map((emp) => ( // emp es EmployeeProfile, emp.id es el ID del documento
+                                <SelectItem key={emp.id} value={emp.id}> 
+                                {emp.name} ({emp.email})
                                 </SelectItem>
                             ))
                         ) : (
-                            <SelectItem value="no-emp" disabled>No hay empleados disponibles</SelectItem>
+                            <SelectItem value="no-emp" disabled>No hay empleadas disponibles</SelectItem>
                         )}
                       </SelectGroup>
                     </SelectContent>

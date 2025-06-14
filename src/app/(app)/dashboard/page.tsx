@@ -7,12 +7,13 @@ import { Users, Building2, ClipboardCheck, AlertTriangle, Briefcase } from 'luci
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { LoadingSpinner } from '@/components/core/loading-spinner'; // Import LoadingSpinner
+import { LoadingSpinner } from '@/components/core/loading-spinner'; 
+import type { AppUser } from '@/lib/types'; // Import AppUser
 
 function AdminDashboard() {
-  const { departments, employees, dataLoading } = useData(); // Added dataLoading
+  const { departments, employees, dataLoading, getEmployeeProfileById } = useData(); 
 
-  if (dataLoading) { // Added loading state check
+  if (dataLoading) { 
     return (
       <div className="flex flex-col items-center justify-center p-8">
         <LoadingSpinner size={32} />
@@ -67,7 +68,7 @@ function AdminDashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Empleados</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Empleadas</CardTitle>
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -110,14 +111,17 @@ function AdminDashboard() {
             {recentlyCompleted.length > 0 ? (
             <ScrollArea className="h-[200px]">
               <ul className="space-y-2">
-                {recentlyCompleted.map(dept => (
-                  <li key={dept.id} className="p-2 rounded-md hover:bg-muted">
-                    <p className="font-medium">{dept.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Completado por {employees.find(e => e.id === dept.assignedTo)?.name || 'N/D'} el {new Date(dept.lastCleanedAt!).toLocaleDateString('es-CL')}
-                    </p>
-                  </li>
-                ))}
+                {recentlyCompleted.map(dept => {
+                  const employee = dept.assignedTo ? getEmployeeProfileById(dept.assignedTo) : null;
+                  return (
+                    <li key={dept.id} className="p-2 rounded-md hover:bg-muted">
+                      <p className="font-medium">{dept.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Completado por {employee?.name || 'N/D'} el {new Date(dept.lastCleanedAt!).toLocaleDateString('es-CL')}
+                      </p>
+                    </li>
+                  );
+                })}
               </ul>
             </ScrollArea>
             ) : (
@@ -130,11 +134,10 @@ function AdminDashboard() {
   );
 }
 
-function EmployeeDashboard() {
-  const { currentUser } = useAuth();
-  const { getTasksForEmployee, getDepartmentById, dataLoading } = useData(); // Added dataLoading
-  
-  if (dataLoading) { // Added loading state check
+function EmployeeDashboard({user}: {user: AppUser}) { // Recibe AppUser
+  const { getTasksForEmployee, getDepartmentById, dataLoading } = useData(); 
+
+  if (dataLoading) { 
      return (
       <div className="flex flex-col items-center justify-center p-8">
         <LoadingSpinner size={32} />
@@ -142,15 +145,15 @@ function EmployeeDashboard() {
       </div>
     );
   }
-
-  const tasks = currentUser ? getTasksForEmployee(currentUser.id) : [];
+  // Usa employeeProfileId de AppUser para obtener tareas
+  const tasks = user.employeeProfileId ? getTasksForEmployee(user.employeeProfileId) : [];
   
   const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress');
   const completedTasksCount = tasks.filter(t => t.status === 'completed').length;
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold font-headline text-foreground">¡Bienvenido/a, {currentUser?.name}!</h2>
+      <h2 className="text-3xl font-bold font-headline text-foreground">¡Bienvenido/a, {user?.name}!</h2>
       <p className="text-muted-foreground">Aquí están tus tareas para hoy.</p>
       
       <div className="grid gap-4 md:grid-cols-2">
@@ -208,14 +211,10 @@ function EmployeeDashboard() {
 
 
 export default function DashboardPage() {
-  const { currentUser } = useAuth();
-  const { dataLoading } = useData();
+  const { currentUser, loading: authLoading } = useAuth(); // Renombrado de dataLoading a authLoading
+  const { dataLoading: appDataLoading } = useData(); // Loading específico de datos de la app
 
-  if (!currentUser && !dataLoading) { // Ensure currentUser exists or not loading
-    return null; // Or a redirect to login, but AppLayout should handle this
-  }
-  
-  if (dataLoading && !currentUser) { // If still loading user auth, show spinner
+  if (authLoading || (!currentUser && appDataLoading)) { // Esperar a que auth y datos iniciales carguen si no hay user
      return (
       <div className="flex flex-grow items-center justify-center">
         <LoadingSpinner size={32} /> 
@@ -224,6 +223,13 @@ export default function DashboardPage() {
     );
   }
 
+  if (!currentUser) {
+    // Esto no debería pasar si AppLayout funciona bien, pero como fallback
+    return <p className="text-center text-muted-foreground">Por favor, inicia sesión para ver el panel.</p>;
+  }
 
-  return currentUser?.role === 'admin' ? <AdminDashboard /> : <EmployeeDashboard />;
+
+  return currentUser?.role === 'admin' 
+    ? <AdminDashboard /> 
+    : <EmployeeDashboard user={currentUser} />; // Pasar currentUser al EmployeeDashboard
 }

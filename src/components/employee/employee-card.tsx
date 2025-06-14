@@ -1,27 +1,17 @@
 
 "use client";
-import type { Employee, CleaningTask, Department } from '@/lib/types';
+import type { EmployeeProfile, CleaningTask, Department } from '@/lib/types'; // Usar EmployeeProfile
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { UserCircle, Mail, Edit3, Trash2, Briefcase, Building2, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-// import {
-//   AlertDialog,
-//   AlertDialogAction,
-//   AlertDialogCancel,
-//   AlertDialogContent,
-//   AlertDialogDescription,
-//   AlertDialogFooter,
-//   AlertDialogHeader,
-//   AlertDialogTitle,
-//   AlertDialogTrigger,
-// } from "@/components/ui/alert-dialog";
+// import { useData } from '@/contexts/data-context'; // Para delete en futuro
 
 interface EmployeeCardProps {
-  employee: Employee;
-  onEdit: (employee: Employee) => void;
+  employee: EmployeeProfile; // Usar EmployeeProfile
+  onEdit: (employee: EmployeeProfile) => void; // Usar EmployeeProfile
   tasks: CleaningTask[];
   departments: Department[];
 }
@@ -55,13 +45,14 @@ const getStatusIcon = (status: Department['status'] | CleaningTask['status']) =>
 
 
 export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeCardProps) {
-  // const { deleteEmployee } = useData(); // For delete in future
+  // const { deleteEmployeeProfile } = useData(); // Para delete en futuro
 
   // const handleDelete = () => {
-  //   // deleteEmployee(employee.id);
+  //   // deleteEmployeeProfile(employee.id); // employee.id es el ID del documento de Firestore
   // };
   
   const assignedTasksDetails = tasks
+    .filter(task => task.employeeId === employee.id) // Asegurar que filtramos por el ID del perfil de empleado
     .map(task => {
       const department = departments.find(d => d.id === task.departmentId);
       return department ? { ...task, departmentName: department.name, departmentStatus: department.status } : null;
@@ -76,9 +67,14 @@ export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeC
           <UserCircle className="mr-2 h-6 w-6 text-primary" />
           {employee.name}
         </CardTitle>
-        <CardDescription className="flex items-center pt-1 text-sm">
-          ID: {employee.id}
+        <CardDescription className="flex items-center pt-1 text-xs text-muted-foreground">
+          ID Perfil: {employee.id}
         </CardDescription>
+         {employee.authUid && (
+          <CardDescription className="flex items-center pt-1 text-xs text-muted-foreground">
+            ID Auth: {employee.authUid}
+          </CardDescription>
+        )}
       </CardHeader>
       <CardContent className="flex-grow space-y-2">
         <div className="flex items-center text-sm text-muted-foreground">
@@ -108,7 +104,7 @@ export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeC
                         </Badge>
                     </div>
                      <p className="text-muted-foreground text-[10px] ml-5">
-                        Asignada: {task.assignedAt.toLocaleDateString('es-CL')}
+                        Asignada: {new Date(task.assignedAt).toLocaleDateString('es-CL')}
                       </p>
                   </li>
                 ))}
@@ -130,20 +126,7 @@ export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeC
               <Trash2 className="mr-1 h-4 w-4" /> Eliminar (Próx.)
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción no se puede deshacer. Esto eliminará permanentemente al empleado "{employee.name}".
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-                Eliminar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
+          // ... AlertDialogContent ...
         </AlertDialog> */}
       </CardFooter>
     </Card>

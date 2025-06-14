@@ -1,6 +1,6 @@
 
 "use client";
-import type { CleaningTask, Department, Employee } from '@/lib/types';
+import type { CleaningTask, Department, EmployeeProfile } from '@/lib/types'; // Usar EmployeeProfile
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,7 +11,7 @@ import { useData } from '@/contexts/data-context';
 interface AssignmentListProps {
   tasks: CleaningTask[];
   departments: Department[];
-  employees: Employee[];
+  employees: EmployeeProfile[]; // Usar EmployeeProfile
 }
 
 function translateStatus(status: CleaningTask['status']) {
@@ -26,21 +26,22 @@ function translateStatus(status: CleaningTask['status']) {
 export function AssignmentList({ tasks, departments, employees }: AssignmentListProps) {
   const { dataLoading } = useData();
 
-  if (dataLoading) {
+  if (dataLoading && tasks.length === 0) { // Mostrar si está cargando y no hay tareas aún
     return (
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="font-headline text-2xl">Asignaciones Actuales</CardTitle>
           <CardDescription>Cargando asignaciones...</CardDescription>
         </CardHeader>
-        <CardContent>
-          <p className="text-center text-muted-foreground py-4">...</p>
+        <CardContent className="flex items-center justify-center p-6">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <p className="ml-2 text-muted-foreground">Cargando...</p>
         </CardContent>
       </Card>
     );
   }
 
-  if (tasks.length === 0) {
+  if (tasks.length === 0 && !dataLoading) {
     return (
       <Card className="shadow-lg">
         <CardHeader>
@@ -83,7 +84,8 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
           <ul className="space-y-4">
             {tasks.map((task) => {
               const department = departments.find(d => d.id === task.departmentId);
-              const employee = employees.find(e => e.id === task.employeeId);
+              // task.employeeId es el ID del documento de EmployeeProfile
+              const employee = employees.find(e => e.id === task.employeeId); 
               if (!department || !employee) return null;
 
               return (
@@ -99,9 +101,9 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                   </div>
                   <div className="text-sm text-muted-foreground space-y-1">
                     <p className="flex items-center"><User className="mr-2 h-4 w-4"/> Asignado a: {employee.name}</p>
-                    <p className="flex items-center"><CalendarDays className="mr-2 h-4 w-4"/> Asignado el: {task.assignedAt.toLocaleDateString('es-CL')}</p>
+                    <p className="flex items-center"><CalendarDays className="mr-2 h-4 w-4"/> Asignado el: {new Date(task.assignedAt).toLocaleDateString('es-CL')}</p>
                     {task.status === 'completed' && task.completedAt && (
-                      <p className="flex items-center text-green-600"><CheckCircle2 className="mr-2 h-4 w-4"/> Completado el: {task.completedAt.toLocaleDateString('es-CL')}</p>
+                      <p className="flex items-center text-green-600"><CheckCircle2 className="mr-2 h-4 w-4"/> Completado el: {new Date(task.completedAt).toLocaleDateString('es-CL')}</p>
                     )}
                   </div>
                 </li>

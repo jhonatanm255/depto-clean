@@ -5,7 +5,7 @@ import type { Department } from '@/lib/types';
 import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea'; // Import Textarea
+import { Textarea } from '@/components/ui/textarea'; 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,7 +16,7 @@ import { LoadingSpinner } from '@/components/core/loading-spinner';
 const departmentSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
   accessCode: z.string().min(1, "Se requiere el código de acceso"),
-  address: z.string().optional(), // Dirección es opcional
+  address: z.string().optional(), 
 });
 
 type DepartmentFormData = z.infer<typeof departmentSchema>;
@@ -53,7 +53,7 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
         await updateDepartment({ 
             ...department, 
             ...data,
-            address: data.address || undefined, // Ensure undefined if empty
+            address: data.address || undefined, 
             lastCleanedAt: department.lastCleanedAt ? new Date(department.lastCleanedAt) : undefined,
         });
       } else {
@@ -61,13 +61,14 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
       }
       onClose(); 
     } catch (error) {
-      // Error toast is handled by DataContext due to re-throw
-      // react-hook-form's isSubmitting state will automatically reset on promise rejection
       console.error("Submit error in DepartmentForm:", error);
+      // El toast de error lo maneja DataContext
+      // react-hook-form resetea isSubmitting automáticamente si la promesa es rechazada.
     }
   };
 
   const handleCloseDialog = () => {
+    form.reset(); // Limpiar el formulario al cerrar
     onClose();
   };
 
@@ -88,7 +89,7 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
                 <FormItem>
                   <FormLabel>Nombre del Departamento</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ej: Apartamento 101" {...field} />
+                    <Input placeholder="Ej: Apartamento 101" {...field} disabled={form.formState.isSubmitting}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -101,7 +102,7 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
                 <FormItem>
                   <FormLabel>Código de Acceso</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ej: 1234#" {...field} />
+                    <Input placeholder="Ej: 1234#" {...field} disabled={form.formState.isSubmitting}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -114,7 +115,7 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
                 <FormItem>
                   <FormLabel>Dirección (Opcional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Ej: Av. Siempre Viva 742, Springfield" {...field} />
+                    <Textarea placeholder="Ej: Av. Siempre Viva 742, Springfield" {...field} disabled={form.formState.isSubmitting}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -122,7 +123,7 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
             />
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="outline" onClick={handleCloseDialog}>Cancelar</Button>
+                <Button type="button" variant="outline" onClick={handleCloseDialog} disabled={form.formState.isSubmitting}>Cancelar</Button>
               </DialogClose>
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting && <LoadingSpinner size={16} className="mr-2" />}
