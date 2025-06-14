@@ -1,4 +1,3 @@
-
 "use client";
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -10,9 +9,9 @@ export default function RootRedirectPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!authLoading) { // Only redirect once auth state is resolved
+    if (!authLoading) { 
       if (currentUser) {
-        router.replace('/'); // Redirect to the main app dashboard (which should be (app)/page.tsx)
+        router.replace('/dashboard'); 
       } else {
         router.replace('/login');
       }
@@ -28,7 +27,6 @@ export default function RootRedirectPage() {
     );
   }
 
-  // If not authLoading, useEffect is about to redirect (or has already started). Show a placeholder.
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
         <LoadingSpinner size={48} />

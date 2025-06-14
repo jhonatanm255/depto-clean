@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useEffect, useMemo, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
-import { LoadingSpinner } from '@/components/core/loading-spinner';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -23,18 +22,18 @@ const MOCK_EMPLOYEE_USER: User = { id: 'emp001', email: 'employee@cleansweep.com
 
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser, storageInitialized] = useLocalStorage<User | null>('currentUser', null);
+  const [currentUser, setCurrentUser, isInitializedFromStorage] = useLocalStorage<User | null>('currentUser_cleansweep', null);
   const router = useRouter();
 
-  const loading = !storageInitialized; // Auth is loading if storage is NOT yet initialized
+  const loading = !isInitializedFromStorage; 
 
   const login = useCallback((email: string, role: UserRole) => {
     if (role === 'admin' && email.toLowerCase() === MOCK_ADMIN_USER.email.toLowerCase()) {
       setCurrentUser(MOCK_ADMIN_USER);
-      router.push('/'); 
+      router.push('/dashboard'); 
     } else if (role === 'employee' && email.toLowerCase() === MOCK_EMPLOYEE_USER.email.toLowerCase()) {
       setCurrentUser(MOCK_EMPLOYEE_USER);
-       router.push('/'); 
+       router.push('/dashboard'); 
     } else {
       console.error('Login failed: Invalid credentials or role.');
       toast({

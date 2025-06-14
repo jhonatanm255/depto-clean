@@ -31,7 +31,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: '/', label: 'Panel Principal', icon: LayoutDashboard, roles: ['admin', 'employee'] },
+  { href: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, roles: ['admin', 'employee'] },
   { href: '/admin/departments', label: 'Departamentos', icon: Building2, roles: ['admin'] },
   { href: '/admin/assignments', label: 'Asignar Tareas', icon: ClipboardEdit, roles: ['admin'] },
   { href: '/employee/tasks', label: 'Mis Tareas', icon: Briefcase, roles: ['employee'] },
@@ -48,7 +48,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r">
       <SidebarHeader className="p-4 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+        <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
            <ShieldCheck className="h-7 w-7 text-primary" />
           <span className="font-headline text-lg font-semibold text-primary">CleanSweep</span>
         </Link>
@@ -61,10 +61,10 @@ export function AppSidebar() {
               <Link href={item.href} legacyBehavior passHref>
                 <SidebarMenuButton
                   asChild
-                  isActive={pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))}
+                  isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
                   tooltip={item.label}
                   className={cn(
-                    (pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))) 
+                    (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))) 
                     ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90" 
                     : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )}

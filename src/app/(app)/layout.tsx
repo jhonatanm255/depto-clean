@@ -16,15 +16,15 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Only perform redirects once authentication status is resolved
     if (!authLoading) {
-      if (!currentUser && pathname !== '/login') { // /login page uses a different layout
+      if (!currentUser && pathname !== '/login') { 
         router.replace('/login');
+      } else if (currentUser && pathname === '/login') { 
+        router.replace('/dashboard');
       }
     }
   }, [currentUser, authLoading, router, pathname]);
 
-  // Case 1: Authentication is still loading from AuthProvider/useLocalStorage
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -34,9 +34,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // Case 2: Auth is done, no user, and current path is NOT the login page.
-  // This means a redirect to /login is imminent via the useEffect.
-  // Show a loader to prevent flashing the app shell.
   if (!currentUser && pathname !== '/login') { 
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -46,8 +43,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     );
   }
   
-  // If user is authenticated and on an app page, render the main app structure.
-  // Or if we are on the /login page (which has its own layout, so this part of AppLayout won't be used for /login).
   return (
     <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
       <SidebarProvider>
