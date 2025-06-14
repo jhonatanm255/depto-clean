@@ -10,7 +10,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { toast } from '@/hooks/use-toast';
+// Toast is handled in DataContext
 
 const departmentSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
@@ -44,19 +44,22 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
   }, [department, form, isOpen]);
 
 
-  const onSubmit: SubmitHandler<DepartmentFormData> = (data) => {
+  const onSubmit: SubmitHandler<DepartmentFormData> = async (data) => {
     try {
       if (department) {
-        updateDepartment({ ...department, ...data });
-        toast({ title: "Departamento Actualizado", description: `"${data.name}" ha sido actualizado.` });
+        // Retain existing status, assignedTo, and lastCleanedAt if not explicitly changed by other logic
+        await updateDepartment({ 
+            ...department, 
+            ...data,
+            lastCleanedAt: department.lastCleanedAt ? new Date(department.lastCleanedAt) : undefined,
+        });
       } else {
-        addDepartment(data);
-        toast({ title: "Departamento Agregado", description: `"${data.name}" ha sido agregado.` });
+        await addDepartment(data);
       }
       onClose();
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "No se pudo guardar el departamento." });
       console.error(error);
+      // Toast handled by DataContext
     }
   };
 
@@ -106,7 +109,9 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
               <DialogClose asChild>
                 <Button type="button" variant="outline" onClick={handleCloseDialog}>Cancelar</Button>
               </DialogClose>
-              <Button type="submit">{department ? 'Guardar Cambios' : 'Agregar Departamento'}</Button>
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? (department ? 'Guardando...' : 'Agregando...') : (department ? 'Guardar Cambios' : 'Agregar Departamento')}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

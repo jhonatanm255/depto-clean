@@ -19,7 +19,7 @@ const assignmentSchema = z.object({
 type AssignmentFormData = z.infer<typeof assignmentSchema>;
 
 export function AssignmentForm() {
-  const { departments, employees, assignTask, tasks } = useData();
+  const { departments, employees, assignTask, tasks, dataLoading } = useData();
   
   const form = useForm<AssignmentFormData>({
     resolver: zodResolver(assignmentSchema),
@@ -31,16 +31,32 @@ export function AssignmentForm() {
   );
 
 
-  const onSubmit: SubmitHandler<AssignmentFormData> = (data) => {
+  const onSubmit: SubmitHandler<AssignmentFormData> = async (data) => {
     try {
-      assignTask(data.departmentId, data.employeeId);
-      toast({ title: "Tarea Asignada", description: `Departamento asignado al empleado.` });
+      await assignTask(data.departmentId, data.employeeId);
+      // Toast is handled within assignTask
       form.reset();
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "No se pudo asignar la tarea."});
+      // Toast for general error, specific errors handled in assignTask
+      toast({ variant: "destructive", title: "Error Inesperado", description: "No se pudo asignar la tarea."});
       console.error(error);
     }
   };
+
+  if (dataLoading) {
+    return (
+      <Card className="w-full shadow-lg">
+        <CardHeader>
+          <CardTitle className="font-headline text-2xl flex items-center">
+            <ClipboardEdit className="mr-2 h-6 w-6 text-primary" /> Asignar Nueva Tarea
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Cargando datos...</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full shadow-lg">
@@ -59,7 +75,7 @@ export function AssignmentForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Departamento</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value || ""} disabled={availableDepartments.length === 0 && employees.length === 0}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecciona un departamento" />
@@ -75,7 +91,7 @@ export function AssignmentForm() {
                                 </SelectItem>
                             ))
                         ) : (
-                            <SelectItem value="no-dept" disabled>No hay departamentos disponibles para asignar</SelectItem>
+                            <SelectItem value="no-dept" disabled>No hay departamentos disponibles</SelectItem>
                         )}
                       </SelectGroup>
                     </SelectContent>
@@ -90,7 +106,7 @@ export function AssignmentForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Empleado</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value || ""} disabled={employees.length === 0}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecciona un empleado" />
@@ -99,11 +115,15 @@ export function AssignmentForm() {
                     <SelectContent>
                        <SelectGroup>
                         <SelectLabel>Empleados</SelectLabel>
-                        {employees.map((emp) => (
-                            <SelectItem key={emp.id} value={emp.id}>
-                            {emp.name}
-                            </SelectItem>
-                        ))}
+                        {employees.length > 0 ? (
+                            employees.map((emp) => (
+                                <SelectItem key={emp.id} value={emp.id}>
+                                {emp.name}
+                                </SelectItem>
+                            ))
+                        ) : (
+                            <SelectItem value="no-emp" disabled>No hay empleados disponibles</SelectItem>
+                        )}
                       </SelectGroup>
                     </SelectContent>
                   </Select>
@@ -111,8 +131,8 @@ export function AssignmentForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={availableDepartments.length === 0}>
-              Asignar Tarea
+            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={availableDepartments.length === 0 || employees.length === 0 || form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? "Asignando..." : "Asignar Tarea"}
             </Button>
           </form>
         </Form>

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { User, Building2, CalendarDays, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useData } from '@/contexts/data-context';
 
 interface AssignmentListProps {
   tasks: CleaningTask[];
@@ -23,6 +24,22 @@ function translateStatus(status: CleaningTask['status']) {
 }
 
 export function AssignmentList({ tasks, departments, employees }: AssignmentListProps) {
+  const { dataLoading } = useData();
+
+  if (dataLoading) {
+    return (
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="font-headline text-2xl">Asignaciones Actuales</CardTitle>
+          <CardDescription>Cargando asignaciones...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-center text-muted-foreground py-4">...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (tasks.length === 0) {
     return (
       <Card className="shadow-lg">
@@ -82,9 +99,9 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                   </div>
                   <div className="text-sm text-muted-foreground space-y-1">
                     <p className="flex items-center"><User className="mr-2 h-4 w-4"/> Asignado a: {employee.name}</p>
-                    <p className="flex items-center"><CalendarDays className="mr-2 h-4 w-4"/> Asignado el: {new Date(task.assignedAt).toLocaleDateString('es-CL')}</p>
+                    <p className="flex items-center"><CalendarDays className="mr-2 h-4 w-4"/> Asignado el: {task.assignedAt.toLocaleDateString('es-CL')}</p>
                     {task.status === 'completed' && task.completedAt && (
-                      <p className="flex items-center text-green-600"><CheckCircle2 className="mr-2 h-4 w-4"/> Completado el: {new Date(task.completedAt).toLocaleDateString('es-CL')}</p>
+                      <p className="flex items-center text-green-600"><CheckCircle2 className="mr-2 h-4 w-4"/> Completado el: {task.completedAt.toLocaleDateString('es-CL')}</p>
                     )}
                   </div>
                 </li>

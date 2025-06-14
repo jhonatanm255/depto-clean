@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Building2, KeyRound, CheckCircle2, Loader2, AlertTriangle, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { toast } from '@/hooks/use-toast';
+// Toast is handled in DataContext
 
 interface TaskCardProps {
   task: CleaningTask;
@@ -26,9 +26,9 @@ function translateStatus(status: CleaningTask['status']) {
 export function TaskCard({ task, department }: TaskCardProps) {
   const { updateTaskStatus } = useData();
 
-  const handleUpdateStatus = (status: 'pending' | 'in_progress' | 'completed') => {
-    updateTaskStatus(task.id, status);
-    toast({ title: "Tarea Actualizada", description: `Estado de la tarea cambiado a ${translateStatus(status)}.` });
+  const handleUpdateStatus = async (status: 'pending' | 'in_progress' | 'completed') => {
+    await updateTaskStatus(task.id, status);
+    // Toast is handled within updateTaskStatus
   };
 
   const getStatusBadgeVariant = (status: CleaningTask['status']) => {
@@ -82,11 +82,11 @@ export function TaskCard({ task, department }: TaskCardProps) {
       </CardHeader>
       <CardContent className="flex-grow space-y-2">
          <p className="flex items-center text-sm text-muted-foreground">
-            <CalendarDays className="mr-2 h-4 w-4"/> Asignada: {new Date(task.assignedAt).toLocaleDateString('es-CL')}
+            <CalendarDays className="mr-2 h-4 w-4"/> Asignada: {task.assignedAt.toLocaleDateString('es-CL')}
         </p>
         {task.status === 'completed' && task.completedAt && (
            <p className="flex items-center text-sm text-green-600">
-             <CheckCircle2 className="mr-2 h-4 w-4"/> Completada: {new Date(task.completedAt).toLocaleDateString('es-CL')}
+             <CheckCircle2 className="mr-2 h-4 w-4"/> Completada: {task.completedAt.toLocaleDateString('es-CL')}
            </p>
         )}
       </CardContent>

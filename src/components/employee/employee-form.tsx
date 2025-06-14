@@ -10,7 +10,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { toast } from '@/hooks/use-toast';
+// Toast is handled in DataContext
 
 const employeeSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
@@ -40,19 +40,18 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
   }, [employee, form, isOpen]);
 
 
-  const onSubmit: SubmitHandler<EmployeeFormData> = (data) => {
+  const onSubmit: SubmitHandler<EmployeeFormData> = async (data) => {
     try {
       if (employee) {
-        // updateEmployee({ ...employee, ...data }); // Implement in future
-        toast({ title: "Empleado Actualizado", description: `"${data.name}" ha sido actualizado.` });
+        // await updateEmployee({ ...employee, ...data }); // Implement in future
+        // toast({ title: "Empleado Actualizado", description: `"${data.name}" ha sido actualizado.` });
       } else {
-        addEmployee(data);
-        toast({ title: "Empleado Agregado", description: `"${data.name}" ha sido agregado.` });
+        await addEmployee(data);
       }
       onClose();
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "No se pudo guardar el empleado." });
       console.error(error);
+      // Toast handled by DataContext
     }
   };
   
@@ -101,7 +100,9 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
               <DialogClose asChild>
                 <Button type="button" variant="outline" onClick={handleCloseDialog}>Cancelar</Button>
               </DialogClose>
-              <Button type="submit">{employee ? 'Guardar Cambios' : 'Agregar Empleado'}</Button>
+              <Button type="submit" disabled={form.formState.isSubmitting || !!employee}>
+                 {employee ? 'Guardar Cambios (Próximamente)' : (form.formState.isSubmitting ? 'Agregando...' : 'Agregar Empleado')}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

@@ -56,8 +56,8 @@ export function DepartmentCard({ department, onEdit, employees }: DepartmentCard
     }
   };
 
-  const handleDelete = () => {
-    deleteDepartment(department.id);
+  const handleDelete = async () => {
+    await deleteDepartment(department.id);
   };
 
   return (

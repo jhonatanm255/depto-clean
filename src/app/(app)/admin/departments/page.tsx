@@ -9,9 +9,10 @@ import { DepartmentCard } from '@/components/department/department-card';
 import { PlusCircle, Building2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { LoadingSpinner } from '@/components/core/loading-spinner';
 
 export default function DepartmentsPage() {
-  const { departments, employees } = useData();
+  const { departments, employees, dataLoading } = useData();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,9 +34,8 @@ export default function DepartmentsPage() {
     .filter(dept => dept.name.toLowerCase().includes(searchTerm.toLowerCase()))
     .filter(dept => {
         if (statusFilter === 'all') return true;
-        // Adjusted filter for "Pendiente (Sin Asignar)" to check if it's pending AND not in any active task
         if (statusFilter === 'pending_assignment') {
-            return dept.status === 'pending' && !dept.assignedTo; // Directly use assignedTo from department
+            return dept.status === 'pending' && !dept.assignedTo;
         }
         return dept.status === statusFilter;
     })
@@ -47,6 +47,15 @@ export default function DepartmentsPage() {
             default: return 0;
         }
     });
+
+  if (dataLoading) {
+    return (
+      <div className="container mx-auto py-8 px-4 md:px-6 flex flex-col items-center justify-center">
+        <LoadingSpinner size={32} />
+        <p className="mt-4 text-muted-foreground">Cargando departamentos...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
@@ -96,13 +105,13 @@ export default function DepartmentsPage() {
         </Select>
       </div>
 
-      {departments.length === 0 ? (
+      {departments.length === 0 && !dataLoading ? (
         <div className="text-center py-10">
           <Building2 className="mx-auto h-16 w-16 text-muted-foreground" />
           <p className="mt-4 text-lg text-muted-foreground">No se encontraron departamentos.</p>
           <p className="text-sm text-muted-foreground">Comienza agregando un nuevo departamento.</p>
         </div>
-      ) : filteredDepartments.length === 0 ? (
+      ) : filteredDepartments.length === 0 && !dataLoading ? (
         <div className="text-center py-10">
            <p className="mt-4 text-lg text-muted-foreground">Ningún departamento coincide con tus filtros.</p>
         </div>

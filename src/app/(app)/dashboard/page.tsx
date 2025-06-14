@@ -7,9 +7,20 @@ import { Users, Building2, ClipboardCheck, AlertTriangle, Briefcase } from 'luci
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { LoadingSpinner } from '@/components/core/loading-spinner'; // Import LoadingSpinner
 
 function AdminDashboard() {
-  const { departments, employees } = useData();
+  const { departments, employees, dataLoading } = useData(); // Added dataLoading
+
+  if (dataLoading) { // Added loading state check
+    return (
+      <div className="flex flex-col items-center justify-center p-8">
+        <LoadingSpinner size={32} />
+        <p className="mt-4 text-muted-foreground">Cargando datos del panel...</p>
+      </div>
+    );
+  }
+
   const pendingCount = departments.filter(d => d.status === 'pending').length;
   const completedCount = departments.filter(d => d.status === 'completed').length;
 
@@ -121,8 +132,17 @@ function AdminDashboard() {
 
 function EmployeeDashboard() {
   const { currentUser } = useAuth();
-  const { getTasksForEmployee, getDepartmentById } = useData();
+  const { getTasksForEmployee, getDepartmentById, dataLoading } = useData(); // Added dataLoading
   
+  if (dataLoading) { // Added loading state check
+     return (
+      <div className="flex flex-col items-center justify-center p-8">
+        <LoadingSpinner size={32} />
+        <p className="mt-4 text-muted-foreground">Cargando tus tareas...</p>
+      </div>
+    );
+  }
+
   const tasks = currentUser ? getTasksForEmployee(currentUser.id) : [];
   
   const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress');
@@ -189,10 +209,21 @@ function EmployeeDashboard() {
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
+  const { dataLoading } = useData();
 
-  if (!currentUser) {
-    return null; 
+  if (!currentUser && !dataLoading) { // Ensure currentUser exists or not loading
+    return null; // Or a redirect to login, but AppLayout should handle this
+  }
+  
+  if (dataLoading && !currentUser) { // If still loading user auth, show spinner
+     return (
+      <div className="flex flex-grow items-center justify-center">
+        <LoadingSpinner size={32} /> 
+        <p className="ml-2 text-muted-foreground">Cargando panel...</p>
+      </div>
+    );
   }
 
-  return currentUser.role === 'admin' ? <AdminDashboard /> : <EmployeeDashboard />;
+
+  return currentUser?.role === 'admin' ? <AdminDashboard /> : <EmployeeDashboard />;
 }

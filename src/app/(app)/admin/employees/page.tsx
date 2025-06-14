@@ -8,11 +8,12 @@ import { EmployeeForm } from '@/components/employee/employee-form';
 import { EmployeeCard } from '@/components/employee/employee-card';
 import { PlusCircle, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { LoadingSpinner } from '@/components/core/loading-spinner';
 
 export default function EmployeesPage() {
-  const { employees } = useData();
+  const { employees, dataLoading } = useData();
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null); // For future editing
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const handleOpenForm = (employee?: Employee) => {
@@ -29,6 +30,15 @@ export default function EmployeesPage() {
     emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     emp.email.toLowerCase().includes(searchTerm.toLowerCase())
   ).sort((a,b) => a.name.localeCompare(b.name));
+
+  if (dataLoading) {
+    return (
+      <div className="container mx-auto py-8 px-4 md:px-6 flex flex-col items-center justify-center">
+        <LoadingSpinner size={32} />
+        <p className="mt-4 text-muted-foreground">Cargando empleados...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
@@ -52,13 +62,13 @@ export default function EmployeesPage() {
         />
       </div>
 
-      {employees.length === 0 ? (
+      {employees.length === 0 && !dataLoading ? (
         <div className="text-center py-10">
           <Users className="mx-auto h-16 w-16 text-muted-foreground" />
           <p className="mt-4 text-lg text-muted-foreground">No se encontraron empleados.</p>
           <p className="text-sm text-muted-foreground">Comienza agregando un nuevo empleado.</p>
         </div>
-      ) : filteredEmployees.length === 0 ? (
+      ) : filteredEmployees.length === 0 && !dataLoading ? (
          <div className="text-center py-10">
            <p className="mt-4 text-lg text-muted-foreground">Ningún empleado coincide con tu búsqueda.</p>
         </div>

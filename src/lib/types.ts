@@ -1,3 +1,4 @@
+
 export type UserRole = 'admin' | 'employee';
 
 export interface User {
@@ -12,21 +13,21 @@ export interface Department {
   name: string;
   accessCode: string;
   status: 'pending' | 'in_progress' | 'completed';
-  assignedTo?: string; // Employee ID
-  lastCleanedAt?: string; // ISO date string
+  assignedTo?: string; // Employee ID (Firestore document ID)
+  lastCleanedAt?: Date; 
 }
 
 export interface Employee {
-  id: string;
+  id: string; // Firestore document ID
   name: string;
-  email: string; // Could be same as user email if employee is a user
+  email: string; 
 }
 
 export interface CleaningTask {
-  id: string;
-  departmentId: string;
-  employeeId: string;
-  assignedAt: string; // ISO date string
+  id: string; // Firestore document ID
+  departmentId: string; // Firestore document ID
+  employeeId: string; // Firestore document ID
+  assignedAt: Date; 
   status: 'pending' | 'in_progress' | 'completed';
-  completedAt?: string; // ISO date string
+  completedAt?: Date; 
 }
