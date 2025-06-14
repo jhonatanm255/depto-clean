@@ -16,35 +16,53 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!authLoading && !currentUser && pathname !== '/login') {
-      router.replace('/login');
+    // Only perform redirects once authentication status is resolved
+    if (!authLoading) {
+      if (!currentUser && pathname !== '/login') {
+        router.replace('/login');
+      }
+      if (currentUser && pathname === '/login') {
+        router.replace('/');
+      }
     }
   }, [currentUser, authLoading, router, pathname]);
 
-  if (authLoading || (!currentUser && pathname !== '/login')) {
+  // Case 1: Authentication is still loading
+  if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <LoadingSpinner size={48} />
       </div>
     );
   }
-  
-  if (currentUser && pathname === '/login') {
-    router.replace('/'); 
-    return ( 
+
+  // Case 2: Auth is done, no user, and not on login page (redirect to /login is imminent)
+  if (!currentUser && pathname !== '/login') {
+    return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <LoadingSpinner size={48} />
       </div>
     );
   }
 
+  // Case 3: Auth is done, user exists, but is on login page (redirect to / is imminent)
+  if (currentUser && pathname === '/login') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <LoadingSpinner size={48} />
+      </div>
+    );
+  }
+
+  // If none of the above, user is authenticated and on an app page, or unauthenticated and on the login page.
+  // The login page itself will be rendered via {children} if pathname is /login and !currentUser.
   return (
     <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
       <SidebarProvider>
         <div className="flex min-h-screen w-full">
-          <AppSidebar />
+          {pathname !== '/login' && <AppSidebar />}
           <div className="flex flex-1 flex-col">
-            <HeaderMain />
+            {pathname !== '/login' && <HeaderMain />}
             <main className="flex-1 overflow-y-auto bg-background p-4 sm:p-6 lg:p-8">
               {children}
             </main>

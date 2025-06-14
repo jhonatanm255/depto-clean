@@ -4,7 +4,7 @@ import type { User, UserRole } from '@/lib/types';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
-import React, { createContext, useContext, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
 
 interface AuthContextType {
@@ -27,13 +27,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loading = storageLoading;
 
-  const login = (email: string, role: UserRole) => {
+  const login = useCallback((email: string, role: UserRole) => {
     if (role === 'admin' && email.toLowerCase() === MOCK_ADMIN_USER.email.toLowerCase()) {
       setCurrentUser(MOCK_ADMIN_USER);
-      router.push('/');
+      router.push('/'); // Use push for explicit navigation
     } else if (role === 'employee' && email.toLowerCase() === MOCK_EMPLOYEE_USER.email.toLowerCase()) {
       setCurrentUser(MOCK_EMPLOYEE_USER);
-       router.push('/');
+       router.push('/'); // Use push for explicit navigation
     } else {
       console.error('Login failed: Invalid credentials or role.');
       toast({
@@ -42,14 +42,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           description: "Credenciales inválidas. Por favor, verifica tu email, contraseña y rol.",
       });
     }
-  };
+  }, [setCurrentUser, router]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setCurrentUser(null);
-    router.push('/login');
-  };
+    router.push('/login'); // Use push for explicit navigation
+  }, [setCurrentUser, router]);
   
-  const value = useMemo(() => ({ currentUser, setCurrentUser, login, logout, loading }), [currentUser, loading, router]);
+  const value = useMemo(() => ({ currentUser, setCurrentUser, login, logout, loading }), 
+    [currentUser, setCurrentUser, login, logout, loading]
+  );
 
   return (
     <AuthContext.Provider value={value}>

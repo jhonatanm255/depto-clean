@@ -7,7 +7,7 @@ import { Users, Building2, ClipboardCheck, AlertTriangle, Briefcase } from 'luci
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { LoadingSpinner } from '@/components/core/loading-spinner';
+// Removed LoadingSpinner from here, AppLayout handles the main loading
 
 function AdminDashboard() {
   const { departments, employees } = useData();
@@ -121,8 +121,10 @@ function AdminDashboard() {
 }
 
 function EmployeeDashboard() {
-  const { currentUser } = useAuth();
+  const { currentUser } = useAuth(); // AppLayout ensures currentUser is available
   const { getTasksForEmployee, getDepartmentById } = useData();
+  
+  // currentUser should exist if this component renders, due to AppLayout's checks
   const tasks = currentUser ? getTasksForEmployee(currentUser.id) : [];
   
   const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress');
@@ -188,22 +190,15 @@ function EmployeeDashboard() {
 
 
 export default function DashboardPage() {
-  const { currentUser, loading: authLoading } = useAuth();
+  const { currentUser } = useAuth();
 
-  if (authLoading) {
-    return (
-      <div className="flex flex-grow items-center justify-center bg-background">
-        <LoadingSpinner size={48} />
-      </div>
-    );
-  }
-
+  // AppLayout handles the main loading state and redirection if currentUser is null.
+  // If currentUser is somehow null here, it's an issue with AppLayout,
+  // but this page shouldn't show its own full-page loader for auth reasons.
   if (!currentUser) {
-     return (
-      <div className="flex flex-grow items-center justify-center bg-background">
-        <LoadingSpinner size={48} />
-      </div>
-    );
+    // This should ideally not be reached if AppLayout is working correctly.
+    // Return null or a minimal placeholder to avoid further issues.
+    return null; 
   }
 
   return currentUser.role === 'admin' ? <AdminDashboard /> : <EmployeeDashboard />;
