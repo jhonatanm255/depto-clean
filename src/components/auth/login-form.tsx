@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useState, type FormEvent } from 'react';
-import { Building, UserCog, Users, Info, KeyRound, ShieldAlert } from 'lucide-react';
+import { Building, UserCog, Users, Info, KeyRound, ShieldAlert, TriangleAlert } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -21,6 +21,9 @@ export function LoginForm() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    // Para el login, el tercer parámetro 'role' y el cuarto 'passwordForNewUser' no se usan realmente
+    // en la función login del AuthContext si el usuario ya existe.
+    // El 'actualPassword' es el que se usa, que es 'password' del estado del formulario.
     await login(email, password, 'employee', password); 
   };
 
@@ -43,17 +46,19 @@ export function LoginForm() {
         <CardDescription>Inicia sesión para gestionar tus tareas de limpieza.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Alert className="mb-6 bg-blue-50 border-blue-200 text-blue-700">
-            <ShieldAlert className="h-5 w-5 text-blue-500" />
-            <AlertTitle className="font-semibold text-blue-800">Acceso al Sistema</AlertTitle>
-            <AlertDescription className="text-blue-700 text-xs space-y-1">
-              <p><strong>Administrador:</strong><br />
-              Usuario: <code className="font-mono text-xs p-0.5 bg-blue-100 rounded">{ADMIN_EMAIL_CHECK}</code><br />
-              Clave: <code className="font-mono text-xs p-0.5 bg-blue-100 rounded">admin123</code><br />
-              <strong className="text-red-600">Importante:</strong> Asegúrate de que este usuario administrador exista en tu panel de <code className="font-mono text-xs p-0.5 bg-blue-100 rounded">Firebase Authentication</code> con esta contraseña. Si no existe, créalo manualmente en la consola de Firebase.
+        <Alert variant="destructive" className="mb-6 bg-red-50 border-red-300 text-red-800">
+            <TriangleAlert className="h-5 w-5 text-red-600" />
+            <AlertTitle className="font-bold text-red-900">¡ACCIÓN REQUERIDA PARA ADMIN!</AlertTitle>
+            <AlertDescription className="text-red-700 text-xs space-y-1">
+              <p><strong>Para acceder como Administrador:</strong><br />
+              Asegúrate de que el usuario <code className="font-mono text-xs p-0.5 bg-red-100 rounded">{ADMIN_EMAIL_CHECK}</code> con contraseña <code className="font-mono text-xs p-0.5 bg-red-100 rounded">admin123</code> 
+              <strong className="text-red-900"> EXISTA en tu panel de Firebase Authentication.</strong>
+              <br />
+              Ve a tu consola de Firebase -> Authentication -> Users y crea este usuario si no está allí. 
+              <strong className="text-red-900"> La aplicación NO lo creará por ti.</strong>
               </p>
-              <p><strong>Empleados/as:</strong><br />
-              Utiliza el correo electrónico y la contraseña que te asignó el administrador al crear tu perfil en el sistema.
+              <p className="mt-2"><strong>Empleadas:</strong><br />
+              Usa el email y contraseña que el administrador te asignó al crear tu perfil desde el panel de esta aplicación.
               </p>
             </AlertDescription>
         </Alert>
