@@ -17,9 +17,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for demonstration
 const MOCK_ADMIN_USER: User = { id: 'admin001', email: 'admin@cleansweep.com', role: 'admin', name: 'Usuario Admin' };
-const MOCK_EMPLOYEE_USER: User = { id: 'emp001', email: 'employee@cleansweep.com', role: 'employee', name: 'Personal Limpieza' };
+const MOCK_EMPLOYEE_USER: User = { id: 'emp001', email: 'employee@cleansweep.com', role: 'employee', name: 'Personal de Limpieza' };
 
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -50,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/login');
   };
   
-  const value = useMemo(() => ({ currentUser, setCurrentUser, login, logout, loading }), [currentUser, setCurrentUser, login, logout, loading]);
+  const value = useMemo(() => ({ currentUser, setCurrentUser, login, logout, loading }), [currentUser, loading, router]);
 
   return (
     <AuthContext.Provider value={value}>

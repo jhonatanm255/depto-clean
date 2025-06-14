@@ -5,13 +5,19 @@ import { useData } from '@/contexts/data-context';
 import { TaskCard } from '@/components/task/task-card';
 import { Briefcase, CheckSquare } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LoadingSpinner } from '@/components/core/loading-spinner';
 
 export default function EmployeeTasksPage() {
   const { currentUser } = useAuth();
   const { getTasksForEmployee, getDepartmentById } = useData();
 
   if (!currentUser) {
-    return <p className="text-center mt-10">Cargando datos de usuario...</p>;
+    return (
+      <div className="flex flex-grow items-center justify-center">
+        <LoadingSpinner size={32} /> 
+        <p className="ml-2 text-muted-foreground">Cargando datos de usuario...</p>
+      </div>
+    );
   }
 
   const tasks = getTasksForEmployee(currentUser.id)

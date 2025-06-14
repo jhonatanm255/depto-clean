@@ -22,7 +22,7 @@ type DepartmentFormData = z.infer<typeof departmentSchema>;
 interface DepartmentFormProps {
   isOpen: boolean;
   onClose: () => void;
-  department?: Department | null; // For editing
+  department?: Department | null;
 }
 
 export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormProps) {
@@ -34,7 +34,7 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
   });
 
   React.useEffect(() => {
-    if (isOpen) { // Reset form only when dialog opens for a specific or new department
+    if (isOpen) { 
       if (department) {
         form.reset({ name: department.name, accessCode: department.accessCode });
       } else {
@@ -53,7 +53,6 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
         addDepartment(data);
         toast({ title: "Departamento Agregado", description: `"${data.name}" ha sido agregado.` });
       }
-      // form.reset(); // Resetting is handled by useEffect on isOpen or by DialogClose
       onClose();
     } catch (error) {
       toast({ variant: "destructive", title: "Error", description: "No se pudo guardar el departamento." });
@@ -62,7 +61,7 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
   };
 
   const handleCloseDialog = () => {
-    form.reset({ name: department ? department.name : '', accessCode: department ? department.accessCode : '' }); // Reset to original or empty
+    form.reset({ name: department ? department.name : '', accessCode: department ? department.accessCode : '' });
     onClose();
   };
 

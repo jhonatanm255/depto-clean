@@ -82,11 +82,11 @@ export function TaskCard({ task, department }: TaskCardProps) {
       </CardHeader>
       <CardContent className="flex-grow space-y-2">
          <p className="flex items-center text-sm text-muted-foreground">
-            <CalendarDays className="mr-2 h-4 w-4"/> Asignada: {new Date(task.assignedAt).toLocaleDateString()}
+            <CalendarDays className="mr-2 h-4 w-4"/> Asignada: {new Date(task.assignedAt).toLocaleDateString('es-CL')}
         </p>
         {task.status === 'completed' && task.completedAt && (
            <p className="flex items-center text-sm text-green-600">
-             <CheckCircle2 className="mr-2 h-4 w-4"/> Completada: {new Date(task.completedAt).toLocaleDateString()}
+             <CheckCircle2 className="mr-2 h-4 w-4"/> Completada: {new Date(task.completedAt).toLocaleDateString('es-CL')}
            </p>
         )}
       </CardContent>

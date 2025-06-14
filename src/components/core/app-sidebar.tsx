@@ -52,7 +52,6 @@ export function AppSidebar() {
            <ShieldCheck className="h-7 w-7 text-primary" />
           <span className="font-headline text-lg font-semibold text-primary">CleanSweep</span>
         </Link>
-        {/* <SidebarTrigger className="group-data-[collapsible=icon]:hidden" /> */}
       </SidebarHeader>
       
       <SidebarContent className="p-2">

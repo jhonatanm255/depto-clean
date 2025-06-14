@@ -104,7 +104,7 @@ function AdminDashboard() {
                   <li key={dept.id} className="p-2 rounded-md hover:bg-muted">
                     <p className="font-medium">{dept.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      Completado por {employees.find(e => e.id === dept.assignedTo)?.name || 'N/D'} el {new Date(dept.lastCleanedAt!).toLocaleDateString()}
+                      Completado por {employees.find(e => e.id === dept.assignedTo)?.name || 'N/D'} el {new Date(dept.lastCleanedAt!).toLocaleDateString('es-CL')}
                     </p>
                   </li>
                 ))}
@@ -198,12 +198,7 @@ export default function DashboardPage() {
     );
   }
 
-  // No redirection logic here, (app)/layout.tsx handles it if currentUser is null.
-  // This component will only render if currentUser is available after loading.
-
   if (!currentUser) {
-    // This case should ideally not be reached if (app)/layout.tsx's redirection is effective.
-    // However, as a fallback or during brief transitions, show loading.
      return (
       <div className="flex flex-grow items-center justify-center bg-background">
         <LoadingSpinner size={48} />

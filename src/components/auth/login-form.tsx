@@ -10,16 +10,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useState, type FormEvent } from 'react';
 import { Building, UserCog, Users } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { LoadingSpinner } from '@/components/core/loading-spinner';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState(''); // Password check is illustrative
+  const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('employee');
   const { login, loading } = useAuth();
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    // Simplified login, password isn't actually checked against a hash here
     if (role === 'admin' && email === 'admin@cleansweep.com' && password === 'admin123') {
         login(email, role);
     } else if (role === 'employee' && email === 'employee@cleansweep.com' && password === 'emp123') {
@@ -34,7 +34,12 @@ export function LoginForm() {
   };
 
   if (loading) {
-    return <p>Cargando...</p>;
+    return (
+      <div className="flex flex-col items-center justify-center p-8">
+        <LoadingSpinner size={32}/>
+        <p className="mt-4 text-muted-foreground">Verificando...</p>
+      </div>
+    );
   }
 
   return (
@@ -100,7 +105,7 @@ export function LoginForm() {
         </form>
       </CardContent>
       <CardFooter className="text-center text-sm text-muted-foreground">
-        <p>Usa admin@cleansweep.com (pass: admin123) o employee@cleansweep.com (pass: emp123).</p>
+        <p>Usar: admin@cleansweep.com (clave: admin123) o employee@cleansweep.com (clave: emp123).</p>
       </CardFooter>
     </Card>
   );

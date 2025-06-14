@@ -22,8 +22,7 @@ function ThemeToggle() {
   React.useEffect(() => setMounted(true), []);
 
   if (!mounted) {
-    // Return a placeholder or null to avoid layout shift and hydration mismatch
-    return <div style={{ width: '40px', height: '40px' }} />; // Matches Button size="icon"
+    return <div style={{ width: '40px', height: '40px' }} />;
   }
 
   return (
@@ -40,17 +39,17 @@ function ThemeToggle() {
 
 export function HeaderMain() {
   const { currentUser, logout } = useAuth();
-  const { toggleSidebar, isMobile } = useSidebar(); // Added isMobile from useSidebar
+  const { toggleSidebar, isMobile } = useSidebar(); 
 
   const getInitials = (name?: string) => {
-    if (!name) return "CS"; // CleanSweep
+    if (!name) return "CS"; 
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background/80 px-4 backdrop-blur-md sm:px-6">
       <div className="flex items-center gap-2">
-        {isMobile && ( // Only show PanelLeft button on mobile
+        {isMobile && ( 
           <Button
             variant="ghost"
             size="icon"

@@ -3,14 +3,14 @@
 import type { Department, Employee, CleaningTask } from '@/lib/types';
 import useLocalStorage from '@/hooks/use-local-storage';
 import type { ReactNode } from 'react';
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 
 interface DataContextType {
   departments: Department[];
   addDepartment: (dept: Omit<Department, 'id' | 'status'>) => void;
   updateDepartment: (dept: Department) => void;
   deleteDepartment: (id: string) => void;
-  employees: Employee[]; // For now, employees are static
+  employees: Employee[];
   tasks: CleaningTask[];
   assignTask: (departmentId: string, employeeId: string) => void;
   updateTaskStatus: (taskId: string, status: 'pending' | 'in_progress' | 'completed') => void;
@@ -21,26 +21,29 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 const initialDepartments: Department[] = [
-  { id: 'dept1', name: 'Apartment 101', accessCode: '1234', status: 'pending', assignedTo: 'emp1' },
-  { id: 'dept2', name: 'Office Suite 200', accessCode: '5678', status: 'completed', lastCleanedAt: new Date().toISOString(), assignedTo: 'emp2' },
-  { id: 'dept3', name: 'Condo 3B', accessCode: '9012', status: 'pending' },
+  { id: 'dept1', name: 'Apartamento 101', accessCode: '1234', status: 'pending', assignedTo: 'emp001' },
+  { id: 'dept2', name: 'Oficina 200', accessCode: '5678', status: 'completed', lastCleanedAt: new Date(Date.now() - 86400000 * 2).toISOString(), assignedTo: 'emp2' },
+  { id: 'dept3', name: 'Condominio 3B', accessCode: '9012', status: 'pending' },
+  { id: 'dept4', name: 'Local Comercial 5', accessCode: '4321', status: 'in_progress', assignedTo: 'emp001' },
 ];
 
 const initialEmployees: Employee[] = [
-  { id: 'emp1', name: 'Alice Smith', email: 'alice@example.com' },
-  { id: 'emp2', name: 'Bob Johnson', email: 'bob@example.com' },
-  { id: 'emp001', name: 'Cleaning Staff', email: 'employee@cleansweep.com' } // Corresponds to mock employee user
+  { id: 'emp1', name: 'Ana Silva', email: 'ana.silva@example.com' },
+  { id: 'emp2', name: 'Carlos Ponce', email: 'carlos.ponce@example.com' },
+  { id: 'emp001', name: 'Personal Limpieza', email: 'employee@cleansweep.com' } 
 ];
 
 const initialTasks: CleaningTask[] = [
-    { id: 'task1', departmentId: 'dept1', employeeId: 'emp1', assignedAt: new Date().toISOString(), status: 'pending' },
+    { id: 'task1', departmentId: 'dept1', employeeId: 'emp001', assignedAt: new Date(Date.now() - 86400000).toISOString(), status: 'pending' },
+    { id: 'task2', departmentId: 'dept4', employeeId: 'emp001', assignedAt: new Date().toISOString(), status: 'in_progress' },
+    { id: 'task3', departmentId: 'dept2', employeeId: 'emp2', assignedAt: new Date(Date.now() - 86400000 * 3).toISOString(), status: 'completed', completedAt: new Date(Date.now() - 86400000 * 2).toISOString() },
 ];
 
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [departments, setDepartments] = useLocalStorage<Department[]>('departments', initialDepartments);
-  const [tasks, setTasks] = useLocalStorage<CleaningTask[]>('tasks', initialTasks);
-  const employees = initialEmployees; // Static for now
+  const [departments, setDepartments, departmentsLoading] = useLocalStorage<Department[]>('departments_cleansweep', initialDepartments);
+  const [tasks, setTasks, tasksLoading] = useLocalStorage<CleaningTask[]>('tasks_cleansweep', initialTasks);
+  const employees = initialEmployees; 
 
   const addDepartment = (deptData: Omit<Department, 'id' | 'status'>) => {
     const newDepartment: Department = {
@@ -55,7 +58,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setDepartments((prev) =>
       prev.map((dept) => (dept.id === updatedDept.id ? updatedDept : dept))
     );
-    // also update task if department is assigned and status changes
     const task = tasks.find(t => t.departmentId === updatedDept.id && t.employeeId === updatedDept.assignedTo);
     if (task && task.status !== updatedDept.status) {
         updateTaskStatus(task.id, updatedDept.status);
@@ -71,8 +73,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const department = departments.find(d => d.id === departmentId);
     if (!department) return;
 
-    // Remove existing task for this department if any
-    const otherTasks = tasks.filter(t => t.departmentId !== departmentId);
+    const otherTasks = tasks.filter(t => t.departmentId !== departmentId || (t.status !== 'pending' && t.status !== 'in_progress'));
 
     const newTask: CleaningTask = {
       id: `task-${Date.now()}`,
@@ -82,19 +83,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
       status: 'pending',
     };
     setTasks([...otherTasks, newTask]);
-    updateDepartment({ ...department, assignedTo: employeeId, status: 'pending' });
+    updateDepartment({ ...department, assignedTo: employeeId, status: 'pending', lastCleanedAt: undefined });
   };
 
   const updateTaskStatus = (taskId: string, status: 'pending' | 'in_progress' | 'completed') => {
     setTasks((prevTasks) =>
       prevTasks.map((task) => {
         if (task.id === taskId) {
-          const updatedTask = { ...task, status, completedAt: status === 'completed' ? new Date().toISOString() : undefined };
-          const department = departments.find(d => d.id === task.departmentId);
-          if (department) {
-            // Use a new state variable for departments to trigger re-render properly
-            setDepartments(prevDepts => prevDepts.map(d => d.id === task.departmentId ? {...d, status, lastCleanedAt: status === 'completed' ? new Date().toISOString() : d.lastCleanedAt} : d));
-          }
+          const completedAt = status === 'completed' ? new Date().toISOString() : undefined;
+          const updatedTask = { ...task, status, completedAt };
+          
+          setDepartments(prevDepts => prevDepts.map(d => 
+            d.id === task.departmentId 
+            ? {...d, status, lastCleanedAt: completedAt || d.lastCleanedAt } 
+            : d
+          ));
           return updatedTask;
         }
         return task;
@@ -102,20 +105,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
     );
   };
 
-
   const getTasksForEmployee = (employeeId: string) => {
+    if (tasksLoading) return [];
     return tasks.filter((task) => task.employeeId === employeeId);
   };
 
   const getDepartmentById = (departmentId: string) => {
+    if (departmentsLoading) return undefined;
     return departments.find(d => d.id === departmentId);
   };
   
   const value = useMemo(() => ({
-    departments, addDepartment, updateDepartment, deleteDepartment,
+    departments: departmentsLoading ? initialDepartments : departments, 
+    addDepartment, 
+    updateDepartment, 
+    deleteDepartment,
     employees,
-    tasks, assignTask, updateTaskStatus, getTasksForEmployee, getDepartmentById
-  }), [departments, employees, tasks]);
+    tasks: tasksLoading ? initialTasks : tasks, 
+    assignTask, 
+    updateTaskStatus, 
+    getTasksForEmployee, 
+    getDepartmentById
+  }), [departments, employees, tasks, departmentsLoading, tasksLoading]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }
@@ -123,8 +134,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 export function useData() {
   const context = useContext(DataContext);
   if (context === undefined) {
-    throw new Error('useData must be used within a DataProvider');
+    throw new Error('useData debe usarse dentro de un DataProvider');
   }
   return context;
 }
-

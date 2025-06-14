@@ -21,7 +21,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     }
   }, [currentUser, authLoading, router, pathname]);
 
-  // If auth is still loading, or if not authenticated and not on login page, show spinner.
   if (authLoading || (!currentUser && pathname !== '/login')) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -30,19 +29,15 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     );
   }
   
-  // If user is logged in but tries to access /login, redirect to dashboard
-  // This case should ideally not happen if navigation is correct, but good as a safeguard.
   if (currentUser && pathname === '/login') {
-    router.replace('/'); // Redirect to dashboard
-    return ( // Show spinner during redirection
+    router.replace('/'); 
+    return ( 
       <div className="flex min-h-screen items-center justify-center bg-background">
         <LoadingSpinner size={48} />
       </div>
     );
   }
 
-  // If we reach here, user is authenticated or it's the login page (which is handled by its own layout)
-  // For authenticated users, render the app layout with sidebar and header
   return (
     <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
       <SidebarProvider>

@@ -82,9 +82,9 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                   </div>
                   <div className="text-sm text-muted-foreground space-y-1">
                     <p className="flex items-center"><User className="mr-2 h-4 w-4"/> Asignado a: {employee.name}</p>
-                    <p className="flex items-center"><CalendarDays className="mr-2 h-4 w-4"/> Asignado el: {new Date(task.assignedAt).toLocaleDateString()}</p>
+                    <p className="flex items-center"><CalendarDays className="mr-2 h-4 w-4"/> Asignado el: {new Date(task.assignedAt).toLocaleDateString('es-CL')}</p>
                     {task.status === 'completed' && task.completedAt && (
-                      <p className="flex items-center text-green-600"><CheckCircle2 className="mr-2 h-4 w-4"/> Completado el: {new Date(task.completedAt).toLocaleDateString()}</p>
+                      <p className="flex items-center text-green-600"><CheckCircle2 className="mr-2 h-4 w-4"/> Completado el: {new Date(task.completedAt).toLocaleDateString('es-CL')}</p>
                     )}
                   </div>
                 </li>

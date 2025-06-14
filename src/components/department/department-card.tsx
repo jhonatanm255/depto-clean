@@ -93,7 +93,7 @@ export function DepartmentCard({ department, onEdit, employees }: DepartmentCard
         )}
          {department.lastCleanedAt && (
           <p className="text-xs text-muted-foreground">
-            Última Limpieza: {new Date(department.lastCleanedAt).toLocaleDateString()}
+            Última Limpieza: {new Date(department.lastCleanedAt).toLocaleDateString('es-CL')}
           </p>
         )}
       </CardContent>
