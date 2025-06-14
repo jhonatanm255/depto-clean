@@ -10,7 +10,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { toast } from '@/hooks/use-toast';
 import { ClipboardEdit } from 'lucide-react';
-import { LoadingSpinner } from '@/components/core/loading-spinner'; // Import LoadingSpinner
+import { LoadingSpinner } from '@/components/core/loading-spinner'; 
 
 const assignmentSchema = z.object({
   departmentId: z.string().min(1, "Se requiere el departamento"),
@@ -31,20 +31,17 @@ export function AssignmentForm() {
     (dept) => !tasks.some(task => task.departmentId === dept.id && (task.status === 'pending' || task.status === 'in_progress'))
   );
 
-
   const onSubmit: SubmitHandler<AssignmentFormData> = async (data) => {
     try {
       await assignTask(data.departmentId, data.employeeId);
-      form.reset(); // Reset form on success
+      form.reset(); 
     } catch (error) {
-      // Toast for general error, specific errors handled in assignTask
-      toast({ variant: "destructive", title: "Error Inesperado", description: "No se pudo asignar la tarea."});
-      console.error(error);
-      // form.formState.isSubmitting should reset automatically if assignTask promise rejects
+      // Error toast is handled by DataContext due to re-throw
+      console.error("Submit error in AssignmentForm:", error);
     }
   };
 
-  if (dataLoading) { // Simple loading state for initial data fetch
+  if (dataLoading) { 
     return (
       <Card className="w-full shadow-lg">
         <CardHeader>

@@ -56,10 +56,16 @@ export function LoginForm() {
         <Alert className="mb-4 bg-accent/10 border-accent/30">
           <Info className="h-5 w-5 text-accent" />
           <AlertTitle className="text-accent font-semibold">Credenciales de Prueba</AlertTitle>
-          <AlertDescription className="text-accent/90 text-xs">
-            Admin: <code className="font-mono">admin@cleansweep.com</code> / <code className="font-mono">admin123</code><br />
-            Empleado (general): <code className="font-mono">employee@cleansweep.com</code> / <code className="font-mono">emp123</code>.
-            Los empleados creados por el admin son para asignación de tareas; el login de empleado es compartido.
+          <AlertDescription className="text-accent/90 text-xs space-y-1">
+            <p><strong>Administrador:</strong><br />
+            Usuario: <code className="font-mono text-xs p-0.5 bg-accent/20 rounded">admin@cleansweep.com</code><br />
+            Clave: <code className="font-mono text-xs p-0.5 bg-accent/20 rounded">admin123</code></p>
+            <p><strong>Empleado (General):</strong><br />
+            Usuario: <code className="font-mono text-xs p-0.5 bg-accent/20 rounded">employee@cleansweep.com</code><br />
+            Clave: <code className="font-mono text-xs p-0.5 bg-accent/20 rounded">emp123</code></p>
+            <p className="mt-1">
+              Los perfiles de empleado creados por el administrador son para asignación y seguimiento de tareas. El inicio de sesión para el rol "Empleado" es compartido.
+            </p>
           </AlertDescription>
         </Alert>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -115,9 +121,6 @@ export function LoginForm() {
           </Button>
         </form>
       </CardContent>
-      {/* <CardFooter className="text-center text-sm text-muted-foreground">
-        <p>Usar: admin@cleansweep.com (clave: admin123) o employee@cleansweep.com (clave: emp123).</p>
-      </CardFooter> */}
     </Card>
   );
 }

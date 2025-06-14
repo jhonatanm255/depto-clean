@@ -1,7 +1,7 @@
 
 "use client";
 import { useState } from 'react';
-import type { Employee, CleaningTask, Department } from '@/lib/types';
+import type { Employee } from '@/lib/types';
 import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
 import { EmployeeForm } from '@/components/employee/employee-form';
@@ -9,7 +9,7 @@ import { EmployeeCard } from '@/components/employee/employee-card';
 import { PlusCircle, Users, Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function EmployeesPage() {
   const { employees, tasks, departments, dataLoading, getTasksForEmployee } = useData();
@@ -32,7 +32,7 @@ export default function EmployeesPage() {
     emp.email.toLowerCase().includes(searchTerm.toLowerCase())
   ).sort((a,b) => a.name.localeCompare(b.name));
 
-  if (dataLoading && employees.length === 0) { // Show main loader only if no employees yet
+  if (dataLoading && employees.length === 0) { 
     return (
       <div className="container mx-auto py-8 px-4 md:px-6 flex flex-col items-center justify-center">
         <LoadingSpinner size={32} />
@@ -55,8 +55,15 @@ export default function EmployeesPage() {
         </div>
          <Alert className="mt-4 text-sm bg-blue-50 border-blue-200 text-blue-700">
             <Info className="h-5 w-5 text-blue-500" />
+            <AlertTitle className="font-semibold">Información Importante Sobre el Acceso de Empleados</AlertTitle>
             <AlertDescription>
-              Los empleados agregados aquí son para asignación de tareas. Para iniciar sesión como empleado operativo, usar las credenciales generales: <code className="font-mono text-xs">employee@cleansweep.com</code> / <code className="font-mono text-xs">emp123</code>.
+              Los empleados agregados aquí son para la asignación de tareas de limpieza. Actualmente, todas las empleadas operativas inician sesión en la aplicación con las credenciales generales:
+              <br />
+              Usuario: <code className="font-mono text-xs p-0.5 bg-blue-100 rounded">employee@cleansweep.com</code>
+              <br />
+              Contraseña: <code className="font-mono text-xs p-0.5 bg-blue-100 rounded">emp123</code>
+              <br />
+              Una vez dentro, la aplicación les mostrará las tareas específicas que usted les asigne a su perfil de empleada individual. La creación de cuentas con contraseñas individuales por empleada es una mejora planificada para el futuro.
             </AlertDescription>
           </Alert>
       </header>

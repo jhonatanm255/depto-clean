@@ -5,28 +5,29 @@ export interface User {
   id: string;
   email: string;
   role: UserRole;
-  name?: string; // Optional: Employee name might be stored here
+  name?: string; 
 }
 
 export interface Department {
   id: string;
   name: string;
   accessCode: string;
+  address?: string; // Nuevo campo para la dirección
   status: 'pending' | 'in_progress' | 'completed';
-  assignedTo?: string; // Employee ID (Firestore document ID)
+  assignedTo?: string; 
   lastCleanedAt?: Date; 
 }
 
 export interface Employee {
-  id: string; // Firestore document ID
+  id: string; 
   name: string;
   email: string; 
 }
 
 export interface CleaningTask {
-  id: string; // Firestore document ID
-  departmentId: string; // Firestore document ID
-  employeeId: string; // Firestore document ID
+  id: string; 
+  departmentId: string; 
+  employeeId: string; 
   assignedAt: Date; 
   status: 'pending' | 'in_progress' | 'completed';
   completedAt?: Date; 

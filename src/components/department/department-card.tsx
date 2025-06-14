@@ -4,7 +4,7 @@ import type { Department, Employee } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, KeyRound, User, Edit3, Trash2, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
+import { Building2, KeyRound, User, Edit3, Trash2, CheckCircle2, AlertTriangle, Loader2, MapPin } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,7 +57,12 @@ export function DepartmentCard({ department, onEdit, employees }: DepartmentCard
   };
 
   const handleDelete = async () => {
-    await deleteDepartment(department.id);
+    try {
+        await deleteDepartment(department.id);
+    } catch (error) {
+        // Error toast handled by DataContext
+        console.error("Delete failed in DepartmentCard:", error);
+    }
   };
 
   return (
@@ -73,10 +78,16 @@ export function DepartmentCard({ department, onEdit, employees }: DepartmentCard
             {translateStatus(department.status)}
           </Badge>
         </div>
-        <CardDescription className="flex items-center pt-1">
+        <CardDescription className="flex items-center pt-1 text-sm">
           <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />
           Código de Acceso: {department.accessCode}
         </CardDescription>
+        {department.address && (
+          <CardDescription className="flex items-start pt-1 text-xs text-muted-foreground">
+            <MapPin className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
+            {department.address}
+          </CardDescription>
+        )}
       </CardHeader>
       <CardContent className="flex-grow space-y-2">
         {assignedEmployee && (

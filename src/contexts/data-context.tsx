@@ -42,17 +42,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState<CleaningTask[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
-  // Firestore Listeners
   useEffect(() => {
     setDataLoading(true);
     const unsubDepartments = onSnapshot(collection(db, "departments"), (snapshot) => {
-      const deptsData = snapshot.docs.map(doc => ({ 
-        id: doc.id, 
-        ...doc.data(),
-        lastCleanedAt: doc.data().lastCleanedAt ? (doc.data().lastCleanedAt as Timestamp).toDate() : undefined,
+      const deptsData = snapshot.docs.map(docSnapshot => ({ 
+        id: docSnapshot.id, 
+        ...docSnapshot.data(),
+        lastCleanedAt: docSnapshot.data().lastCleanedAt ? (docSnapshot.data().lastCleanedAt as Timestamp).toDate() : undefined,
       })) as Department[];
       setDepartments(deptsData);
-      setDataLoading(false); // Consider a more robust multi-collection loading state
+      // Consider a more robust multi-collection loading state manager if app grows
+      if (employees.length > 0 && tasks.length > 0) setDataLoading(false);
     }, (error) => {
       console.error("Error fetching departments: ", error);
       toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los departamentos."});
@@ -60,37 +60,54 @@ export function DataProvider({ children }: { children: ReactNode }) {
     });
 
     const unsubEmployees = onSnapshot(collection(db, "employees"), (snapshot) => {
-      const empsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Employee[];
+      const empsData = snapshot.docs.map(docSnapshot => ({ id: docSnapshot.id, ...docSnapshot.data() })) as Employee[];
       setEmployees(empsData);
+      if (departments.length > 0 && tasks.length > 0) setDataLoading(false);
     }, (error) => {
       console.error("Error fetching employees: ", error);
       toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los empleados."});
+      setDataLoading(false);
     });
 
     const unsubTasks = onSnapshot(collection(db, "tasks"), (snapshot) => {
-      const tasksData = snapshot.docs.map(doc => ({ 
-        id: doc.id, 
-        ...doc.data(),
-        assignedAt: (doc.data().assignedAt as Timestamp).toDate(),
-        completedAt: doc.data().completedAt ? (doc.data().completedAt as Timestamp).toDate() : undefined,
+      const tasksData = snapshot.docs.map(docSnapshot => ({ 
+        id: docSnapshot.id, 
+        ...docSnapshot.data(),
+        assignedAt: (docSnapshot.data().assignedAt as Timestamp).toDate(),
+        completedAt: docSnapshot.data().completedAt ? (docSnapshot.data().completedAt as Timestamp).toDate() : undefined,
       })) as CleaningTask[];
       setTasks(tasksData);
+      if (departments.length > 0 && employees.length > 0) setDataLoading(false);
     }, (error) => {
       console.error("Error fetching tasks: ", error);
        toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar las tareas."});
+       setDataLoading(false);
     });
+    
+    // Initial loading complete check
+    Promise.all([
+        getDocs(collection(db, "departments")),
+        getDocs(collection(db, "employees")),
+        getDocs(collection(db, "tasks"))
+    ]).then(() => {
+        setDataLoading(false);
+    }).catch(() => {
+        setDataLoading(false); // also set to false on initial fetch error
+    });
+
 
     return () => {
       unsubDepartments();
       unsubEmployees();
       unsubTasks();
     };
-  }, []);
+  }, []); // department, employees, tasks removed from deps to avoid re-subscribing
 
   const addDepartment = async (deptData: Omit<Department, 'id' | 'status' | 'lastCleanedAt' | 'assignedTo'>) => {
     try {
       await addDoc(collection(db, "departments"), {
         ...deptData,
+        address: deptData.address || '', // Ensure address is at least an empty string
         status: 'pending',
         assignedTo: null,
         lastCleanedAt: null,
@@ -99,27 +116,29 @@ export function DataProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Error adding department: ", error);
       toast({ variant: "destructive", title: "Error", description: "No se pudo agregar el departamento."});
+      throw error; // Re-throw error for react-hook-form
     }
   };
 
   const updateDepartment = async (updatedDept: Department) => {
     try {
       const deptRef = doc(db, "departments", updatedDept.id);
-      const { id, ...dataToUpdate } = updatedDept; // Exclude id from data
+      const { id, ...dataToUpdate } = updatedDept; 
       await updateDoc(deptRef, {
         ...dataToUpdate,
+        address: dataToUpdate.address || '',
         lastCleanedAt: dataToUpdate.lastCleanedAt ? Timestamp.fromDate(new Date(dataToUpdate.lastCleanedAt)) : null,
       });
       toast({ title: "Departamento Actualizado", description: `"${updatedDept.name}" ha sido actualizado.` });
     } catch (error) {
       console.error("Error updating department: ", error);
       toast({ variant: "destructive", title: "Error", description: "No se pudo actualizar el departamento."});
+      throw error; // Re-throw error
     }
   };
   
   const deleteDepartment = async (id: string) => {
     try {
-      // Also delete associated tasks
       const q = query(collection(db, "tasks"), where("departmentId", "==", id));
       const querySnapshot = await getDocs(q);
       const batch = writeBatch(db);
@@ -132,6 +151,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Error deleting department: ", error);
       toast({ variant: "destructive", title: "Error", description: "No se pudo eliminar el departamento."});
+      throw error; // Re-throw error
     }
   };
 
@@ -142,6 +162,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Error adding employee: ", error);
       toast({ variant: "destructive", title: "Error", description: "No se pudo agregar el empleado."});
+      throw error; // Re-throw error
     }
   };
 
@@ -149,20 +170,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const department = departments.find(d => d.id === departmentId);
     if (!department) {
       toast({ variant: "destructive", title: "Error", description: "Departamento no encontrado." });
-      return;
+      throw new Error("Departamento no encontrado");
     }
 
     try {
       const batch = writeBatch(db);
-
-      // Check if there's an existing pending/in_progress task for this department and delete it.
       const existingTaskQuery = query(
         collection(db, "tasks"), 
         where("departmentId", "==", departmentId), 
         where("status", "in", ["pending", "in_progress"])
       );
       const existingTaskSnapshot = await getDocs(existingTaskQuery);
-      existingTaskSnapshot.forEach(doc => batch.delete(doc.ref));
+      existingTaskSnapshot.forEach(docSnap => batch.delete(docSnap.ref));
       
       const newTaskData = {
         departmentId,
@@ -171,14 +190,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
         status: 'pending' as 'pending' | 'in_progress' | 'completed',
         completedAt: null,
       };
-      const taskRef = doc(collection(db, "tasks")); // Auto-generate ID for new task
+      const taskRef = doc(collection(db, "tasks")); 
       batch.set(taskRef, newTaskData);
 
       const deptRef = doc(db, "departments", departmentId);
       batch.update(deptRef, { 
         assignedTo: employeeId, 
         status: 'pending',
-        lastCleanedAt: null // Reset lastCleanedAt as it's a new assignment
+        lastCleanedAt: null 
       });
       
       await batch.commit();
@@ -186,6 +205,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Error assigning task: ", error);
       toast({ variant: "destructive", title: "Error", description: "No se pudo asignar la tarea." });
+      throw error; // Re-throw error
     }
   };
 
@@ -193,21 +213,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const task = tasks.find(t => t.id === taskId);
     if (!task) {
       toast({ variant: "destructive", title: "Error", description: "Tarea no encontrada." });
-      return;
+      throw new Error("Tarea no encontrada");
     }
 
     try {
       const batch = writeBatch(db);
       const taskRef = doc(db, "tasks", taskId);
-      const completedAt = status === 'completed' ? Timestamp.now() : task.completedAt ? Timestamp.fromDate(new Date(task.completedAt)) : null;
+      const newCompletedAtTimestamp = status === 'completed' ? Timestamp.now() : task.completedAt ? Timestamp.fromDate(new Date(task.completedAt)) : null;
       
-      batch.update(taskRef, { status, completedAt });
+      batch.update(taskRef, { status, completedAt: newCompletedAtTimestamp });
 
       const deptRef = doc(db, "departments", task.departmentId);
       batch.update(deptRef, { 
         status, 
-        lastCleanedAt: completedAt, // Keep original completedAt if not completing now
-        assignedTo: task.employeeId // Ensure assignedTo remains correct
+        lastCleanedAt: newCompletedAtTimestamp,
+        assignedTo: task.employeeId 
       });
 
       await batch.commit();
@@ -215,6 +235,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Error updating task status: ", error);
       toast({ variant: "destructive", title: "Error", description: "No se pudo actualizar el estado de la tarea."});
+      throw error; // Re-throw error
     }
   };
 
@@ -241,8 +262,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     dataLoading
   }), [departments, employees, tasks, dataLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // IMPORTANT: For a production app, you MUST configure Firestore Security Rules
-  // to protect your data from unauthorized access.
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

@@ -44,18 +44,18 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
     try {
       if (employee) {
         // await updateEmployee({ ...employee, ...data }); // Implement in future
+        // For now, editing is disabled.
       } else {
         await addEmployee(data);
       }
       onClose(); 
     } catch (error) {
-      console.error(error);
-      // Toast handled by DataContext
+      // Error toast is handled by DataContext
+      console.error("Submit error in EmployeeForm:", error);
     }
   };
   
   const handleCloseDialog = () => {
-    // form.reset is handled by useEffect
     onClose();
   };
 
@@ -76,7 +76,7 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
                 <FormItem>
                   <FormLabel>Nombre Completo</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ej: Ana Pérez" {...field} disabled={!!employee} />
+                    <Input placeholder="Ej: Ana Pérez" {...field} disabled={!!employee || form.formState.isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -89,7 +89,7 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
                 <FormItem>
                   <FormLabel>Correo Electrónico</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ej: ana.perez@ejemplo.com" {...field} disabled={!!employee} />
+                    <Input placeholder="Ej: ana.perez@ejemplo.com" {...field} disabled={!!employee || form.formState.isSubmitting}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -97,7 +97,7 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
             />
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="outline" onClick={handleCloseDialog}>Cancelar</Button>
+                <Button type="button" variant="outline" onClick={handleCloseDialog} disabled={form.formState.isSubmitting}>Cancelar</Button>
               </DialogClose>
               <Button type="submit" disabled={form.formState.isSubmitting || !!employee}>
                  {form.formState.isSubmitting && <LoadingSpinner size={16} className="mr-2" />}

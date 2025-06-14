@@ -5,6 +5,7 @@ import type { Department } from '@/lib/types';
 import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea'; // Import Textarea
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,6 +16,7 @@ import { LoadingSpinner } from '@/components/core/loading-spinner';
 const departmentSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
   accessCode: z.string().min(1, "Se requiere el código de acceso"),
+  address: z.string().optional(), // Dirección es opcional
 });
 
 type DepartmentFormData = z.infer<typeof departmentSchema>;
@@ -30,19 +32,20 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
   
   const form = useForm<DepartmentFormData>({
     resolver: zodResolver(departmentSchema),
-    defaultValues: department ? { name: department.name, accessCode: department.accessCode } : { name: '', accessCode: '' },
+    defaultValues: department 
+      ? { name: department.name, accessCode: department.accessCode, address: department.address || '' } 
+      : { name: '', accessCode: '', address: '' },
   });
 
   React.useEffect(() => {
     if (isOpen) { 
       if (department) {
-        form.reset({ name: department.name, accessCode: department.accessCode });
+        form.reset({ name: department.name, accessCode: department.accessCode, address: department.address || '' });
       } else {
-        form.reset({ name: '', accessCode: '' });
+        form.reset({ name: '', accessCode: '', address: '' });
       }
     }
   }, [department, form, isOpen]);
-
 
   const onSubmit: SubmitHandler<DepartmentFormData> = async (data) => {
     try {
@@ -50,25 +53,23 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
         await updateDepartment({ 
             ...department, 
             ...data,
+            address: data.address || undefined, // Ensure undefined if empty
             lastCleanedAt: department.lastCleanedAt ? new Date(department.lastCleanedAt) : undefined,
         });
       } else {
         await addDepartment(data);
       }
-      onClose(); // Close dialog on success
+      onClose(); 
     } catch (error) {
-      console.error(error);
-      // Toast for error is handled by DataContext
-      // The form.formState.isSubmitting should reset automatically by RHF if the promise rejects.
+      // Error toast is handled by DataContext due to re-throw
+      // react-hook-form's isSubmitting state will automatically reset on promise rejection
+      console.error("Submit error in DepartmentForm:", error);
     }
-    // form.formState.isSubmitting is managed by react-hook-form
   };
 
   const handleCloseDialog = () => {
-    // form.reset is handled by useEffect when isOpen changes or department changes
     onClose();
   };
-
 
   if (!isOpen) return null;
 
@@ -101,6 +102,19 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
                   <FormLabel>Código de Acceso</FormLabel>
                   <FormControl>
                     <Input placeholder="Ej: 1234#" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dirección (Opcional)</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Ej: Av. Siempre Viva 742, Springfield" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
