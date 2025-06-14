@@ -1,0 +1,73 @@
+
+"use client";
+import { useAuth } from '@/contexts/auth-context';
+import { useData } from '@/contexts/data-context';
+import { TaskCard } from '@/components/task/task-card';
+import { Briefcase, CheckSquare } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+export default function EmployeeTasksPage() {
+  const { currentUser } = useAuth();
+  const { getTasksForEmployee, getDepartmentById } = useData();
+
+  if (!currentUser) {
+    return <p className="text-center mt-10">Loading user data...</p>;
+  }
+
+  const tasks = getTasksForEmployee(currentUser.id)
+    .sort((a,b) => new Date(b.assignedAt).getTime() - new Date(a.assignedAt).getTime()); // Sort by most recent
+  
+  const pendingTasks = tasks.filter(task => task.status === 'pending' || task.status === 'in_progress');
+  const completedTasks = tasks.filter(task => task.status === 'completed');
+
+  return (
+    <div className="container mx-auto py-8 px-4 md:px-6">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold font-headline text-foreground flex items-center">
+          <Briefcase className="mr-3 h-8 w-8 text-primary" />
+          My Cleaning Tasks
+        </h1>
+        <p className="text-muted-foreground mt-1">View and manage your assigned cleaning tasks.</p>
+      </header>
+
+      <Tabs defaultValue="pending" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 md:w-[400px] mb-6">
+          <TabsTrigger value="pending">Pending ({pendingTasks.length})</TabsTrigger>
+          <TabsTrigger value="completed">Completed ({completedTasks.length})</TabsTrigger>
+        </TabsList>
+        <TabsContent value="pending">
+          {pendingTasks.length === 0 ? (
+            <div className="text-center py-10 border rounded-lg bg-card shadow">
+              <CheckSquare className="mx-auto h-16 w-16 text-green-500" />
+              <p className="mt-4 text-xl text-muted-foreground">All caught up!</p>
+              <p className="text-sm text-muted-foreground">You have no pending tasks.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {pendingTasks.map((task) => {
+                const department = getDepartmentById(task.departmentId);
+                return <TaskCard key={task.id} task={task} department={department} />;
+              })}
+            </div>
+          )}
+        </TabsContent>
+        <TabsContent value="completed">
+           {completedTasks.length === 0 ? (
+            <div className="text-center py-10 border rounded-lg bg-card shadow">
+              <Briefcase className="mx-auto h-16 w-16 text-muted-foreground" />
+              <p className="mt-4 text-xl text-muted-foreground">No tasks completed yet.</p>
+              <p className="text-sm text-muted-foreground">Completed tasks will appear here.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {completedTasks.map((task) => {
+                const department = getDepartmentById(task.departmentId);
+                return <TaskCard key={task.id} task={task} department={department} />;
+              })}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
