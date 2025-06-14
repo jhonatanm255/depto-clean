@@ -23,17 +23,16 @@ export default function RootRedirectPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <LoadingSpinner size={48} />
-        <p className="ml-2 text-muted-foreground">Inicializando estado de autenticación...</p>
+        <p className="ml-2 text-muted-foreground">Inicializando estado de autenticación (Root)...</p>
       </div>
     );
   }
 
-  // If not loading, and useEffect hasn't redirected yet, show a minimal placeholder.
-  // This indicates the redirect is being processed.
+  // If not authLoading, useEffect is about to redirect (or has already started). Show a placeholder.
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
         <LoadingSpinner size={48} />
-        <p className="ml-2 text-muted-foreground">Procesando redirección...</p>
+        <p className="ml-2 text-muted-foreground">Procesando redirección (Root)...</p>
       </div>
   );
 }

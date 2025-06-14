@@ -1,26 +1,31 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+// Returns: [value, setValue, isInitializedFromStorage]
 function useLocalStorage<T>(
   key: string,
   initialValue: T
-): [T, (value: T | ((val: T) => T)) => void, boolean] { // Returns: value, setValue, isInitialized
-  const [isInitialized, setIsInitialized] = useState(false); // Start as false
+): [T, (value: T | ((val: T) => T)) => void, boolean] {
+  const [isInitializedFromStorage, setIsInitializedFromStorage] = useState(false);
   const [storedValue, setStoredValue] = useState<T>(initialValue);
 
   useEffect(() => {
     // This effect runs only on the client, after the initial render.
+    let valueFromStorage: T = initialValue;
     try {
       const item = window.localStorage.getItem(key);
       if (item) {
-        setStoredValue(JSON.parse(item));
+        valueFromStorage = JSON.parse(item);
       }
     } catch (error) {
       console.error("Error reading localStorage key “" + key + "”:", error);
+      // If error, valueFromStorage remains initialValue
     } finally {
-      setIsInitialized(true); // Signal that loading from localStorage is complete.
+      setStoredValue(valueFromStorage); // Set value found or initial
+      setIsInitializedFromStorage(true); // Signal that loading from localStorage is complete.
     }
-  }, [key]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]); // Only re-run if key changes (which it shouldn't in this app's context)
 
   const setValue = useCallback((value: T | ((val: T) => T)) => {
     try {
@@ -34,7 +39,7 @@ function useLocalStorage<T>(
     }
   }, [key, storedValue]);
 
-  return [storedValue, setValue, isInitialized];
+  return [storedValue, setValue, isInitializedFromStorage];
 }
 
 export default useLocalStorage;

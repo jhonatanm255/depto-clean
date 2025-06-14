@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useEffect, useMemo, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { LoadingSpinner } from '@/components/core/loading-spinner';
 
 interface AuthContextType {
   currentUser: User | null;

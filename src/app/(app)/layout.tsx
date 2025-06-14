@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { AppSidebar } from '@/components/core/app-sidebar';
 import { HeaderMain } from '@/components/core/header-main';
-import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 
@@ -21,12 +21,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       if (!currentUser && pathname !== '/login') { // /login page uses a different layout
         router.replace('/login');
       }
-      // This scenario (logged-in user on /login) should ideally be handled
-      // by /login page itself, or the RootRedirectPage redirecting to '/'
-      // which then lands here.
-      // else if (currentUser && pathname === '/login') {
-      //   router.replace('/'); 
-      // }
     }
   }, [currentUser, authLoading, router, pathname]);
 
@@ -43,7 +37,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   // Case 2: Auth is done, no user, and current path is NOT the login page.
   // This means a redirect to /login is imminent via the useEffect.
   // Show a loader to prevent flashing the app shell.
-  if (!currentUser && pathname !== '/login') { // Ensure we are not on /login itself
+  if (!currentUser && pathname !== '/login') { 
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <LoadingSpinner size={48} />
@@ -52,20 +46,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     );
   }
   
-  // Case 3: Logged in user somehow lands on /login (which shouldn't use this layout).
-  // This state should ideally be prevented by other redirects.
-  // If it happens, RootRedirectPage should have sent them to '/' (here).
-  // So this state is less likely to be hit with current logic.
-  // if (currentUser && pathname === '/login') {
-  //    return (
-  //     <div className="flex min-h-screen items-center justify-center bg-background">
-  //       <LoadingSpinner size={48} />
-  //       <p className="ml-2 text-muted-foreground">Redirigiendo al panel principal (AppLayout)...</p>
-  //     </div>
-  //   );
-  // }
-
   // If user is authenticated and on an app page, render the main app structure.
+  // Or if we are on the /login page (which has its own layout, so this part of AppLayout won't be used for /login).
   return (
     <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
       <SidebarProvider>
