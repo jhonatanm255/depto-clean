@@ -1,17 +1,18 @@
 
 "use client";
 import { useState } from 'react';
-import type { Employee } from '@/lib/types';
+import type { Employee, CleaningTask, Department } from '@/lib/types';
 import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
 import { EmployeeForm } from '@/components/employee/employee-form';
 import { EmployeeCard } from '@/components/employee/employee-card';
-import { PlusCircle, Users } from 'lucide-react';
+import { PlusCircle, Users, Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function EmployeesPage() {
-  const { employees, dataLoading } = useData();
+  const { employees, tasks, departments, dataLoading, getTasksForEmployee } = useData();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,7 +32,7 @@ export default function EmployeesPage() {
     emp.email.toLowerCase().includes(searchTerm.toLowerCase())
   ).sort((a,b) => a.name.localeCompare(b.name));
 
-  if (dataLoading) {
+  if (dataLoading && employees.length === 0) { // Show main loader only if no employees yet
     return (
       <div className="container mx-auto py-8 px-4 md:px-6 flex flex-col items-center justify-center">
         <LoadingSpinner size={32} />
@@ -52,6 +53,12 @@ export default function EmployeesPage() {
             <PlusCircle className="mr-2 h-5 w-5" /> Agregar Nuevo Empleado
           </Button>
         </div>
+         <Alert className="mt-4 text-sm bg-blue-50 border-blue-200 text-blue-700">
+            <Info className="h-5 w-5 text-blue-500" />
+            <AlertDescription>
+              Los empleados agregados aquí son para asignación de tareas. Para iniciar sesión como empleado operativo, usar las credenciales generales: <code className="font-mono text-xs">employee@cleansweep.com</code> / <code className="font-mono text-xs">emp123</code>.
+            </AlertDescription>
+          </Alert>
       </header>
 
       <div className="mb-6 p-4 border rounded-lg bg-card shadow">
@@ -61,6 +68,12 @@ export default function EmployeesPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
+
+      {dataLoading && employees.length > 0 && (
+         <div className="flex items-center justify-center p-4 text-muted-foreground">
+            <LoadingSpinner size={20} className="mr-2"/> Actualizando lista...
+        </div>
+      )}
 
       {employees.length === 0 && !dataLoading ? (
         <div className="text-center py-10">
@@ -74,9 +87,18 @@ export default function EmployeesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredEmployees.map((emp) => (
-            <EmployeeCard key={emp.id} employee={emp} onEdit={() => handleOpenForm(emp)} />
-          ))}
+          {filteredEmployees.map((emp) => {
+            const employeeTasks = getTasksForEmployee(emp.id);
+            return (
+              <EmployeeCard 
+                key={emp.id} 
+                employee={emp} 
+                onEdit={() => handleOpenForm(emp)} 
+                tasks={employeeTasks}
+                departments={departments}
+              />
+            );
+          })}
         </div>
       )}
       <EmployeeForm isOpen={isFormOpen} onClose={handleCloseForm} employee={editingEmployee} />

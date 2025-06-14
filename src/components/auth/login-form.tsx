@@ -8,9 +8,10 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useState, type FormEvent } from 'react';
-import { Building, UserCog, Users } from 'lucide-react';
+import { Building, UserCog, Users, Info } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -52,6 +53,15 @@ export function LoginForm() {
         <CardDescription>Inicia sesión para gestionar tus tareas de limpieza.</CardDescription>
       </CardHeader>
       <CardContent>
+        <Alert className="mb-4 bg-accent/10 border-accent/30">
+          <Info className="h-5 w-5 text-accent" />
+          <AlertTitle className="text-accent font-semibold">Credenciales de Prueba</AlertTitle>
+          <AlertDescription className="text-accent/90 text-xs">
+            Admin: <code className="font-mono">admin@cleansweep.com</code> / <code className="font-mono">admin123</code><br />
+            Empleado (general): <code className="font-mono">employee@cleansweep.com</code> / <code className="font-mono">emp123</code>.
+            Los empleados creados por el admin son para asignación de tareas; el login de empleado es compartido.
+          </AlertDescription>
+        </Alert>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="email">Correo Electrónico</Label>
@@ -99,14 +109,15 @@ export function LoginForm() {
               </div>
             </RadioGroup>
           </div>
-          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={loading}>
+            {loading ? <LoadingSpinner className="mr-2" size={16} /> : null}
             Iniciar Sesión
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="text-center text-sm text-muted-foreground">
+      {/* <CardFooter className="text-center text-sm text-muted-foreground">
         <p>Usar: admin@cleansweep.com (clave: admin123) o employee@cleansweep.com (clave: emp123).</p>
-      </CardFooter>
+      </CardFooter> */}
     </Card>
   );
 }

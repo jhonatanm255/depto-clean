@@ -10,7 +10,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-// Toast is handled in DataContext
+import { LoadingSpinner } from '@/components/core/loading-spinner';
 
 const departmentSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
@@ -47,7 +47,6 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
   const onSubmit: SubmitHandler<DepartmentFormData> = async (data) => {
     try {
       if (department) {
-        // Retain existing status, assignedTo, and lastCleanedAt if not explicitly changed by other logic
         await updateDepartment({ 
             ...department, 
             ...data,
@@ -56,15 +55,17 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
       } else {
         await addDepartment(data);
       }
-      onClose();
+      onClose(); // Close dialog on success
     } catch (error) {
       console.error(error);
-      // Toast handled by DataContext
+      // Toast for error is handled by DataContext
+      // The form.formState.isSubmitting should reset automatically by RHF if the promise rejects.
     }
+    // form.formState.isSubmitting is managed by react-hook-form
   };
 
   const handleCloseDialog = () => {
-    form.reset({ name: department ? department.name : '', accessCode: department ? department.accessCode : '' });
+    // form.reset is handled by useEffect when isOpen changes or department changes
     onClose();
   };
 
@@ -110,6 +111,7 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
                 <Button type="button" variant="outline" onClick={handleCloseDialog}>Cancelar</Button>
               </DialogClose>
               <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting && <LoadingSpinner size={16} className="mr-2" />}
                 {form.formState.isSubmitting ? (department ? 'Guardando...' : 'Agregando...') : (department ? 'Guardar Cambios' : 'Agregar Departamento')}
               </Button>
             </DialogFooter>

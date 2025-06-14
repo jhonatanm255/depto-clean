@@ -10,6 +10,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { toast } from '@/hooks/use-toast';
 import { ClipboardEdit } from 'lucide-react';
+import { LoadingSpinner } from '@/components/core/loading-spinner'; // Import LoadingSpinner
 
 const assignmentSchema = z.object({
   departmentId: z.string().min(1, "Se requiere el departamento"),
@@ -34,16 +35,16 @@ export function AssignmentForm() {
   const onSubmit: SubmitHandler<AssignmentFormData> = async (data) => {
     try {
       await assignTask(data.departmentId, data.employeeId);
-      // Toast is handled within assignTask
-      form.reset();
+      form.reset(); // Reset form on success
     } catch (error) {
       // Toast for general error, specific errors handled in assignTask
       toast({ variant: "destructive", title: "Error Inesperado", description: "No se pudo asignar la tarea."});
       console.error(error);
+      // form.formState.isSubmitting should reset automatically if assignTask promise rejects
     }
   };
 
-  if (dataLoading) {
+  if (dataLoading) { // Simple loading state for initial data fetch
     return (
       <Card className="w-full shadow-lg">
         <CardHeader>
@@ -51,8 +52,9 @@ export function AssignmentForm() {
             <ClipboardEdit className="mr-2 h-6 w-6 text-primary" /> Asignar Nueva Tarea
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p>Cargando datos...</p>
+        <CardContent className="flex items-center justify-center p-6">
+          <LoadingSpinner size={24} />
+          <p className="ml-2 text-muted-foreground">Cargando datos...</p>
         </CardContent>
       </Card>
     );
@@ -75,7 +77,11 @@ export function AssignmentForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Departamento</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || ""} disabled={availableDepartments.length === 0 && employees.length === 0}>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value || ""} 
+                    disabled={availableDepartments.length === 0 || employees.length === 0 || form.formState.isSubmitting}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecciona un departamento" />
@@ -106,7 +112,11 @@ export function AssignmentForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Empleado</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || ""} disabled={employees.length === 0}>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value || ""} 
+                    disabled={employees.length === 0 || form.formState.isSubmitting}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecciona un empleado" />
@@ -131,7 +141,12 @@ export function AssignmentForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={availableDepartments.length === 0 || employees.length === 0 || form.formState.isSubmitting}>
+            <Button 
+              type="submit" 
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" 
+              disabled={availableDepartments.length === 0 || employees.length === 0 || form.formState.isSubmitting}
+            >
+              {form.formState.isSubmitting && <LoadingSpinner size={16} className="mr-2" />}
               {form.formState.isSubmitting ? "Asignando..." : "Asignar Tarea"}
             </Button>
           </form>
