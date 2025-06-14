@@ -19,6 +19,7 @@ import {
   Briefcase,
   LogOut,
   ShieldCheck,
+  Users, // Added Users icon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +34,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, roles: ['admin', 'employee'] },
   { href: '/admin/departments', label: 'Departamentos', icon: Building2, roles: ['admin'] },
+  { href: '/admin/employees', label: 'Gestionar Empleados', icon: Users, roles: ['admin'] }, // New item
   { href: '/admin/assignments', label: 'Asignar Tareas', icon: ClipboardEdit, roles: ['admin'] },
   { href: '/employee/tasks', label: 'Mis Tareas', icon: Briefcase, roles: ['employee'] },
 ];

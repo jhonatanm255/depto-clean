@@ -17,6 +17,9 @@ export default function AssignmentsPage() {
           <ClipboardEdit className="mr-3 h-8 w-8 text-primary" />
           Asignar y Ver Tareas
         </h1>
+         <p className="text-muted-foreground mt-1">
+            Aquí puedes asignar departamentos a empleados para su limpieza y ver el historial de asignaciones.
+        </p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">

@@ -33,7 +33,10 @@ export default function DepartmentsPage() {
     .filter(dept => dept.name.toLowerCase().includes(searchTerm.toLowerCase()))
     .filter(dept => {
         if (statusFilter === 'all') return true;
-        if (statusFilter === 'pending_assignment' && dept.status === 'pending' && !dept.assignedTo) return true;
+        // Adjusted filter for "Pendiente (Sin Asignar)" to check if it's pending AND not in any active task
+        if (statusFilter === 'pending_assignment') {
+            return dept.status === 'pending' && !dept.assignedTo; // Directly use assignedTo from department
+        }
         return dept.status === statusFilter;
     })
     .sort((a, b) => {
@@ -57,6 +60,9 @@ export default function DepartmentsPage() {
             <PlusCircle className="mr-2 h-5 w-5" /> Agregar Nuevo Departamento
           </Button>
         </div>
+         <p className="text-muted-foreground mt-1">
+            Crea, visualiza y organiza los departamentos o áreas que necesitan limpieza.
+        </p>
       </header>
 
       <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg bg-card shadow">

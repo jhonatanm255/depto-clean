@@ -11,6 +11,7 @@ interface DataContextType {
   updateDepartment: (dept: Department) => void;
   deleteDepartment: (id: string) => void;
   employees: Employee[];
+  addEmployee: (emp: Omit<Employee, 'id'>) => void;
   tasks: CleaningTask[];
   assignTask: (departmentId: string, employeeId: string) => void;
   updateTaskStatus: (taskId: string, status: 'pending' | 'in_progress' | 'completed') => void;
@@ -20,31 +21,16 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-const initialDepartments: Department[] = [
-  { id: 'dept1', name: 'Apartamento 101', accessCode: '1234', status: 'pending', assignedTo: 'emp001' },
-  { id: 'dept2', name: 'Oficina 200', accessCode: '5678', status: 'completed', lastCleanedAt: new Date(Date.now() - 86400000 * 2).toISOString(), assignedTo: 'emp2' },
-  { id: 'dept3', name: 'Condominio 3B', accessCode: '9012', status: 'pending' },
-  { id: 'dept4', name: 'Local Comercial 5', accessCode: '4321', status: 'in_progress', assignedTo: 'emp001' },
-];
-
-const initialEmployees: Employee[] = [
-  { id: 'emp1', name: 'Ana Silva', email: 'ana.silva@example.com' },
-  { id: 'emp2', name: 'Carlos Ponce', email: 'carlos.ponce@example.com' },
-  { id: 'emp001', name: 'Personal Limpieza', email: 'employee@cleansweep.com' } 
-];
-
-const initialTasks: CleaningTask[] = [
-    { id: 'task1', departmentId: 'dept1', employeeId: 'emp001', assignedAt: new Date(Date.now() - 86400000).toISOString(), status: 'pending' },
-    { id: 'task2', departmentId: 'dept4', employeeId: 'emp001', assignedAt: new Date().toISOString(), status: 'in_progress' },
-    { id: 'task3', departmentId: 'dept2', employeeId: 'emp2', assignedAt: new Date(Date.now() - 86400000 * 3).toISOString(), status: 'completed', completedAt: new Date(Date.now() - 86400000 * 2).toISOString() },
-];
+const initialDepartments: Department[] = [];
+const initialEmployeesData: Employee[] = []; // Renamed to avoid conflict, will be empty
+const initialTasks: CleaningTask[] = [];
 
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [departments, setDepartments, departmentsLoading] = useLocalStorage<Department[]>('departments_cleansweep', initialDepartments);
+  const [employees, setEmployees, employeesLoading] = useLocalStorage<Employee[]>('employees_cleansweep', initialEmployeesData);
   const [tasks, setTasks, tasksLoading] = useLocalStorage<CleaningTask[]>('tasks_cleansweep', initialTasks);
-  const employees = initialEmployees; 
-
+  
   const addDepartment = (deptData: Omit<Department, 'id' | 'status'>) => {
     const newDepartment: Department = {
       ...deptData,
@@ -58,8 +44,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setDepartments((prev) =>
       prev.map((dept) => (dept.id === updatedDept.id ? updatedDept : dept))
     );
-    const task = tasks.find(t => t.departmentId === updatedDept.id && t.employeeId === updatedDept.assignedTo);
-    if (task && task.status !== updatedDept.status) {
+    const task = tasks.find(t => t.departmentId === updatedDept.id && t.employeeId === updatedDept.assignedTo && (t.status === 'pending' || t.status === 'in_progress'));
+    if (task && task.status !== updatedDept.status && (updatedDept.status === 'pending' || updatedDept.status === 'in_progress' || updatedDept.status === 'completed')) {
         updateTaskStatus(task.id, updatedDept.status);
     }
   };
@@ -69,11 +55,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setTasks((prev) => prev.filter((task) => task.departmentId !== id));
   };
 
+  const addEmployee = (empData: Omit<Employee, 'id'>) => {
+    const newEmployee: Employee = {
+      ...empData,
+      id: `emp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, // Added randomness to ID
+    };
+    setEmployees((prev) => [...prev, newEmployee]);
+  };
+
   const assignTask = (departmentId: string, employeeId: string) => {
     const department = departments.find(d => d.id === departmentId);
     if (!department) return;
 
-    const otherTasks = tasks.filter(t => t.departmentId !== departmentId || (t.status !== 'pending' && t.status !== 'in_progress'));
+    // Remove any existing pending/in_progress task for this department before assigning a new one
+    const otherTasks = tasks.filter(t => !(t.departmentId === departmentId && (t.status === 'pending' || t.status === 'in_progress')));
 
     const newTask: CleaningTask = {
       id: `task-${Date.now()}`,
@@ -83,6 +78,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       status: 'pending',
     };
     setTasks([...otherTasks, newTask]);
+    // Update department status and assignedTo
     updateDepartment({ ...department, assignedTo: employeeId, status: 'pending', lastCleanedAt: undefined });
   };
 
@@ -95,7 +91,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           
           setDepartments(prevDepts => prevDepts.map(d => 
             d.id === task.departmentId 
-            ? {...d, status, lastCleanedAt: completedAt || d.lastCleanedAt } 
+            ? {...d, status, lastCleanedAt: completedAt || d.lastCleanedAt, assignedTo: task.employeeId } 
             : d
           ));
           return updatedTask;
@@ -120,13 +116,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
     addDepartment, 
     updateDepartment, 
     deleteDepartment,
-    employees,
+    employees: employeesLoading ? initialEmployeesData : employees,
+    addEmployee,
     tasks: tasksLoading ? initialTasks : tasks, 
     assignTask, 
     updateTaskStatus, 
     getTasksForEmployee, 
     getDepartmentById
-  }), [departments, employees, tasks, departmentsLoading, tasksLoading]);
+  }), [departments, employees, tasks, departmentsLoading, employeesLoading, tasksLoading]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }
