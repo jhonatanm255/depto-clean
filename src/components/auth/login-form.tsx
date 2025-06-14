@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-// Removido RadioGroup ya que el rol se infiere del email o es empleado por defecto
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useState, type FormEvent } from 'react';
 import { Building, UserCog, Users, Info, KeyRound, ShieldAlert } from 'lucide-react';
@@ -18,18 +17,14 @@ const ADMIN_EMAIL_CHECK = "admin@cleansweep.com";
 export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  // const [role, setRole] = useState<UserRole>('employee'); // Rol se infiere o es employee
   const { login, loading } = useAuth();
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    // El rol es implícito. Si el email es de admin, es admin. Si no, se intenta como empleado.
-    // La función login en AuthContext ahora toma (email, contraseña_placeholder, rol_placeholder, contraseña_real)
-    // Pasamos roles placeholder ya que no se usan directamente en la lógica de login de AuthContext
     await login(email, password, 'employee', password); 
   };
 
-  if (loading && !email) { // Solo mostrar spinner global si no se ha interactuado
+  if (loading && !email) { 
     return (
       <div className="flex flex-col items-center justify-center p-8">
         <LoadingSpinner size={32}/>
@@ -54,10 +49,11 @@ export function LoginForm() {
             <AlertDescription className="text-blue-700 text-xs space-y-1">
               <p><strong>Administrador:</strong><br />
               Usuario: <code className="font-mono text-xs p-0.5 bg-blue-100 rounded">{ADMIN_EMAIL_CHECK}</code><br />
-              Clave: <code className="font-mono text-xs p-0.5 bg-blue-100 rounded">admin123</code></p>
+              Clave: <code className="font-mono text-xs p-0.5 bg-blue-100 rounded">admin123</code><br />
+              <strong className="text-red-600">Importante:</strong> Asegúrate de que este usuario administrador exista en tu panel de <code className="font-mono text-xs p-0.5 bg-blue-100 rounded">Firebase Authentication</code> con esta contraseña. Si no existe, créalo manualmente en la consola de Firebase.
+              </p>
               <p><strong>Empleados/as:</strong><br />
-              Utiliza el correo electrónico y la contraseña que te asignó el administrador.
-              Si eres una nueva empleada y el administrador acaba de crear tu cuenta, usa esas credenciales.
+              Utiliza el correo electrónico y la contraseña que te asignó el administrador al crear tu perfil en el sistema.
               </p>
             </AlertDescription>
         </Alert>
@@ -87,7 +83,6 @@ export function LoginForm() {
               aria-label="Contraseña"
             />
           </div>
-          {/* Removido RadioGroup para selección de rol */}
           <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={loading}>
             {loading ? <LoadingSpinner className="mr-2" size={16} /> : null}
             Iniciar Sesión
