@@ -3,9 +3,11 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { LoadingSpinner } from '@/components/core/loading-spinner';
 
-export default function RootPage() {
+// This page is now a pure redirector based on auth state.
+// It should not display any significant UI itself.
+// The root loading.tsx or (app)/layout.tsx will handle visual loading states.
+export default function RootRedirectPage() {
   const { currentUser, loading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -13,20 +15,17 @@ export default function RootPage() {
     // Wait until auth state is resolved
     if (!authLoading) {
       if (currentUser) {
-        // User is logged in, redirect to the main app dashboard handled by (app)/page.tsx
-        router.replace('/'); 
+        // User is logged in, redirect to the main app dashboard.
+        // This relies on (app)/page.tsx handling the '/' route within the app layout.
+        router.replace('/');
       } else {
-        // User is not logged in, redirect to login
+        // User is not logged in, redirect to login.
         router.replace('/login');
       }
     }
   }, [authLoading, currentUser, router]);
 
-  // Show a spinner while determining auth state and redirecting
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <LoadingSpinner size={48} />
-      <p className="ml-2 text-muted-foreground">Inicializando aplicación...</p>
-    </div>
-  );
+  // Return null. If redirects are slow or authLoading is stuck true,
+  // Next.js will show src/app/loading.tsx or the loader in (app)/layout.tsx.
+  return null;
 }
