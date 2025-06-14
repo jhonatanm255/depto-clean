@@ -10,23 +10,23 @@ export default function RootPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // Wait until auth state is resolved
     if (!authLoading) {
       if (currentUser) {
-        // Si hay usuario y ya no está cargando, redirige a la página principal de la app (dashboard)
-        // Esto es un fallback, ya que (app)/layout.tsx también maneja esto.
-        // La idea es que / sea manejado por (app)/page.tsx
+        // User is logged in, redirect to the main app dashboard handled by (app)/page.tsx
         router.replace('/'); 
       } else {
-        // Si no hay usuario y ya no está cargando, redirige a login
+        // User is not logged in, redirect to login
         router.replace('/login');
       }
     }
   }, [authLoading, currentUser, router]);
 
-  // Muestra un spinner mientras se determina el estado de autenticación y se redirige
+  // Show a spinner while determining auth state and redirecting
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <LoadingSpinner size={48} />
+      <p className="ml-2 text-muted-foreground">Inicializando aplicación...</p>
     </div>
   );
 }
