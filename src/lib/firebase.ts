@@ -5,18 +5,16 @@ import { getFirestore } from "firebase/firestore";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
-// Your web app's Firebase configuration
-// ######################################################################
-// #  IMPORTANTE: REEMPLAZA ESTO CON LA CONFIGURACIÓN REAL DE TU PROYECTO FIREBASE  #
-// #  Puedes encontrarla en la consola de Firebase > Configuración del Proyecto    #
-// ######################################################################
+// Your web app's Firebase configuration (as provided by the user)
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY", // <-- REEMPLAZAR
-  authDomain: "YOUR_AUTH_DOMAIN", // <-- REEMPLAZAR
-  projectId: "YOUR_PROJECT_ID", // <-- REEMPLAZAR - ESTE ES EL QUE CAUSA EL ERROR 400
-  storageBucket: "YOUR_STORAGE_BUCKET", // <-- REEMPLAZAR
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // <-- REEMPLAZAR
-  appId: "YOUR_APP_ID" // <-- REEMPLAZAR
+  apiKey: "AIzaSyDerqx1CxtpuQF6SpB-fZe_v4qdPbngbv4",
+  authDomain: "smartclean-9880a.firebaseapp.com",
+  databaseURL: "https://smartclean-9880a-default-rtdb.firebaseio.com",
+  projectId: "smartclean-9880a",
+  storageBucket: "smartclean-9880a.appspot.com", // Corrected common typo: .appspot.com
+  messagingSenderId: "584252180584",
+  appId: "1:584252180584:web:b09a5499ac76aef2a053dd",
+  measurementId: "G-ZYEWJ5R9VX"
 };
 
 // Initialize Firebase
@@ -28,5 +26,9 @@ if (!getApps().length) {
 }
 
 const db = getFirestore(app);
+
+// If you want to use analytics, you can initialize it like this:
+// import { getAnalytics } from "firebase/analytics";
+// const analytics = getAnalytics(app);
 
 export { db };
