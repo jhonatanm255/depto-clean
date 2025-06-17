@@ -4,25 +4,41 @@ import React, { useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, Building2, ClipboardCheck, AlertTriangle, Briefcase, Info } from 'lucide-react';
+import { Users, Building2, ClipboardCheck, AlertTriangle, Briefcase, Info, Clock, History } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LoadingSpinner } from '@/components/core/loading-spinner'; 
-import type { AppUser } from '@/lib/types'; 
+import type { AppUser, Department } from '@/lib/types'; 
+import { isToday } from '@/lib/utils';
 
 function AdminDashboard() {
-  const { departments, employees, dataLoading, getEmployeeProfileById } = useData(); 
+  const { departments, employees, tasks, dataLoading, getEmployeeProfileById } = useData(); 
 
   const pendingCount = useMemo(() => departments.filter(d => d.status === 'pending').length, [departments]);
-  const completedCount = useMemo(() => departments.filter(d => d.status === 'completed').length, [departments]);
+  
+  const completedTodayCount = useMemo(() => {
+    return tasks.filter(t => t.status === 'completed' && t.completedAt && isToday(new Date(t.completedAt))).length;
+  }, [tasks]);
 
-  const recentlyCompleted = useMemo(() => {
-    return departments
-      .filter(d => d.status === 'completed' && d.lastCleanedAt)
-      .sort((a, b) => new Date(b.lastCleanedAt!).getTime() - new Date(a.lastCleanedAt!).getTime())
-      .slice(0, 5);
-  }, [departments]);
+  const recentlyCompletedToday = useMemo(() => {
+    return tasks
+      .filter(t => t.status === 'completed' && t.completedAt && isToday(new Date(t.completedAt)))
+      .map(task => ({ ...task, department: departments.find(d => d.id === task.departmentId) }))
+      .filter(task => !!task.department)
+      .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())
+      .slice(0, 5) as (typeof tasks[0] & { department: Department })[];
+  }, [tasks, departments]);
+
+  const completedHistory = useMemo(() => {
+    return tasks
+      .filter(t => t.status === 'completed' && t.completedAt && !isToday(new Date(t.completedAt)))
+      .map(task => ({ ...task, department: departments.find(d => d.id === task.departmentId) }))
+      .filter(task => !!task.department)
+      .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())
+      .slice(0, 5) as (typeof tasks[0] & { department: Department })[];
+  }, [tasks, departments]);
+
 
   const needsAttention = useMemo(() => {
     return departments
@@ -30,7 +46,7 @@ function AdminDashboard() {
       .slice(0,5);
   }, [departments]);
 
-  if (dataLoading && departments.length === 0 && employees.length === 0) { 
+  if (dataLoading && departments.length === 0 && employees.length === 0 && tasks.length === 0) { 
     return (
       <div className="flex flex-col items-center justify-center p-8">
         <LoadingSpinner size={32} />
@@ -55,7 +71,7 @@ function AdminDashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tareas Pendientes</CardTitle>
+            <CardTitle className="text-sm font-medium">Tareas Pendientes (Depto)</CardTitle>
             <AlertTriangle className="h-5 w-5 text-yellow-500" />
           </CardHeader>
           <CardContent>
@@ -64,11 +80,11 @@ function AdminDashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tareas Completadas</CardTitle>
-            <ClipboardCheck className="h-5 w-5 text-green-500" />
+            <CardTitle className="text-sm font-medium">Completadas Hoy</CardTitle>
+            <Clock className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dataLoading && completedCount === 0 && departments.length === 0 ? <LoadingSpinner size={16}/> : completedCount}</div>
+            <div className="text-2xl font-bold">{dataLoading && completedTodayCount === 0 && tasks.length === 0 ? <LoadingSpinner size={16}/> : completedTodayCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -82,11 +98,11 @@ function AdminDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Departamentos por Asignar</CardTitle>
-            <CardDescription>Estos departamentos están pendientes y aún no han sido asignados.</CardDescription>
+            <CardDescription>Departamentos pendientes sin asignación.</CardDescription>
           </CardHeader>
           <CardContent>
             {dataLoading && needsAttention.length === 0 && departments.length === 0 ? (
@@ -107,30 +123,30 @@ function AdminDashboard() {
                 </ul>
               </ScrollArea>
             ) : (
-              <p className="text-sm text-muted-foreground">No hay departamentos que necesiten asignación actualmente.</p>
+              <p className="text-sm text-muted-foreground">No hay departamentos que necesiten asignación.</p>
             )}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Tareas Recientemente Completadas</CardTitle>
-            <CardDescription>Resumen de las últimas limpiezas completadas.</CardDescription>
+            <CardTitle>Tareas Completadas Hoy</CardTitle>
+            <CardDescription>Limpiezas completadas durante el día de hoy.</CardDescription>
           </CardHeader>
           <CardContent>
-            {dataLoading && recentlyCompleted.length === 0 && departments.length === 0 ? (
+            {dataLoading && recentlyCompletedToday.length === 0 && tasks.length === 0 ? (
                  <div className="flex items-center justify-center p-4">
                     <LoadingSpinner size={20} /><p className="ml-2 text-muted-foreground">Cargando...</p>
                 </div>
-            ) : recentlyCompleted.length > 0 ? (
+            ) : recentlyCompletedToday.length > 0 ? (
             <ScrollArea className="h-[200px]">
               <ul className="space-y-2">
-                {recentlyCompleted.map(dept => {
-                  const employee = dept.assignedTo ? getEmployeeProfileById(dept.assignedTo) : null;
+                {recentlyCompletedToday.map(task => {
+                  const employee = task.employeeId ? getEmployeeProfileById(task.employeeId) : null;
                   return (
-                    <li key={dept.id} className="p-2 rounded-md hover:bg-muted">
-                      <p className="font-medium">{dept.name}</p>
+                    <li key={task.id} className="p-2 rounded-md hover:bg-muted">
+                      <p className="font-medium">{task.department?.name || 'Departamento no encontrado'}</p>
                       <p className="text-xs text-muted-foreground">
-                        Completado por {employee?.name || 'N/D'} el {new Date(dept.lastCleanedAt!).toLocaleDateString('es-CL')}
+                        Completado por {employee?.name || 'N/D'} el {new Date(task.completedAt!).toLocaleDateString('es-CL')}
                       </p>
                     </li>
                   );
@@ -138,7 +154,38 @@ function AdminDashboard() {
               </ul>
             </ScrollArea>
             ) : (
-               <p className="text-sm text-muted-foreground">No hay tareas completadas recientemente.</p>
+               <p className="text-sm text-muted-foreground">No hay tareas completadas hoy.</p>
+            )}
+          </CardContent>
+        </Card>
+         <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><History className="mr-2 h-5 w-5"/>Historial (Días Anteriores)</CardTitle>
+            <CardDescription>Últimas 5 tareas completadas en días pasados.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {dataLoading && completedHistory.length === 0 && tasks.length > 0 ? (
+                 <div className="flex items-center justify-center p-4">
+                    <LoadingSpinner size={20} /><p className="ml-2 text-muted-foreground">Cargando historial...</p>
+                </div>
+            ) : completedHistory.length > 0 ? (
+            <ScrollArea className="h-[200px]">
+              <ul className="space-y-2">
+                {completedHistory.map(task => {
+                  const employee = task.employeeId ? getEmployeeProfileById(task.employeeId) : null;
+                  return (
+                    <li key={task.id} className="p-2 rounded-md hover:bg-muted">
+                      <p className="font-medium">{task.department?.name || 'Departamento no encontrado'}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Completado por {employee?.name || 'N/D'} el {new Date(task.completedAt!).toLocaleDateString('es-CL')}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            </ScrollArea>
+            ) : (
+               <p className="text-sm text-muted-foreground">No hay historial de tareas completadas en días anteriores.</p>
             )}
           </CardContent>
         </Card>
@@ -159,12 +206,19 @@ function EmployeeDashboard({user}: {user: AppUser}) {
     return tasks.filter(t => t.status === 'pending' || t.status === 'in_progress');
   }, [tasks]);
 
-  const completedTasksCount = useMemo(() => {
-    return tasks.filter(t => t.status === 'completed').length;
+  const completedTodayTasks = useMemo(() => {
+    return tasks.filter(t => t.status === 'completed' && t.completedAt && isToday(new Date(t.completedAt)));
+  }, [tasks]);
+
+  const completedHistoryTasks = useMemo(() => {
+    return tasks
+      .filter(t => t.status === 'completed' && t.completedAt && !isToday(new Date(t.completedAt)))
+      .sort((a,b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())
+      .slice(0,5);
   }, [tasks]);
 
 
-  if (dataLoading && tasks.length === 0) {
+  if (dataLoading && tasks.length === 0 && !user.employeeProfileId) {
      return (
       <div className="flex flex-col items-center justify-center p-8">
         <LoadingSpinner size={32} />
@@ -175,10 +229,10 @@ function EmployeeDashboard({user}: {user: AppUser}) {
   
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold font-headline text-foreground">¡Bienvenido/a, {user?.name}!</h2>
-      <p className="text-muted-foreground">Aquí están tus tareas para hoy.</p>
+      <h2 className="text-3xl font-bold font-headline text-foreground">¡Bienvenida, {user?.name}!</h2>
+      <p className="text-muted-foreground">Aquí están tus tareas para hoy y tu historial.</p>
       
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tareas Activas</CardTitle>
@@ -187,18 +241,32 @@ function EmployeeDashboard({user}: {user: AppUser}) {
           <CardContent>
             <div className="text-2xl font-bold">{dataLoading && pendingTasks.length === 0 && tasks.length === 0 ? <LoadingSpinner size={16}/> : pendingTasks.length}</div>
             <Link href="/employee/tasks" legacyBehavior>
-              <Button variant="link" className="p-0 h-auto text-sm">Ver Tareas</Button>
+              <Button variant="link" className="p-0 h-auto text-sm">Ver Tareas Pendientes</Button>
             </Link>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completadas Hoy</CardTitle>
-            <ClipboardCheck className="h-5 w-5 text-green-500" />
+            <Clock className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dataLoading && completedTasksCount === 0 && tasks.length === 0 ? <LoadingSpinner size={16}/> : completedTasksCount}</div>
-            <p className="text-xs text-muted-foreground">Total tareas completadas</p>
+            <div className="text-2xl font-bold">{dataLoading && completedTodayTasks.length === 0 && tasks.length === 0 ? <LoadingSpinner size={16}/> : completedTodayTasks.length}</div>
+             <Link href="/employee/tasks?tab=completed_today" legacyBehavior>
+                <Button variant="link" className="p-0 h-auto text-sm">Ver Completadas Hoy</Button>
+            </Link>
+          </CardContent>
+        </Card>
+         <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Historial Completadas</CardTitle>
+            <History className="h-5 w-5 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dataLoading && completedHistoryTasks.length === 0 && tasks.length > 0 ? <LoadingSpinner size={16}/> : completedHistoryTasks.length}</div>
+             <Link href="/employee/tasks?tab=completed_history" legacyBehavior>
+                <Button variant="link" className="p-0 h-auto text-sm">Ver Historial</Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
@@ -216,6 +284,9 @@ function EmployeeDashboard({user}: {user: AppUser}) {
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">{getDepartmentById(pendingTasks[0].departmentId)?.name || <LoadingSpinner size={14}/>}</h3>
               <p className="text-sm text-muted-foreground">
+                Dirección: {getDepartmentById(pendingTasks[0].departmentId)?.address || "No especificada"}
+              </p>
+              <p className="text-sm text-muted-foreground">
                 Código de Acceso: {getDepartmentById(pendingTasks[0].departmentId)?.accessCode || "..."}
               </p>
               <Link href="/employee/tasks" legacyBehavior>
@@ -226,8 +297,8 @@ function EmployeeDashboard({user}: {user: AppUser}) {
         </Card>
       ) : (
           <Card>
-            <CardHeader><CardTitle>¡Todo Listo!</CardTitle></CardHeader>
-            <CardContent><p>No tienes tareas pendientes. ¡Buen trabajo!</p></CardContent>
+            <CardHeader><CardTitle>¡Todo Listo por Hoy!</CardTitle></CardHeader>
+            <CardContent><p>No tienes tareas pendientes. ¡Buen trabajo! Revisa tu historial si lo deseas.</p></CardContent>
           </Card>
         )}
     </div>

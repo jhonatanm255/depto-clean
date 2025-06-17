@@ -5,7 +5,7 @@ import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Building2, KeyRound, CheckCircle2, Loader2, AlertTriangle, CalendarDays } from 'lucide-react';
+import { Building2, KeyRound, CheckCircle2, Loader2, AlertTriangle, CalendarDays, MapPin, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 // Toast is handled in DataContext
 
@@ -62,6 +62,10 @@ export function TaskCard({ task, department }: TaskCardProps) {
     );
   }
 
+  const googleMapsUrl = department.address 
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(department.address)}`
+    : null;
+
   return (
     <Card className="flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-200">
       <CardHeader>
@@ -75,22 +79,38 @@ export function TaskCard({ task, department }: TaskCardProps) {
             {translateStatus(task.status)}
           </Badge>
         </div>
-        <CardDescription className="flex items-center pt-1">
-          <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />
+        <CardDescription className="flex items-center pt-1 text-sm text-muted-foreground">
+          <KeyRound className="mr-2 h-4 w-4" />
           Código de Acceso: {department.accessCode}
         </CardDescription>
+        {department.address && (
+           <CardDescription className="flex items-start pt-1 text-xs text-muted-foreground">
+            <MapPin className="mr-2 h-4 w-4 shrink-0" />
+            {department.address}
+          </CardDescription>
+        )}
       </CardHeader>
       <CardContent className="flex-grow space-y-2">
          <p className="flex items-center text-sm text-muted-foreground">
-            <CalendarDays className="mr-2 h-4 w-4"/> Asignada: {task.assignedAt.toLocaleDateString('es-CL')}
+            <CalendarDays className="mr-2 h-4 w-4"/> Asignada: {new Date(task.assignedAt).toLocaleDateString('es-CL')}
         </p>
         {task.status === 'completed' && task.completedAt && (
            <p className="flex items-center text-sm text-green-600">
-             <CheckCircle2 className="mr-2 h-4 w-4"/> Completada: {task.completedAt.toLocaleDateString('es-CL')}
+             <CheckCircle2 className="mr-2 h-4 w-4"/> Completada: {new Date(task.completedAt).toLocaleDateString('es-CL')}
            </p>
         )}
+         {googleMapsUrl && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full sm:w-auto mt-2"
+            onClick={() => window.open(googleMapsUrl, '_blank')}
+          >
+            <ExternalLink className="mr-2 h-4 w-4" /> Ver en Mapa
+          </Button>
+        )}
       </CardContent>
-      <CardFooter className="flex flex-col sm:flex-row justify-end gap-2 border-t pt-4">
+      <CardFooter className="flex flex-col sm:flex-row justify-end gap-2 border-t pt-4 flex-wrap">
         {task.status === 'pending' && (
           <>
             <Button variant="outline" size="sm" onClick={() => handleUpdateStatus('in_progress')} className="w-full sm:w-auto">
