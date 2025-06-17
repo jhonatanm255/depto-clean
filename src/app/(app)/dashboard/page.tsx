@@ -1,10 +1,10 @@
 
 "use client";
-import React, { useMemo } from 'react'; // Added useMemo
+import React, { useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, Building2, ClipboardCheck, AlertTriangle, Briefcase } from 'lucide-react';
+import { Users, Building2, ClipboardCheck, AlertTriangle, Briefcase, Info } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -30,11 +30,11 @@ function AdminDashboard() {
       .slice(0,5);
   }, [departments]);
 
-  if (dataLoading) { 
+  if (dataLoading && departments.length === 0 && employees.length === 0) { 
     return (
       <div className="flex flex-col items-center justify-center p-8">
         <LoadingSpinner size={32} />
-        <p className="mt-4 text-muted-foreground">Cargando datos del panel...</p>
+        <p className="mt-4 text-muted-foreground">Cargando datos del panel de administrador...</p>
       </div>
     );
   }
@@ -50,7 +50,7 @@ function AdminDashboard() {
             <Building2 className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{departments.length}</div>
+            <div className="text-2xl font-bold">{dataLoading && departments.length === 0 ? <LoadingSpinner size={16}/> : departments.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -59,7 +59,7 @@ function AdminDashboard() {
             <AlertTriangle className="h-5 w-5 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pendingCount}</div>
+            <div className="text-2xl font-bold">{dataLoading && pendingCount === 0 && departments.length === 0 ? <LoadingSpinner size={16}/> : pendingCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -68,7 +68,7 @@ function AdminDashboard() {
             <ClipboardCheck className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{completedCount}</div>
+            <div className="text-2xl font-bold">{dataLoading && completedCount === 0 && departments.length === 0 ? <LoadingSpinner size={16}/> : completedCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -77,7 +77,7 @@ function AdminDashboard() {
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{employees.length}</div>
+            <div className="text-2xl font-bold">{dataLoading && employees.length === 0 ? <LoadingSpinner size={16}/> : employees.length}</div>
           </CardContent>
         </Card>
       </div>
@@ -89,7 +89,11 @@ function AdminDashboard() {
             <CardDescription>Estos departamentos están pendientes y aún no han sido asignados.</CardDescription>
           </CardHeader>
           <CardContent>
-            {needsAttention.length > 0 ? (
+            {dataLoading && needsAttention.length === 0 && departments.length === 0 ? (
+                <div className="flex items-center justify-center p-4">
+                    <LoadingSpinner size={20} /><p className="ml-2 text-muted-foreground">Cargando...</p>
+                </div>
+            ) : needsAttention.length > 0 ? (
               <ScrollArea className="h-[200px]">
                 <ul className="space-y-2">
                   {needsAttention.map(dept => (
@@ -113,7 +117,11 @@ function AdminDashboard() {
             <CardDescription>Resumen de las últimas limpiezas completadas.</CardDescription>
           </CardHeader>
           <CardContent>
-            {recentlyCompleted.length > 0 ? (
+            {dataLoading && recentlyCompleted.length === 0 && departments.length === 0 ? (
+                 <div className="flex items-center justify-center p-4">
+                    <LoadingSpinner size={20} /><p className="ml-2 text-muted-foreground">Cargando...</p>
+                </div>
+            ) : recentlyCompleted.length > 0 ? (
             <ScrollArea className="h-[200px]">
               <ul className="space-y-2">
                 {recentlyCompleted.map(dept => {
@@ -143,7 +151,8 @@ function EmployeeDashboard({user}: {user: AppUser}) {
   const { getTasksForEmployee, getDepartmentById, dataLoading } = useData(); 
 
   const tasks = useMemo(() => {
-    return user.employeeProfileId ? getTasksForEmployee(user.employeeProfileId) : [];
+    if (!user.employeeProfileId) return [];
+    return getTasksForEmployee(user.employeeProfileId);
   }, [user.employeeProfileId, getTasksForEmployee]);
   
   const pendingTasks = useMemo(() => {
@@ -155,7 +164,7 @@ function EmployeeDashboard({user}: {user: AppUser}) {
   }, [tasks]);
 
 
-  if (dataLoading && !tasks.length) { // Check if tasks are loaded or still in initial dataLoading
+  if (dataLoading && tasks.length === 0) {
      return (
       <div className="flex flex-col items-center justify-center p-8">
         <LoadingSpinner size={32} />
@@ -176,7 +185,7 @@ function EmployeeDashboard({user}: {user: AppUser}) {
             <Briefcase className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pendingTasks.length}</div>
+            <div className="text-2xl font-bold">{dataLoading && pendingTasks.length === 0 && tasks.length === 0 ? <LoadingSpinner size={16}/> : pendingTasks.length}</div>
             <Link href="/employee/tasks" legacyBehavior>
               <Button variant="link" className="p-0 h-auto text-sm">Ver Tareas</Button>
             </Link>
@@ -188,22 +197,26 @@ function EmployeeDashboard({user}: {user: AppUser}) {
             <ClipboardCheck className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{completedTasksCount}</div>
+            <div className="text-2xl font-bold">{dataLoading && completedTasksCount === 0 && tasks.length === 0 ? <LoadingSpinner size={16}/> : completedTasksCount}</div>
             <p className="text-xs text-muted-foreground">Total tareas completadas</p>
           </CardContent>
         </Card>
       </div>
 
-      {pendingTasks.length > 0 && (
+      {dataLoading && pendingTasks.length === 0 && tasks.length === 0 ? (
+          <div className="flex items-center justify-center p-4">
+              <LoadingSpinner size={20} /><p className="ml-2 text-muted-foreground">Buscando próxima tarea...</p>
+          </div>
+      ) : pendingTasks.length > 0 ? (
         <Card>
           <CardHeader>
             <CardTitle>Tu Próxima Tarea</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold">{getDepartmentById(pendingTasks[0].departmentId)?.name}</h3>
+              <h3 className="text-lg font-semibold">{getDepartmentById(pendingTasks[0].departmentId)?.name || <LoadingSpinner size={14}/>}</h3>
               <p className="text-sm text-muted-foreground">
-                Código de Acceso: {getDepartmentById(pendingTasks[0].departmentId)?.accessCode}
+                Código de Acceso: {getDepartmentById(pendingTasks[0].departmentId)?.accessCode || "..."}
               </p>
               <Link href="/employee/tasks" legacyBehavior>
                  <Button className="mt-2">Ir a Mis Tareas</Button>
@@ -211,8 +224,7 @@ function EmployeeDashboard({user}: {user: AppUser}) {
             </div>
           </CardContent>
         </Card>
-      )}
-       {pendingTasks.length === 0 && (
+      ) : (
           <Card>
             <CardHeader><CardTitle>¡Todo Listo!</CardTitle></CardHeader>
             <CardContent><p>No tienes tareas pendientes. ¡Buen trabajo!</p></CardContent>
@@ -237,9 +249,16 @@ export default function DashboardPage() {
   }
 
   if (!currentUser) {
-    return <p className="text-center text-muted-foreground">Por favor, inicia sesión para ver el panel.</p>;
+    return (
+      <div className="flex flex-col items-center justify-center p-8">
+        <Info className="h-10 w-10 text-destructive mb-2" />
+        <p className="text-center text-muted-foreground text-lg">Por favor, inicia sesión para ver el panel.</p>
+        <Link href="/login" legacyBehavior>
+            <Button className="mt-4">Ir a Iniciar Sesión</Button>
+        </Link>
+      </div>
+    );
   }
-
 
   return currentUser?.role === 'admin' 
     ? <AdminDashboard /> 
