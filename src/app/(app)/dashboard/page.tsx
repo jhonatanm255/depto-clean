@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, Building2, ClipboardCheck, AlertTriangle, Briefcase, Info, Clock, History } from 'lucide-react';
+import { Users, Building2, ClipboardCheck, AlertTriangle, Briefcase, Info, Clock, History, Activity } from 'lucide-react'; // Added Activity
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -16,6 +16,7 @@ function AdminDashboard() {
   const { departments, employees, tasks, dataLoading, getEmployeeProfileById } = useData(); 
 
   const pendingCount = useMemo(() => departments.filter(d => d.status === 'pending').length, [departments]);
+  const inProgressCount = useMemo(() => departments.filter(d => d.status === 'in_progress').length, [departments]); // New count
   
   const completedTodayCount = useMemo(() => {
     return tasks.filter(t => t.status === 'completed' && t.completedAt && isToday(new Date(t.completedAt))).length;
@@ -59,16 +60,8 @@ function AdminDashboard() {
     <div className="space-y-6">
       <h2 className="text-3xl font-bold font-headline text-foreground">Panel de Administrador</h2>
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Departamentos</CardTitle>
-            <Building2 className="h-5 w-5 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dataLoading && departments.length === 0 ? <LoadingSpinner size={16}/> : departments.length}</div>
-          </CardContent>
-        </Card>
+      {/* First row of cards: Pendientes, En Progreso, Completadas Hoy */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tareas Pendientes (Depto)</CardTitle>
@@ -80,11 +73,33 @@ function AdminDashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tareas en Progreso (Depto)</CardTitle>
+            <Activity className="h-5 w-5 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dataLoading && inProgressCount === 0 && departments.length === 0 ? <LoadingSpinner size={16}/> : inProgressCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completadas Hoy</CardTitle>
             <Clock className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{dataLoading && completedTodayCount === 0 && tasks.length === 0 ? <LoadingSpinner size={16}/> : completedTodayCount}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Second row of cards: Total Departamentos, Total Empleadas */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Departamentos</CardTitle>
+            <Building2 className="h-5 w-5 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dataLoading && departments.length === 0 ? <LoadingSpinner size={16}/> : departments.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -98,6 +113,7 @@ function AdminDashboard() {
         </Card>
       </div>
 
+      {/* Rest of the dashboard content */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
@@ -164,7 +180,7 @@ function AdminDashboard() {
             <CardDescription>Últimas 5 tareas completadas en días pasados.</CardDescription>
           </CardHeader>
           <CardContent>
-            {dataLoading && completedHistory.length === 0 && tasks.length > 0 ? (
+            {dataLoading && completedHistory.length === 0 && tasks.length > 0 ? ( // Adjusted condition slightly
                  <div className="flex items-center justify-center p-4">
                     <LoadingSpinner size={20} /><p className="ml-2 text-muted-foreground">Cargando historial...</p>
                 </div>
