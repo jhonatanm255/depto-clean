@@ -108,7 +108,7 @@ export function DepartmentCard({ department, onEdit, employees }: DepartmentCard
           </p>
         )}
       </CardContent>
-      <CardFooter className="flex justify-end gap-2 border-t pt-4">
+      <CardFooter className="flex justify-end gap-2 border-t pt-4 flex-wrap">
         <Button variant="outline" size="sm" onClick={() => onEdit(department)} aria-label={`Editar ${department.name}`}>
           <Edit3 className="mr-1 h-4 w-4" /> Editar
         </Button>

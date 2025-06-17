@@ -93,16 +93,16 @@ export function TaskCard({ task, department }: TaskCardProps) {
       <CardFooter className="flex flex-col sm:flex-row justify-end gap-2 border-t pt-4">
         {task.status === 'pending' && (
           <>
-            <Button variant="outline" size="sm" onClick={() => handleUpdateStatus('in_progress')}>
+            <Button variant="outline" size="sm" onClick={() => handleUpdateStatus('in_progress')} className="w-full sm:w-auto">
               <Loader2 className="mr-1 h-4 w-4" /> Iniciar Limpieza
             </Button>
-            <Button size="sm" onClick={() => handleUpdateStatus('completed')} className="bg-green-500 hover:bg-green-600 text-white">
+            <Button size="sm" onClick={() => handleUpdateStatus('completed')} className="bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto">
               <CheckCircle2 className="mr-1 h-4 w-4" /> Marcar Completada
             </Button>
           </>
         )}
         {task.status === 'in_progress' && (
-          <Button size="sm" onClick={() => handleUpdateStatus('completed')} className="bg-green-500 hover:bg-green-600 text-white">
+          <Button size="sm" onClick={() => handleUpdateStatus('completed')} className="bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto">
             <CheckCircle2 className="mr-1 h-4 w-4" /> Marcar Completada
           </Button>
         )}

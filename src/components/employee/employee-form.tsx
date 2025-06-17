@@ -77,8 +77,8 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
           {!employee && (
             <DialogDescription className="text-xs pt-1">
               Al crear una empleada, se generará una cuenta en Firebase Authentication.
-              Deberás comunicar la contraseña inicial a la empleada. Esta contraseña no se podrá ver después.
-              <br/><strong>Importante:</strong> Crear una empleada te desconectará temporalmente. Deberás volver a iniciar sesión como administrador.
+              <br/><strong>Importante:</strong> Comunicar la contraseña inicial a la empleada, ya que <strong>no se podrá ver después</strong> por motivos de seguridad.
+              <br/>Crear una empleada te desconectará temporalmente. Deberás volver a iniciar sesión como administrador.
             </DialogDescription>
           )}
         </DialogHeader>
@@ -137,7 +137,7 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
                 )}
               />
             )}
-            <DialogFooter>
+            <DialogFooter className="flex-wrap gap-2 sm:gap-0">
               <DialogClose asChild>
                 <Button type="button" variant="outline" onClick={handleCloseDialog} disabled={form.formState.isSubmitting}>Cancelar</Button>
               </DialogClose>

@@ -121,7 +121,7 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
                 </FormItem>
               )}
             />
-            <DialogFooter>
+            <DialogFooter className="flex-wrap gap-2 sm:gap-0">
               <DialogClose asChild>
                 <Button type="button" variant="outline" onClick={handleCloseDialog} disabled={form.formState.isSubmitting}>Cancelar</Button>
               </DialogClose>
