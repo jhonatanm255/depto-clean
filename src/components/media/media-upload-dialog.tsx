@@ -15,10 +15,12 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 import { UploadCloud, FileImage, Video } from 'lucide-react';
-import { Progress } from '@/components/ui/progress'; // Importar Progress
+import { Progress } from '@/components/ui/progress';
 
 const mediaReportSchema = z.object({
-  file: z.instanceof(FileList).refine(files => files.length > 0, "Se requiere un archivo."),
+  file: z.instanceof(FileList).refine(files => files.length > 0, "Se requiere un archivo.")
+                              .refine(files => files.length > 0 && files[0].size > 0, "El archivo no puede estar vacío.")
+                              .refine(files => files.length > 0 && files[0].size <= 50 * 1024 * 1024, "El archivo no debe exceder los 50MB."), // Límite de 50MB
   reportType: z.enum(['before', 'after', 'incident'], { required_error: "Se requiere el tipo de reporte." }),
   description: z.string().optional(),
 });
@@ -53,8 +55,9 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
     }
     const fileToUpload = data.file[0];
     setIsUploading(true);
-    setUploadProgress(0); // Iniciar progreso
-
+    setUploadProgress(0); 
+    
+    let submissionSuccessful = false;
     try {
       await addMediaReport(
         departmentId,
@@ -62,27 +65,32 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
         fileToUpload,
         data.reportType as MediaReportType,
         data.description,
-        (progress) => setUploadProgress(progress) // Callback de progreso
+        (progress) => setUploadProgress(progress)
       );
+      submissionSuccessful = true;
       form.reset();
       setFileName(null);
-      onClose(); // Cerrar solo después de éxito completo
     } catch (error) {
       console.error("Error en submit de MediaUploadDialog:", error);
-      // El toast de error ya lo maneja DataContext
-      // No cerramos el diálogo en caso de error para que el usuario pueda reintentar o corregir
+      submissionSuccessful = false;
+      // El toast de error ya lo maneja DataContext o addMediaReport internamente.
+      // react-hook-form limpiará isSubmitting si la promesa es rechazada.
     } finally {
       setIsUploading(false);
-      setUploadProgress(null); // Limpiar progreso
+      setUploadProgress(null);
+      if (submissionSuccessful) {
+        onClose(); // Cerrar solo si la subida Y el registro fueron exitosos.
+      }
+      // Si no fue exitoso, el diálogo permanece abierto para reintentar o corregir.
     }
   };
 
   const handleCloseDialog = () => {
-    if (isUploading) return; // No cerrar si está subiendo
+    if (isUploading) return; 
     form.reset();
     setFileName(null);
     setUploadProgress(null);
-    setIsUploading(false);
+    setIsUploading(false); // Asegurarse de que isUploading se restablezca aquí también
     onClose();
   };
 
@@ -97,7 +105,7 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
             Subir Evidencia Multimedia
           </DialogTitle>
           <DialogDescription>
-            Selecciona una foto o video para adjuntar al reporte del departamento.
+            Selecciona una foto o video (máx. 50MB) para adjuntar al reporte del departamento.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -105,7 +113,7 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
             <FormField
               control={form.control}
               name="file"
-              render={({ field: { onChange, ...fieldProps } }) => (
+              render={({ field: { onChange, value, ...fieldProps } }) => ( // 'value' aquí es de RHF
                 <FormItem>
                   <FormLabel>Archivo (Foto o Video)</FormLabel>
                   <FormControl>
@@ -114,10 +122,11 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
                         type="file"
                         accept="image/*,video/*"
                         onChange={(e) => {
-                          onChange(e.target.files);
+                          onChange(e.target.files); // Actualiza RHF
                           setFileName(e.target.files && e.target.files.length > 0 ? e.target.files[0].name : null);
                         }}
-                        {...fieldProps}
+                        // No pasar 'value' a <input type="file">
+                        {...fieldProps} 
                         className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
                         disabled={isUploading}
                       />
@@ -189,4 +198,3 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
     </Dialog>
   );
 }
-

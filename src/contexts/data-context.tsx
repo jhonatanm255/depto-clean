@@ -42,7 +42,7 @@ interface DataContextType {
     file: File, 
     reportType: MediaReportType, 
     description?: string,
-    onProgress?: (progress: number) => void // Callback para progreso
+    onProgress?: (progress: number) => void
   ) => Promise<void>;
   getMediaReportsForDepartment: (departmentId: string) => Promise<MediaReport[]>;
 
@@ -320,52 +320,90 @@ export function DataProvider({ children }: { children: ReactNode }) {
   ): Promise<void> => {
     if (!currentUser?.uid) {
       toast({ variant: "destructive", title: "Error de autenticación", description: "No se pudo verificar la empleada." });
-      throw new Error("Usuario no autenticado");
+      throw new Error("Usuario no autenticado para subir archivo.");
     }
+     if (!employeeProfileId) {
+        toast({ variant: "destructive", title: "Error de Perfil", description: "No se pudo identificar el perfil de la empleada para el reporte." });
+        throw new Error("Perfil de empleada no identificado para el reporte.");
+    }
+
     const uploadedByAuthUid = currentUser.uid;
     const uniqueFileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
     const storagePath = `departments/${departmentId}/media/${uniqueFileName}`;
     const fileRef = ref(storage, storagePath);
+    console.log(`[DataContext] Iniciando subida para: ${storagePath}, Archivo: ${file.name}, Tamaño: ${file.size}`);
 
     return new Promise((resolve, reject) => {
-      const uploadTask = uploadBytesResumable(fileRef, file);
+      try {
+        const uploadTask = uploadBytesResumable(fileRef, file);
 
-      uploadTask.on('state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          if (onProgress) {
-            onProgress(progress);
-          }
-        },
-        (error) => {
-          console.error("Error subiendo archivo a Storage: ", error);
-          toast({ variant: "destructive", title: "Error de Subida", description: "No se pudo subir el archivo a Storage." });
-          reject(error);
-        },
-        async () => {
-          try {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            await addDoc(collection(db, "media_reports"), {
-              departmentId,
-              employeeProfileId,
-              uploadedByAuthUid,
-              storagePath,
-              downloadURL,
-              fileName: file.name,
-              contentType: file.type,
-              reportType,
-              description: description || "",
-              uploadedAt: Timestamp.now(),
-            });
-            toast({ title: "Evidencia Subida", description: "El archivo se ha subido y registrado correctamente." });
-            resolve();
-          } catch (error) {
-            console.error("Error guardando metadatos en Firestore: ", error);
-            toast({ variant: "destructive", title: "Error de Registro", description: "El archivo se subió pero no se pudo registrar." });
+        uploadTask.on('state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            console.log(`[DataContext] Progreso de subida: ${progress}% (${snapshot.bytesTransferred}/${snapshot.totalBytes})`);
+            if (onProgress) {
+              onProgress(progress);
+            }
+            switch (snapshot.state) {
+              case 'paused':
+                console.log('[DataContext] Subida pausada');
+                break;
+              case 'running':
+                console.log('[DataContext] Subida en progreso');
+                break;
+            }
+          },
+          (error) => {
+            console.error("[DataContext] Error subiendo archivo a Storage: ", error);
+            let errorMessage = "No se pudo subir el archivo.";
+            switch (error.code) {
+              case 'storage/unauthorized':
+                errorMessage = "No tienes permiso para subir archivos. Verifica las reglas de Firebase Storage.";
+                break;
+              case 'storage/canceled':
+                errorMessage = "La subida del archivo fue cancelada.";
+                break;
+              case 'storage/unknown':
+                errorMessage = "Ocurrió un error desconocido durante la subida.";
+                break;
+              default:
+                 errorMessage = `Error de Storage: ${error.message} (Código: ${error.code})`;
+            }
+            toast({ variant: "destructive", title: "Error de Subida", description: errorMessage });
             reject(error);
+          },
+          async () => {
+            console.log(`[DataContext] Subida completada para: ${storagePath}`);
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              console.log(`[DataContext] URL de descarga obtenida: ${downloadURL}`);
+              await addDoc(collection(db, "media_reports"), {
+                departmentId,
+                employeeProfileId, // ID del perfil de Firestore
+                uploadedByAuthUid,  // Auth UID del usuario logueado
+                storagePath,
+                downloadURL,
+                fileName: file.name,
+                contentType: file.type,
+                reportType,
+                description: description || "",
+                uploadedAt: Timestamp.now(),
+              });
+              console.log(`[DataContext] Metadatos guardados en Firestore para: ${file.name}`);
+              toast({ title: "Evidencia Subida", description: "El archivo se ha subido y registrado correctamente." });
+              resolve();
+            } catch (firestoreError) {
+              console.error("[DataContext] Error guardando metadatos en Firestore: ", firestoreError);
+              toast({ variant: "destructive", title: "Error de Registro", description: "El archivo se subió pero no se pudo registrar en la base de datos." });
+              reject(firestoreError);
+            }
           }
-        }
-      );
+        );
+      } catch (initializationError) {
+          console.error("[DataContext] Error inicializando subida a Storage: ", initializationError);
+          toast({ variant: "destructive", title: "Error de Configuración", description: "No se pudo iniciar la subida del archivo. Revisa la configuración de Storage." });
+          reject(initializationError);
+      }
     });
   }, [currentUser]);
 
@@ -425,7 +463,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     tasks, assignTask, updateTaskStatus, 
     addMediaReport, getMediaReportsForDepartment,
     getTasksForEmployee, getDepartmentById, getEmployeeProfileById,
-    dataLoading
+    dataLoading, currentUser 
   ]);
 
 
