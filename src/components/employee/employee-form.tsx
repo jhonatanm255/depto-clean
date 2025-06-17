@@ -12,7 +12,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { KeyRound } from 'lucide-react';
+import { KeyRound, ShieldCheck } from 'lucide-react';
 
 const employeeSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
@@ -25,23 +25,23 @@ type EmployeeFormData = z.infer<typeof employeeSchema>;
 interface EmployeeFormProps {
   isOpen: boolean;
   onClose: () => void;
-  employee?: EmployeeProfile | null; // Usamos EmployeeProfile
+  employee?: EmployeeProfile | null; 
 }
 
 export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
-  // const { addEmployee, updateEmployeeProfile } = useData(); // updateEmployeeProfile si se implementa edición
   const { addEmployeeWithAuth } = useData(); 
   
   const form = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeSchema),
-    // Si es para editar, no cargamos la contraseña. La edición de contraseña sería un flujo separado.
-    defaultValues: employee ? { name: employee.name, email: employee.email, password: '' } : { name: '', email: '', password: '' },
+    defaultValues: employee 
+      ? { name: employee.name, email: employee.email, password: '' } 
+      : { name: '', email: '', password: '' },
   });
 
   React.useEffect(() => {
     if (isOpen) {
         form.reset(employee 
-          ? { name: employee.name, email: employee.email, password: '' } // No pre-rellenar contraseña en edición
+          ? { name: employee.name, email: employee.email, password: '' } 
           : { name: '', email: '', password: '' }
         );
     }
@@ -50,9 +50,7 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
 
   const onSubmit: SubmitHandler<EmployeeFormData> = async (data) => {
     if (employee) {
-      // La edición de empleados (especialmente contraseña) es más compleja y se deja para el futuro.
-      // Se podría llamar a updateEmployeeProfile(employee.id, { name: data.name, email: data.email });
-      alert("La funcionalidad de editar empleado aún no está implementada completamente.");
+      alert("La funcionalidad de editar empleado (incluyendo contraseña) aún no está implementada completamente y requiere un flujo de seguridad diferente.");
       onClose();
       return;
     }
@@ -60,14 +58,12 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
       await addEmployeeWithAuth(data.name, data.email, data.password);
       onClose(); 
     } catch (error) {
-      // El error (incluido el toast) se maneja en addEmployeeWithAuth
       console.error("Submit error en EmployeeForm (addEmployeeWithAuth):", error);
-      // form.formState.isSubmitting se resetea automáticamente por react-hook-form al fallar la promesa
     }
   };
   
   const handleCloseDialog = () => {
-    form.reset(); // Limpiar el formulario al cerrar
+    form.reset(); 
     onClose();
   };
 
@@ -79,14 +75,16 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
         <DialogHeader>
           <DialogTitle>{employee ? 'Editar Perfil de Empleada (Básico)' : 'Agregar Nueva Empleada'}</DialogTitle>
           {!employee && (
-            <DialogDescription>
-              Esto creará una cuenta de usuario para la empleada con el email y contraseña especificados.
+            <DialogDescription className="text-xs pt-1">
+              Al crear una empleada, se generará una cuenta en Firebase Authentication.
+              Deberás comunicar la contraseña inicial a la empleada. Esta contraseña no se podrá ver después.
+              <br/><strong>Importante:</strong> Crear una empleada te desconectará temporalmente. Deberás volver a iniciar sesión como administrador.
             </DialogDescription>
           )}
         </DialogHeader>
         
         {employee && (
-          <Alert variant="default" className="bg-yellow-50 border-yellow-200 text-yellow-700">
+          <Alert variant="default" className="bg-yellow-50 border-yellow-200 text-yellow-700 mt-2">
             <KeyRound className="h-5 w-5 text-yellow-500" />
             <AlertTitle className="font-semibold">Edición Limitada</AlertTitle>
             <AlertDescription>
@@ -104,7 +102,7 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
                 <FormItem>
                   <FormLabel>Nombre Completo</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ej: Ana Pérez" {...field} disabled={form.formState.isSubmitting && !!employee} />
+                    <Input placeholder="Ej: Ana Pérez" {...field} disabled={form.formState.isSubmitting || !!employee} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -117,23 +115,24 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
                 <FormItem>
                   <FormLabel>Correo Electrónico (Será el usuario)</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="Ej: ana.perez@ejemplo.com" {...field} disabled={form.formState.isSubmitting && !!employee}/>
+                    <Input type="email" placeholder="Ej: ana.perez@ejemplo.com" {...field} disabled={form.formState.isSubmitting || !!employee}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {!employee && ( // Solo mostrar campo de contraseña si es un nuevo empleado
+            {!employee && ( 
               <FormField
                 control={form.control}
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Contraseña</FormLabel>
+                    <FormLabel>Contraseña (Mínimo 6 caracteres)</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Mínimo 6 caracteres" {...field} disabled={form.formState.isSubmitting} />
+                      <Input type="password" placeholder="••••••••" {...field} disabled={form.formState.isSubmitting} />
                     </FormControl>
                     <FormMessage />
+                    <p className="text-xs text-muted-foreground pt-1">Esta contraseña es para la creación inicial de la cuenta. Comunícasela a la empleada.</p>
                   </FormItem>
                 )}
               />
@@ -142,9 +141,11 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
               <DialogClose asChild>
                 <Button type="button" variant="outline" onClick={handleCloseDialog} disabled={form.formState.isSubmitting}>Cancelar</Button>
               </DialogClose>
-              <Button type="submit" disabled={form.formState.isSubmitting || (!!employee)}>
+              <Button type="submit" disabled={form.formState.isSubmitting || (!!employee && !form.formState.isDirty)}>
                  {form.formState.isSubmitting && <LoadingSpinner size={16} className="mr-2" />}
-                 {employee ? 'Guardar Cambios (Próx.)' : (form.formState.isSubmitting ? 'Agregando...' : 'Agregar Empleada y Crear Cuenta')}
+                 {employee 
+                    ? (form.formState.isSubmitting ? 'Guardando...' : 'Guardar Cambios (Próx.)') 
+                    : (form.formState.isSubmitting ? 'Agregando...' : 'Agregar Empleada y Crear Cuenta')}
               </Button>
             </DialogFooter>
           </form>

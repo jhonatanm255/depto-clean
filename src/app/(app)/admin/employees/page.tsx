@@ -6,7 +6,7 @@ import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
 import { EmployeeForm } from '@/components/employee/employee-form';
 import { EmployeeCard } from '@/components/employee/employee-card';
-import { PlusCircle, Users, Info, ShieldAlert, Search } from 'lucide-react';
+import { PlusCircle, Users, Info, ShieldAlert, Search, KeyRound } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -57,14 +57,21 @@ export default function EmployeesPage() {
         </div>
          <Alert className="mt-4 text-sm bg-yellow-50 border-yellow-300 text-yellow-800">
             <ShieldAlert className="h-5 w-5 text-yellow-600" />
-            <AlertTitle className="font-semibold">¡Importante sobre Cuentas de Empleadas!</AlertTitle>
-            <AlertDescription>
-              Al agregar una nueva empleada, se creará una cuenta de usuario en Firebase Authentication con el email y contraseña que especifiques.
-              La empleada podrá usar estas credenciales para iniciar sesión en la aplicación.
-              <br />
-              <strong>Atención:</strong> Después de crear una cuenta de empleada, como administrador, <strong>deberás volver a iniciar sesión</strong> en tu propia cuenta de administrador. Esto se debe a que Firebase Authentication inicia sesión automáticamente con la nueva cuenta creada.
-              <br />
-              La edición de perfiles de empleadas (incluyendo cambio de contraseña) es una funcionalidad planificada para el futuro.
+            <AlertTitle className="font-semibold">¡Importante Sobre Cuentas y Contraseñas de Empleadas!</AlertTitle>
+            <AlertDescription className="space-y-1">
+              <p>
+                Al agregar una nueva empleada, se creará una cuenta de usuario en Firebase Authentication con el <strong>email y contraseña que especifiques</strong>.
+                La empleada podrá usar estas credenciales para iniciar sesión en la aplicación.
+              </p>
+              <p>
+                <strong>Comunicación de la Contraseña:</strong> Como administrador, eres responsable de <strong>comunicar de forma segura la contraseña inicial</strong> a la empleada. Esta contraseña <strong>no se almacena para ser vista posteriormente</strong> por motivos de seguridad.
+              </p>
+              <p>
+                <strong>Impacto en tu Sesión:</strong> Después de crear una cuenta de empleada, como administrador, <strong>deberás volver a iniciar sesión</strong> en tu propia cuenta. Esto se debe a que Firebase Authentication inicia sesión automáticamente con la nueva cuenta creada.
+              </p>
+               <p>
+                La edición de perfiles de empleadas (incluyendo el reseteo de contraseñas por parte del admin) es una funcionalidad planificada para el futuro.
+              </p>
             </AlertDescription>
           </Alert>
       </header>
