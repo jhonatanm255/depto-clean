@@ -39,20 +39,28 @@ export function MediaReportsDialog({ isOpen, onClose, departmentId, departmentNa
 
   useEffect(() => {
     if (isOpen && departmentId) {
+      console.log(`[MediaReportsDialog] Abriendo para departmentId: ${departmentId}`);
       setIsLoading(true);
       getMediaReportsForDepartment(departmentId)
         .then(data => {
           setReports(data);
         })
-        .catch(console.error)
+        .catch(error => {
+          // DataContext ya muestra un toast de error. Esto es para depuración adicional.
+          console.error(`[MediaReportsDialog] Error al obtener reportes para ${departmentId}:`, error);
+        })
         .finally(() => setIsLoading(false));
+    } else if (!isOpen) {
+      // Limpiar estado cuando el diálogo se cierra
+      setReports([]);
+      setIsLoading(false);
     }
   }, [isOpen, departmentId, getMediaReportsForDepartment]);
 
   if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-lg md:max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Evidencias Multimedia: {departmentName}</DialogTitle>
@@ -61,7 +69,7 @@ export function MediaReportsDialog({ isOpen, onClose, departmentId, departmentNa
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="flex-grow pr-6 -mr-6"> {/* Negative margin to compensate ScrollArea padding */}
+        <ScrollArea className="flex-grow pr-6 -mr-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-10">
               <LoadingSpinner size={24} />
@@ -70,7 +78,7 @@ export function MediaReportsDialog({ isOpen, onClose, departmentId, departmentNa
           ) : reports.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
                <AlertTriangle className="h-12 w-12 text-muted-foreground/70 mb-2" />
-              <p className="text-muted-foreground">No hay evidencias multimedia para este departamento.</p>
+              <p className="text-muted-foreground">No hay evidencias multimedia para este departamento o no se pudieron cargar.</p>
             </div>
           ) : (
             <ul className="space-y-3">
@@ -100,6 +108,14 @@ export function MediaReportsDialog({ isOpen, onClose, departmentId, departmentNa
                       <span className="flex items-center"><User className="mr-1 h-3 w-3" /> Subido por: {employee?.name || 'Desconocido'}</span>
                       <span className="flex items-center"><CalendarDays className="mr-1 h-3 w-3" /> Fecha: {new Date(report.uploadedAt).toLocaleDateString('es-CL')} {new Date(report.uploadedAt).toLocaleTimeString('es-CL')}</span>
                     </div>
+                     <a 
+                        href={report.downloadURL} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline flex items-center mt-1"
+                      >
+                        <ExternalLink className="mr-1 h-3 w-3" /> Ver archivo
+                      </a>
                   </li>
                 );
               })}
