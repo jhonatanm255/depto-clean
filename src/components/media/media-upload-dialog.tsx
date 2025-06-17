@@ -9,12 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
-import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 import { UploadCloud, FileImage, Video } from 'lucide-react';
+import { Progress } from '@/components/ui/progress'; // Importar Progress
 
 const mediaReportSchema = z.object({
   file: z.instanceof(FileList).refine(files => files.length > 0, "Se requiere un archivo."),
@@ -35,6 +36,7 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
   const { currentUser } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const form = useForm<MediaReportFormData>({
     resolver: zodResolver(mediaReportSchema),
@@ -51,28 +53,35 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
     }
     const fileToUpload = data.file[0];
     setIsUploading(true);
+    setUploadProgress(0); // Iniciar progreso
+
     try {
       await addMediaReport(
         departmentId,
         currentUser.employeeProfileId,
         fileToUpload,
         data.reportType as MediaReportType,
-        data.description
+        data.description,
+        (progress) => setUploadProgress(progress) // Callback de progreso
       );
       form.reset();
       setFileName(null);
-      onClose();
+      onClose(); // Cerrar solo después de éxito completo
     } catch (error) {
       console.error("Error en submit de MediaUploadDialog:", error);
       // El toast de error ya lo maneja DataContext
+      // No cerramos el diálogo en caso de error para que el usuario pueda reintentar o corregir
     } finally {
       setIsUploading(false);
+      setUploadProgress(null); // Limpiar progreso
     }
   };
 
   const handleCloseDialog = () => {
+    if (isUploading) return; // No cerrar si está subiendo
     form.reset();
     setFileName(null);
+    setUploadProgress(null);
     setIsUploading(false);
     onClose();
   };
@@ -116,7 +125,7 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
                   </FormControl>
                   {fileName && (
                     <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                      {fileName.match(/\.(jpeg|jpg|gif|png)$/) ? <FileImage className="h-4 w-4 mr-1 text-primary" /> : <Video className="h-4 w-4 mr-1 text-primary" />}
+                      {fileName.match(/\.(jpeg|jpg|gif|png)$/i) ? <FileImage className="h-4 w-4 mr-1 text-primary" /> : <Video className="h-4 w-4 mr-1 text-primary" />}
                       Archivo seleccionado: {fileName}
                     </p>
                   )}
@@ -124,6 +133,12 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
                 </FormItem>
               )}
             />
+            {isUploading && uploadProgress !== null && (
+              <div className="space-y-1">
+                <Progress value={uploadProgress} className="w-full h-2" />
+                <p className="text-xs text-muted-foreground text-center">Subiendo: {Math.round(uploadProgress)}%</p>
+              </div>
+            )}
             <FormField
               control={form.control}
               name="reportType"
@@ -174,3 +189,4 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
     </Dialog>
   );
 }
+

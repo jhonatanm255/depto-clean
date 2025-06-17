@@ -3,7 +3,7 @@
 import type { Department, EmployeeProfile, CleaningTask, MediaReport, MediaReportType } from '@/lib/types';
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from 'react';
-import { db, storage } from '@/lib/firebase'; // Importar storage
+import { db, storage } from '@/lib/firebase';
 import { 
   collection, 
   addDoc, 
@@ -18,7 +18,7 @@ import {
   writeBatch,
   orderBy
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Imports para Storage
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { getAuth, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from './auth-context'; 
@@ -41,7 +41,8 @@ interface DataContextType {
     employeeProfileId: string, 
     file: File, 
     reportType: MediaReportType, 
-    description?: string
+    description?: string,
+    onProgress?: (progress: number) => void // Callback para progreso
   ) => Promise<void>;
   getMediaReportsForDepartment: (departmentId: string) => Promise<MediaReport[]>;
 
@@ -57,7 +58,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [employees, setEmployees] = useState<EmployeeProfile[]>([]);
   const [tasks, setTasks] = useState<CleaningTask[]>([]);
-  // No vamos a mantener mediaReports en el estado global del contexto por ahora, se cargarán bajo demanda.
   const [dataLoading, setDataLoading] = useState(true);
   const { currentUser } = useAuth(); 
 
@@ -155,27 +155,30 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       const batch = writeBatch(db);
 
-      // Eliminar tareas asociadas
+      const mediaReportsQuery = query(collection(db, "media_reports"), where("departmentId", "==", id));
+      const mediaReportsSnapshot = await getDocs(mediaReportsQuery);
+      
+      const deletePromises: Promise<void>[] = [];
+      mediaReportsSnapshot.forEach((reportDoc) => {
+        const reportData = reportDoc.data() as MediaReport;
+        if (reportData.storagePath) {
+          const storageFileRef = ref(storage, reportData.storagePath);
+          deletePromises.push(deleteObject(storageFileRef).catch(err => console.warn("Error deleting file from storage, may not exist or protected:", err, reportData.storagePath)));
+        }
+        batch.delete(doc(db, "media_reports", reportDoc.id));
+      });
+      
+      await Promise.all(deletePromises);
+
       const tasksQuery = query(collection(db, "tasks"), where("departmentId", "==", id));
       const tasksSnapshot = await getDocs(tasksQuery);
       tasksSnapshot.forEach((taskDoc) => {
         batch.delete(doc(db, "tasks", taskDoc.id));
       });
-
-      // Eliminar reportes multimedia asociados (TODO: También eliminar de Storage)
-      const mediaReportsQuery = query(collection(db, "media_reports"), where("departmentId", "==", id));
-      const mediaReportsSnapshot = await getDocs(mediaReportsQuery);
-      mediaReportsSnapshot.forEach((reportDoc) => {
-        // Aquí idealmente también se eliminaría el archivo de Firebase Storage
-        // const reportData = reportDoc.data() as MediaReport;
-        // const storageFileRef = ref(storage, reportData.storagePath);
-        // deleteObject(storageFileRef).catch(err => console.error("Error deleting file from storage:", err));
-        batch.delete(doc(db, "media_reports", reportDoc.id));
-      });
       
       batch.delete(doc(db, "departments", id));
       await batch.commit();
-      toast({ title: "Departamento Eliminado", description: "Departamento, tareas y reportes asociados eliminados de Firestore." });
+      toast({ title: "Departamento Eliminado", description: "Departamento, tareas y reportes (Firestore y Storage) asociados eliminados." });
     } catch (error) {
       console.error("Error deleting department: ", error);
       toast({ variant: "destructive", title: "Error", description: "No se pudo eliminar el departamento."});
@@ -312,42 +315,58 @@ export function DataProvider({ children }: { children: ReactNode }) {
     employeeProfileId: string, 
     file: File, 
     reportType: MediaReportType, 
-    description?: string
-  ) => {
+    description?: string,
+    onProgress?: (progress: number) => void
+  ): Promise<void> => {
     if (!currentUser?.uid) {
       toast({ variant: "destructive", title: "Error de autenticación", description: "No se pudo verificar la empleada." });
       throw new Error("Usuario no autenticado");
     }
     const uploadedByAuthUid = currentUser.uid;
-    const uniqueFileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`; // Nombre de archivo único
+    const uniqueFileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
     const storagePath = `departments/${departmentId}/media/${uniqueFileName}`;
     const fileRef = ref(storage, storagePath);
 
-    try {
-      // Subir archivo a Storage
-      const snapshot = await uploadBytes(fileRef, file);
-      const downloadURL = await getDownloadURL(snapshot.ref);
+    return new Promise((resolve, reject) => {
+      const uploadTask = uploadBytesResumable(fileRef, file);
 
-      // Guardar metadatos en Firestore
-      await addDoc(collection(db, "media_reports"), {
-        departmentId,
-        employeeProfileId,
-        uploadedByAuthUid,
-        storagePath,
-        downloadURL,
-        fileName: file.name,
-        contentType: file.type,
-        reportType,
-        description: description || "",
-        uploadedAt: Timestamp.now(),
-      });
-
-      toast({ title: "Evidencia Subida", description: "El archivo se ha subido correctamente." });
-    } catch (error) {
-      console.error("Error subiendo archivo multimedia: ", error);
-      toast({ variant: "destructive", title: "Error de Subida", description: "No se pudo subir el archivo." });
-      throw error;
-    }
+      uploadTask.on('state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          if (onProgress) {
+            onProgress(progress);
+          }
+        },
+        (error) => {
+          console.error("Error subiendo archivo a Storage: ", error);
+          toast({ variant: "destructive", title: "Error de Subida", description: "No se pudo subir el archivo a Storage." });
+          reject(error);
+        },
+        async () => {
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            await addDoc(collection(db, "media_reports"), {
+              departmentId,
+              employeeProfileId,
+              uploadedByAuthUid,
+              storagePath,
+              downloadURL,
+              fileName: file.name,
+              contentType: file.type,
+              reportType,
+              description: description || "",
+              uploadedAt: Timestamp.now(),
+            });
+            toast({ title: "Evidencia Subida", description: "El archivo se ha subido y registrado correctamente." });
+            resolve();
+          } catch (error) {
+            console.error("Error guardando metadatos en Firestore: ", error);
+            toast({ variant: "destructive", title: "Error de Registro", description: "El archivo se subió pero no se pudo registrar." });
+            reject(error);
+          }
+        }
+      );
+    });
   }, [currentUser]);
 
   const getMediaReportsForDepartment = useCallback(async (departmentId: string): Promise<MediaReport[]> => {
@@ -420,3 +439,4 @@ export function useData() {
   }
   return context;
 }
+
