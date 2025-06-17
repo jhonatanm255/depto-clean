@@ -5,9 +5,10 @@ import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Building2, KeyRound, CheckCircle2, Loader2, AlertTriangle, CalendarDays, MapPin, ExternalLink } from 'lucide-react';
+import { Building2, KeyRound, CheckCircle2, Loader2, AlertTriangle, CalendarDays, MapPin, ExternalLink, UploadCloud } from 'lucide-react';
 import { cn } from '@/lib/utils';
-// Toast is handled in DataContext
+import React, { useState } from 'react';
+import { MediaUploadDialog } from '@/components/media/media-upload-dialog'; // Importar
 
 interface TaskCardProps {
   task: CleaningTask;
@@ -25,10 +26,10 @@ function translateStatus(status: CleaningTask['status']) {
 
 export function TaskCard({ task, department }: TaskCardProps) {
   const { updateTaskStatus } = useData();
+  const [isMediaUploadOpen, setIsMediaUploadOpen] = useState(false);
 
   const handleUpdateStatus = async (status: 'pending' | 'in_progress' | 'completed') => {
     await updateTaskStatus(task.id, status);
-    // Toast is handled within updateTaskStatus
   };
 
   const getStatusBadgeVariant = (status: CleaningTask['status']) => {
@@ -67,69 +68,89 @@ export function TaskCard({ task, department }: TaskCardProps) {
     : null;
 
   return (
-    <Card className="flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-200">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <CardTitle className="font-headline text-xl flex items-center">
-            <Building2 className="mr-2 h-6 w-6 text-primary" />
-            {department.name}
-          </CardTitle>
-          <Badge variant="default" className={cn("text-primary-foreground capitalize", getStatusBadgeVariant(task.status))}>
-            {getStatusIcon(task.status)}
-            {translateStatus(task.status)}
-          </Badge>
-        </div>
-        <CardDescription className="flex items-center pt-1 text-sm text-muted-foreground">
-          <KeyRound className="mr-2 h-4 w-4" />
-          Código de Acceso: {department.accessCode}
-        </CardDescription>
-        {department.address && (
-           <CardDescription className="flex items-start pt-1 text-xs text-muted-foreground">
-            <MapPin className="mr-2 h-4 w-4 shrink-0" />
-            {department.address}
+    <>
+      <Card className="flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-200">
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <CardTitle className="font-headline text-xl flex items-center">
+              <Building2 className="mr-2 h-6 w-6 text-primary" />
+              {department.name}
+            </CardTitle>
+            <Badge variant="default" className={cn("text-primary-foreground capitalize", getStatusBadgeVariant(task.status))}>
+              {getStatusIcon(task.status)}
+              {translateStatus(task.status)}
+            </Badge>
+          </div>
+          <CardDescription className="flex items-center pt-1 text-sm text-muted-foreground">
+            <KeyRound className="mr-2 h-4 w-4" />
+            Código de Acceso: {department.accessCode}
           </CardDescription>
-        )}
-      </CardHeader>
-      <CardContent className="flex-grow space-y-2">
-         <p className="flex items-center text-sm text-muted-foreground">
-            <CalendarDays className="mr-2 h-4 w-4"/> Asignada: {new Date(task.assignedAt).toLocaleDateString('es-CL')}
-        </p>
-        {task.status === 'completed' && task.completedAt && (
-           <p className="flex items-center text-sm text-green-600">
-             <CheckCircle2 className="mr-2 h-4 w-4"/> Completada: {new Date(task.completedAt).toLocaleDateString('es-CL')}
-           </p>
-        )}
-         {googleMapsUrl && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full sm:w-auto mt-2"
-            onClick={() => window.open(googleMapsUrl, '_blank')}
-          >
-            <ExternalLink className="mr-2 h-4 w-4" /> Ver en Mapa
-          </Button>
-        )}
-      </CardContent>
-      <CardFooter className="flex flex-col sm:flex-row justify-end gap-2 border-t pt-4 flex-wrap">
-        {task.status === 'pending' && (
-          <>
-            <Button variant="outline" size="sm" onClick={() => handleUpdateStatus('in_progress')} className="w-full sm:w-auto">
-              <Loader2 className="mr-1 h-4 w-4" /> Iniciar Limpieza
+          {department.address && (
+            <CardDescription className="flex items-start pt-1 text-xs text-muted-foreground">
+              <MapPin className="mr-2 h-4 w-4 shrink-0" />
+              {department.address}
+            </CardDescription>
+          )}
+        </CardHeader>
+        <CardContent className="flex-grow space-y-2">
+          <p className="flex items-center text-sm text-muted-foreground">
+              <CalendarDays className="mr-2 h-4 w-4"/> Asignada: {new Date(task.assignedAt).toLocaleDateString('es-CL')}
+          </p>
+          {task.status === 'completed' && task.completedAt && (
+            <p className="flex items-center text-sm text-green-600">
+              <CheckCircle2 className="mr-2 h-4 w-4"/> Completada: {new Date(task.completedAt).toLocaleDateString('es-CL')}
+            </p>
+          )}
+          <div className="flex flex-col sm:flex-row gap-2 mt-2 flex-wrap">
+            {googleMapsUrl && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full sm:w-auto flex-grow"
+                onClick={() => window.open(googleMapsUrl, '_blank')}
+              >
+                <ExternalLink className="mr-2 h-4 w-4" /> Ver en Mapa
+              </Button>
+            )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setIsMediaUploadOpen(true)} 
+              className="w-full sm:w-auto flex-grow"
+              disabled={task.status === 'completed'} // Opcional: deshabilitar si ya está completada
+            >
+              <UploadCloud className="mr-2 h-4 w-4" /> Subir Evidencia
             </Button>
+          </div>
+        </CardContent>
+        <CardFooter className="flex flex-col sm:flex-row justify-end gap-2 border-t pt-4 flex-wrap">
+          {task.status === 'pending' && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => handleUpdateStatus('in_progress')} className="w-full sm:w-auto">
+                <Loader2 className="mr-1 h-4 w-4" /> Iniciar Limpieza
+              </Button>
+              <Button size="sm" onClick={() => handleUpdateStatus('completed')} className="bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto">
+                <CheckCircle2 className="mr-1 h-4 w-4" /> Marcar Completada
+              </Button>
+            </>
+          )}
+          {task.status === 'in_progress' && (
             <Button size="sm" onClick={() => handleUpdateStatus('completed')} className="bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto">
               <CheckCircle2 className="mr-1 h-4 w-4" /> Marcar Completada
             </Button>
-          </>
-        )}
-        {task.status === 'in_progress' && (
-          <Button size="sm" onClick={() => handleUpdateStatus('completed')} className="bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto">
-            <CheckCircle2 className="mr-1 h-4 w-4" /> Marcar Completada
-          </Button>
-        )}
-        {task.status === 'completed' && (
-          <p className="text-sm text-green-600 font-medium">¡Tarea Completada!</p>
-        )}
-      </CardFooter>
-    </Card>
+          )}
+          {task.status === 'completed' && (
+            <p className="text-sm text-green-600 font-medium">¡Tarea Completada!</p>
+          )}
+        </CardFooter>
+      </Card>
+      {department && (
+        <MediaUploadDialog 
+          isOpen={isMediaUploadOpen} 
+          onClose={() => setIsMediaUploadOpen(false)} 
+          departmentId={department.id} 
+        />
+      )}
+    </>
   );
 }

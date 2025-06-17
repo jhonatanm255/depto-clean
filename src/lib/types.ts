@@ -41,3 +41,19 @@ export interface CleaningTask {
   status: 'pending' | 'in_progress' | 'completed';
   completedAt?: Date; 
 }
+
+export type MediaReportType = 'before' | 'after' | 'incident';
+
+export interface MediaReport {
+  id: string;
+  departmentId: string;
+  employeeProfileId: string; 
+  uploadedByAuthUid: string; 
+  storagePath: string; 
+  downloadURL: string;
+  fileName: string;
+  contentType: string; 
+  reportType: MediaReportType;
+  description?: string;
+  uploadedAt: Date; 
+}

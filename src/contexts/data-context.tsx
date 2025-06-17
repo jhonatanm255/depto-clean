@@ -1,9 +1,9 @@
 
 "use client";
-import type { Department, EmployeeProfile, CleaningTask } from '@/lib/types';
+import type { Department, EmployeeProfile, CleaningTask, MediaReport, MediaReportType } from '@/lib/types';
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from 'react';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase'; // Importar storage
 import { 
   collection, 
   addDoc, 
@@ -16,11 +16,12 @@ import {
   where,
   getDocs,
   writeBatch,
-  getDoc
+  orderBy
 } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Imports para Storage
 import { getAuth, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
 import { toast } from '@/hooks/use-toast';
-import { useAuth } from './auth-context'; // Para obtener el admin actual
+import { useAuth } from './auth-context'; 
 
 interface DataContextType {
   departments: Department[];
@@ -35,6 +36,15 @@ interface DataContextType {
   assignTask: (departmentId: string, employeeProfileId: string) => Promise<void>;
   updateTaskStatus: (taskId: string, status: 'pending' | 'in_progress' | 'completed') => Promise<void>;
   
+  addMediaReport: (
+    departmentId: string, 
+    employeeProfileId: string, 
+    file: File, 
+    reportType: MediaReportType, 
+    description?: string
+  ) => Promise<void>;
+  getMediaReportsForDepartment: (departmentId: string) => Promise<MediaReport[]>;
+
   getTasksForEmployee: (employeeProfileId: string) => CleaningTask[];
   getDepartmentById: (departmentId: string) => Department | undefined;
   getEmployeeProfileById: (employeeProfileId: string) => EmployeeProfile | undefined;
@@ -47,8 +57,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [employees, setEmployees] = useState<EmployeeProfile[]>([]);
   const [tasks, setTasks] = useState<CleaningTask[]>([]);
+  // No vamos a mantener mediaReports en el estado global del contexto por ahora, se cargarán bajo demanda.
   const [dataLoading, setDataLoading] = useState(true);
-  const { currentUser: adminUser } = useAuth(); 
+  const { currentUser } = useAuth(); 
 
   useEffect(() => {
     setDataLoading(true);
@@ -142,15 +153,29 @@ export function DataProvider({ children }: { children: ReactNode }) {
   
   const deleteDepartment = useCallback(async (id: string) => {
     try {
-      const q = query(collection(db, "tasks"), where("departmentId", "==", id));
-      const querySnapshot = await getDocs(q);
       const batch = writeBatch(db);
-      querySnapshot.forEach((taskDoc) => {
+
+      // Eliminar tareas asociadas
+      const tasksQuery = query(collection(db, "tasks"), where("departmentId", "==", id));
+      const tasksSnapshot = await getDocs(tasksQuery);
+      tasksSnapshot.forEach((taskDoc) => {
         batch.delete(doc(db, "tasks", taskDoc.id));
       });
+
+      // Eliminar reportes multimedia asociados (TODO: También eliminar de Storage)
+      const mediaReportsQuery = query(collection(db, "media_reports"), where("departmentId", "==", id));
+      const mediaReportsSnapshot = await getDocs(mediaReportsQuery);
+      mediaReportsSnapshot.forEach((reportDoc) => {
+        // Aquí idealmente también se eliminaría el archivo de Firebase Storage
+        // const reportData = reportDoc.data() as MediaReport;
+        // const storageFileRef = ref(storage, reportData.storagePath);
+        // deleteObject(storageFileRef).catch(err => console.error("Error deleting file from storage:", err));
+        batch.delete(doc(db, "media_reports", reportDoc.id));
+      });
+      
       batch.delete(doc(db, "departments", id));
       await batch.commit();
-      toast({ title: "Departamento Eliminado", description: "Departamento y tareas asociadas eliminados." });
+      toast({ title: "Departamento Eliminado", description: "Departamento, tareas y reportes asociados eliminados de Firestore." });
     } catch (error) {
       console.error("Error deleting department: ", error);
       toast({ variant: "destructive", title: "Error", description: "No se pudo eliminar el departamento."});
@@ -160,10 +185,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const addEmployeeWithAuth = useCallback(async (name: string, email: string, password: string) => {
     const auth = getAuth();
-    const adminAuthUid = adminUser?.uid; 
-    const adminAuthEmail = adminUser?.email;
+    const adminAuthUid = currentUser?.uid; 
 
-    if (!adminAuthUid || !adminAuthEmail) {
+    if (!adminAuthUid) {
         toast({ variant: "destructive", title: "Error de Administrador", description: "No se pudo verificar la sesión del administrador." });
         throw new Error("Admin no autenticado");
     }
@@ -192,7 +216,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       toast({ variant: "destructive", title: "Error al Crear Cuenta", description });
       throw error; 
     }
-  }, [adminUser]);
+  }, [currentUser]);
 
 
  const assignTask = useCallback(async (departmentId: string, employeeProfileId: string) => {
@@ -211,7 +235,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const batch = writeBatch(db);
       const deptRef = doc(db, "departments", departmentId);
       
-      // Buscar tarea existente para este departamento que esté activa
       const existingTaskQuery = query(
         collection(db, "tasks"),
         where("departmentId", "==", departmentId),
@@ -220,17 +243,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const existingTaskSnapshot = await getDocs(existingTaskQuery);
 
       if (!existingTaskSnapshot.empty) {
-        // Si existe una tarea activa, la actualizamos (reasignamos)
         const existingTaskDoc = existingTaskSnapshot.docs[0];
         batch.update(existingTaskDoc.ref, {
           employeeId: employeeProfileId,
           assignedAt: Timestamp.now(),
-          status: 'pending', // Siempre se establece como pendiente al reasignar
-          completedAt: null, // Limpiar fecha de completado si la hubo
+          status: 'pending', 
+          completedAt: null, 
         });
         toast({ title: "Tarea Reasignada", description: `Departamento ${department.name} reasignado a ${employee.name}.` });
       } else {
-        // Si no existe tarea activa, creamos una nueva
         const taskRef = doc(collection(db, "tasks"));
         batch.set(taskRef, {
           departmentId,
@@ -242,11 +263,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
         toast({ title: "Tarea Asignada", description: `Departamento ${department.name} asignado a ${employee.name}.` });
       }
       
-      // Actualizar el departamento
       batch.update(deptRef, {
         assignedTo: employeeProfileId,
-        status: 'pending', // El departamento vuelve a pendiente
-        lastCleanedAt: null, // Limpiar última limpieza al reasignar
+        status: 'pending', 
+        lastCleanedAt: null, 
       });
       
       await batch.commit();
@@ -274,7 +294,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const deptRef = doc(db, "departments", task.departmentId);
       batch.update(deptRef, { 
         status, 
-        lastCleanedAt: newCompletedAtTimestamp, // Se actualiza también si la tarea se vuelve a poner pendiente o en progreso
+        lastCleanedAt: newCompletedAtTimestamp, 
         assignedTo: task.employeeId 
       });
 
@@ -286,6 +306,70 @@ export function DataProvider({ children }: { children: ReactNode }) {
       throw error; 
     }
   }, [tasks]);
+
+  const addMediaReport = useCallback(async (
+    departmentId: string, 
+    employeeProfileId: string, 
+    file: File, 
+    reportType: MediaReportType, 
+    description?: string
+  ) => {
+    if (!currentUser?.uid) {
+      toast({ variant: "destructive", title: "Error de autenticación", description: "No se pudo verificar la empleada." });
+      throw new Error("Usuario no autenticado");
+    }
+    const uploadedByAuthUid = currentUser.uid;
+    const uniqueFileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`; // Nombre de archivo único
+    const storagePath = `departments/${departmentId}/media/${uniqueFileName}`;
+    const fileRef = ref(storage, storagePath);
+
+    try {
+      // Subir archivo a Storage
+      const snapshot = await uploadBytes(fileRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+
+      // Guardar metadatos en Firestore
+      await addDoc(collection(db, "media_reports"), {
+        departmentId,
+        employeeProfileId,
+        uploadedByAuthUid,
+        storagePath,
+        downloadURL,
+        fileName: file.name,
+        contentType: file.type,
+        reportType,
+        description: description || "",
+        uploadedAt: Timestamp.now(),
+      });
+
+      toast({ title: "Evidencia Subida", description: "El archivo se ha subido correctamente." });
+    } catch (error) {
+      console.error("Error subiendo archivo multimedia: ", error);
+      toast({ variant: "destructive", title: "Error de Subida", description: "No se pudo subir el archivo." });
+      throw error;
+    }
+  }, [currentUser]);
+
+  const getMediaReportsForDepartment = useCallback(async (departmentId: string): Promise<MediaReport[]> => {
+    try {
+      const q = query(
+        collection(db, "media_reports"), 
+        where("departmentId", "==", departmentId),
+        orderBy("uploadedAt", "desc")
+      );
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(docSnapshot => ({
+        id: docSnapshot.id,
+        ...docSnapshot.data(),
+        uploadedAt: (docSnapshot.data().uploadedAt as Timestamp).toDate(),
+      })) as MediaReport[];
+    } catch (error) {
+      console.error("Error obteniendo reportes multimedia: ", error);
+      toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los reportes." });
+      return [];
+    }
+  }, []);
+
 
   const getTasksForEmployee = useCallback((employeeProfileId: string) => {
     return tasks.filter((task) => task.employeeId === employeeProfileId)
@@ -310,6 +394,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     tasks, 
     assignTask, 
     updateTaskStatus, 
+    addMediaReport,
+    getMediaReportsForDepartment,
     getTasksForEmployee, 
     getDepartmentById,
     getEmployeeProfileById,
@@ -318,6 +404,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     departments, addDepartment, updateDepartment, deleteDepartment, 
     employees, addEmployeeWithAuth,
     tasks, assignTask, updateTaskStatus, 
+    addMediaReport, getMediaReportsForDepartment,
     getTasksForEmployee, getDepartmentById, getEmployeeProfileById,
     dataLoading
   ]);

@@ -4,7 +4,7 @@ import type { Department, Employee } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, KeyRound, User, Edit3, Trash2, CheckCircle2, AlertTriangle, Loader2, MapPin } from 'lucide-react';
+import { Building2, KeyRound, User, Edit3, Trash2, CheckCircle2, AlertTriangle, Loader2, MapPin, Camera } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 import { useData } from '@/contexts/data-context';
+import React, { useState } from 'react';
+import { MediaReportsDialog } from '@/components/media/media-reports-dialog'; // Importar
 
 interface DepartmentCardProps {
   department: Department;
@@ -36,6 +38,7 @@ function translateStatus(status: Department['status']) {
 
 export function DepartmentCard({ department, onEdit, employees }: DepartmentCardProps) {
   const { deleteDepartment } = useData();
+  const [isMediaReportsOpen, setIsMediaReportsOpen] = useState(false);
   const assignedEmployee = employees.find(emp => emp.id === department.assignedTo);
 
   const getStatusBadgeVariant = (status: Department['status']) => {
@@ -60,81 +63,92 @@ export function DepartmentCard({ department, onEdit, employees }: DepartmentCard
     try {
         await deleteDepartment(department.id);
     } catch (error) {
-        // Error toast handled by DataContext
         console.error("Delete failed in DepartmentCard:", error);
     }
   };
 
   return (
-    <Card className="flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-200">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <CardTitle className="font-headline text-xl flex items-center">
-            <Building2 className="mr-2 h-6 w-6 text-primary" />
-            {department.name}
-          </CardTitle>
-          <Badge variant="default" className={cn("text-primary-foreground capitalize", getStatusBadgeVariant(department.status))}>
-            {getStatusIcon(department.status)}
-            {translateStatus(department.status)}
-          </Badge>
-        </div>
-        <CardDescription className="flex items-center pt-1 text-sm">
-          <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />
-          Código de Acceso: {department.accessCode}
-        </CardDescription>
-        {department.address && (
-          <CardDescription className="flex items-start pt-1 text-xs text-muted-foreground">
-            <MapPin className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
-            {department.address}
-          </CardDescription>
-        )}
-      </CardHeader>
-      <CardContent className="flex-grow space-y-2">
-        {assignedEmployee && (
-          <div className="flex items-center text-sm text-muted-foreground">
-            <User className="mr-2 h-4 w-4" />
-            Asignado a: {assignedEmployee.name}
+    <>
+      <Card className="flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-200">
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <CardTitle className="font-headline text-xl flex items-center">
+              <Building2 className="mr-2 h-6 w-6 text-primary" />
+              {department.name}
+            </CardTitle>
+            <Badge variant="default" className={cn("text-primary-foreground capitalize", getStatusBadgeVariant(department.status))}>
+              {getStatusIcon(department.status)}
+              {translateStatus(department.status)}
+            </Badge>
           </div>
-        )}
-        {!assignedEmployee && department.status === 'pending' && (
-           <div className="flex items-center text-sm text-yellow-600">
-             <AlertTriangle className="mr-2 h-4 w-4" />
-             Necesita asignación
-           </div>
-        )}
-         {department.lastCleanedAt && (
-          <p className="text-xs text-muted-foreground">
-            Última Limpieza: {new Date(department.lastCleanedAt).toLocaleDateString('es-CL')}
-          </p>
-        )}
-      </CardContent>
-      <CardFooter className="flex justify-end gap-2 border-t pt-4 flex-wrap">
-        <Button variant="outline" size="sm" onClick={() => onEdit(department)} aria-label={`Editar ${department.name}`}>
-          <Edit3 className="mr-1 h-4 w-4" /> Editar
-        </Button>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm" aria-label={`Eliminar ${department.name}`}>
-              <Trash2 className="mr-1 h-4 w-4" /> Eliminar
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción no se puede deshacer. Esto eliminará permanentemente el
-                departamento "{department.name}" y todas las tareas asociadas.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-                Eliminar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </CardFooter>
-    </Card>
+          <CardDescription className="flex items-center pt-1 text-sm">
+            <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />
+            Código de Acceso: {department.accessCode}
+          </CardDescription>
+          {department.address && (
+            <CardDescription className="flex items-start pt-1 text-xs text-muted-foreground">
+              <MapPin className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
+              {department.address}
+            </CardDescription>
+          )}
+        </CardHeader>
+        <CardContent className="flex-grow space-y-2">
+          {assignedEmployee && (
+            <div className="flex items-center text-sm text-muted-foreground">
+              <User className="mr-2 h-4 w-4" />
+              Asignado a: {assignedEmployee.name}
+            </div>
+          )}
+          {!assignedEmployee && department.status === 'pending' && (
+            <div className="flex items-center text-sm text-yellow-600">
+              <AlertTriangle className="mr-2 h-4 w-4" />
+              Necesita asignación
+            </div>
+          )}
+          {department.lastCleanedAt && (
+            <p className="text-xs text-muted-foreground">
+              Última Limpieza: {new Date(department.lastCleanedAt).toLocaleDateString('es-CL')}
+            </p>
+          )}
+        </CardContent>
+        <CardFooter className="flex justify-end gap-2 border-t pt-4 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => setIsMediaReportsOpen(true)} aria-label={`Ver evidencias de ${department.name}`}>
+            <Camera className="mr-1 h-4 w-4" /> Ver Evidencias
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => onEdit(department)} aria-label={`Editar ${department.name}`}>
+            <Edit3 className="mr-1 h-4 w-4" /> Editar
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm" aria-label={`Eliminar ${department.name}`}>
+                <Trash2 className="mr-1 h-4 w-4" /> Eliminar
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta acción no se puede deshacer. Esto eliminará permanentemente el
+                  departamento "{department.name}", todas las tareas y evidencias asociadas.
+                  Los archivos en Storage no se eliminarán automáticamente por ahora.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                  Eliminar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardFooter>
+      </Card>
+      <MediaReportsDialog
+        isOpen={isMediaReportsOpen}
+        onClose={() => setIsMediaReportsOpen(false)}
+        departmentId={department.id}
+        departmentName={department.name}
+      />
+    </>
   );
 }
