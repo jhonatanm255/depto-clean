@@ -3,7 +3,8 @@
 import type { Department, EmployeeProfile, CleaningTask, MediaReport, MediaReportType } from '@/lib/types';
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from 'react';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase'; // Firebase Firestore remains
+import { supabase, SUPABASE_MEDIA_BUCKET } from '@/lib/supabase'; // Import Supabase client and bucket name
 import { 
   collection, 
   addDoc, 
@@ -18,7 +19,8 @@ import {
   writeBatch,
   orderBy
 } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
+// Firebase Storage imports are no longer needed here for upload/delete of media
+// import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { getAuth, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from './auth-context'; 
@@ -42,7 +44,7 @@ interface DataContextType {
     file: File, 
     reportType: MediaReportType, 
     description?: string,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void // Kept for signature, but Supabase basic upload won't use it directly here
   ) => Promise<void>;
   getMediaReportsForDepartment: (departmentId: string) => Promise<MediaReport[]>;
 
@@ -158,17 +160,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const mediaReportsQuery = query(collection(db, "media_reports"), where("departmentId", "==", id));
       const mediaReportsSnapshot = await getDocs(mediaReportsQuery);
       
-      const deletePromises: Promise<void>[] = [];
+      const supabaseDeletePaths: string[] = [];
       mediaReportsSnapshot.forEach((reportDoc) => {
         const reportData = reportDoc.data() as MediaReport;
         if (reportData.storagePath) {
-          const storageFileRef = ref(storage, reportData.storagePath);
-          deletePromises.push(deleteObject(storageFileRef).catch(err => console.warn("Error deleting file from storage, may not exist or protected:", err, reportData.storagePath)));
+          supabaseDeletePaths.push(reportData.storagePath);
         }
         batch.delete(doc(db, "media_reports", reportDoc.id));
       });
       
-      await Promise.all(deletePromises);
+      if (supabaseDeletePaths.length > 0) {
+        const { error: supabaseError } = await supabase.storage.from(SUPABASE_MEDIA_BUCKET).remove(supabaseDeletePaths);
+        if (supabaseError) {
+          console.warn("Error deleting files from Supabase storage:", supabaseError.message, supabaseDeletePaths);
+          toast({ variant: "destructive", title: "Error Parcial", description: "Algunos archivos en Supabase no se pudieron eliminar." });
+          // Decide if you want to proceed or throw error. For MVP, we might log and proceed.
+        }
+      }
 
       const tasksQuery = query(collection(db, "tasks"), where("departmentId", "==", id));
       const tasksSnapshot = await getDocs(tasksQuery);
@@ -178,7 +186,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       
       batch.delete(doc(db, "departments", id));
       await batch.commit();
-      toast({ title: "Departamento Eliminado", description: "Departamento, tareas y reportes (Firestore y Storage) asociados eliminados." });
+      toast({ title: "Departamento Eliminado", description: "Departamento, tareas y reportes (Firestore y Supabase Storage) asociados eliminados." });
     } catch (error) {
       console.error("Error deleting department: ", error);
       toast({ variant: "destructive", title: "Error", description: "No se pudo eliminar el departamento."});
@@ -316,7 +324,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     file: File, 
     reportType: MediaReportType, 
     description?: string,
-    onProgress?: (progress: number) => void
+    _onProgress?: (progress: number) => void // _onProgress is not used for Supabase basic upload here
   ): Promise<void> => {
     if (!currentUser?.uid) {
       toast({ variant: "destructive", title: "Error de autenticación", description: "No se pudo verificar la empleada." });
@@ -329,82 +337,71 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     const uploadedByAuthUid = currentUser.uid;
     const uniqueFileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-    const storagePath = `departments/${departmentId}/media/${uniqueFileName}`;
-    const fileRef = ref(storage, storagePath);
-    console.log(`[DataContext] Iniciando subida para: ${storagePath}, Archivo: ${file.name}, Tamaño: ${file.size}`);
+    // Path for Supabase: public/departments/{departmentId}/media/{uniqueFileName}
+    // Supabase paths don't typically start with 'public/' in the API call, it's implied by bucket settings.
+    const supabasePath = `departments/${departmentId}/media/${uniqueFileName}`;
+    console.log(`[DataContext] Iniciando subida a Supabase para: ${supabasePath}, Archivo: ${file.name}, Tamaño: ${file.size}`);
 
-    return new Promise((resolve, reject) => {
-      try {
-        const uploadTask = uploadBytesResumable(fileRef, file);
+    try {
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(SUPABASE_MEDIA_BUCKET)
+        .upload(supabasePath, file, {
+          cacheControl: '3600', // Optional: cache for 1 hour
+          upsert: false, // Do not overwrite if file exists (can be true if needed)
+        });
 
-        uploadTask.on('state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            console.log(`[DataContext] Progreso de subida: ${progress}% (${snapshot.bytesTransferred}/${snapshot.totalBytes})`);
-            if (onProgress) {
-              onProgress(progress);
-            }
-            switch (snapshot.state) {
-              case 'paused':
-                console.log('[DataContext] Subida pausada');
-                break;
-              case 'running':
-                console.log('[DataContext] Subida en progreso');
-                break;
-            }
-          },
-          (error) => {
-            console.error("[DataContext] Error subiendo archivo a Storage: ", error);
-            let errorMessage = "No se pudo subir el archivo.";
-            switch (error.code) {
-              case 'storage/unauthorized':
-                errorMessage = "No tienes permiso para subir archivos. Verifica las reglas de Firebase Storage.";
-                break;
-              case 'storage/canceled':
-                errorMessage = "La subida del archivo fue cancelada.";
-                break;
-              case 'storage/unknown':
-                errorMessage = "Ocurrió un error desconocido durante la subida.";
-                break;
-              default:
-                 errorMessage = `Error de Storage: ${error.message} (Código: ${error.code})`;
-            }
-            toast({ variant: "destructive", title: "Error de Subida", description: errorMessage });
-            reject(error);
-          },
-          async () => {
-            console.log(`[DataContext] Subida completada para: ${storagePath}`);
-            try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              console.log(`[DataContext] URL de descarga obtenida: ${downloadURL}`);
-              await addDoc(collection(db, "media_reports"), {
-                departmentId,
-                employeeProfileId, // ID del perfil de Firestore
-                uploadedByAuthUid,  // Auth UID del usuario logueado
-                storagePath,
-                downloadURL,
-                fileName: file.name,
-                contentType: file.type,
-                reportType,
-                description: description || "",
-                uploadedAt: Timestamp.now(),
-              });
-              console.log(`[DataContext] Metadatos guardados en Firestore para: ${file.name}`);
-              toast({ title: "Evidencia Subida", description: "El archivo se ha subido y registrado correctamente." });
-              resolve();
-            } catch (firestoreError) {
-              console.error("[DataContext] Error guardando metadatos en Firestore: ", firestoreError);
-              toast({ variant: "destructive", title: "Error de Registro", description: "El archivo se subió pero no se pudo registrar en la base de datos." });
-              reject(firestoreError);
-            }
-          }
-        );
-      } catch (initializationError) {
-          console.error("[DataContext] Error inicializando subida a Storage: ", initializationError);
-          toast({ variant: "destructive", title: "Error de Configuración", description: "No se pudo iniciar la subida del archivo. Revisa la configuración de Storage." });
-          reject(initializationError);
+      if (uploadError) {
+        console.error("[DataContext] Error subiendo archivo a Supabase Storage: ", uploadError);
+        toast({ variant: "destructive", title: "Error de Subida (Supabase)", description: uploadError.message });
+        throw uploadError;
       }
-    });
+
+      if (!uploadData) {
+        console.error("[DataContext] No se recibieron datos de la subida a Supabase.");
+        toast({ variant: "destructive", title: "Error de Subida (Supabase)", description: "No se completó la subida del archivo."});
+        throw new Error("Supabase upload failed to return data.");
+      }
+      
+      console.log(`[DataContext] Subida a Supabase completada para: ${uploadData.path}`);
+
+      // Get public URL from Supabase
+      const { data: urlData } = supabase.storage
+        .from(SUPABASE_MEDIA_BUCKET)
+        .getPublicUrl(uploadData.path);
+
+      if (!urlData || !urlData.publicUrl) {
+          console.error("[DataContext] No se pudo obtener la URL pública de Supabase para:", uploadData.path);
+          toast({ variant: "destructive", title: "Error de URL", description: "No se pudo obtener la URL pública del archivo subido." });
+          // Consider deleting the uploaded file if URL retrieval fails critically
+          // await supabase.storage.from(SUPABASE_MEDIA_BUCKET).remove([uploadData.path]);
+          throw new Error("Failed to get public URL from Supabase.");
+      }
+      const publicUrl = urlData.publicUrl;
+      console.log(`[DataContext] URL pública de Supabase obtenida: ${publicUrl}`);
+
+      // Save metadata to Firestore
+      await addDoc(collection(db, "media_reports"), {
+        departmentId,
+        employeeProfileId, 
+        uploadedByAuthUid,  
+        storagePath: uploadData.path, // Store Supabase path
+        downloadURL: publicUrl, // Store Supabase public URL
+        fileName: file.name,
+        contentType: file.type,
+        reportType,
+        description: description || "",
+        uploadedAt: Timestamp.now(),
+      });
+      console.log(`[DataContext] Metadatos guardados en Firestore para: ${file.name}`);
+      toast({ title: "Evidencia Subida", description: "El archivo se ha subido y registrado correctamente." });
+      
+    } catch (error) {
+      console.error("[DataContext] Error en addMediaReport: ", error);
+      // The specific error toast should have been thrown by the failing step (upload or Firestore write)
+      // This re-throw ensures the promise is rejected for the calling component
+      throw error;
+    }
   }, [currentUser]);
 
   const getMediaReportsForDepartment = useCallback(async (departmentId: string): Promise<MediaReport[]> => {
@@ -477,4 +474,3 @@ export function useData() {
   }
   return context;
 }
-

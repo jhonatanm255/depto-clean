@@ -15,7 +15,8 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 import { UploadCloud, FileImage, Video } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+// Progress component is removed as Supabase basic upload doesn't provide granular progress easily
+// import { Progress } from '@/components/ui/progress';
 
 const mediaReportSchema = z.object({
   file: z.instanceof(FileList).refine(files => files.length > 0, "Se requiere un archivo.")
@@ -38,7 +39,8 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
   const { currentUser } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  // uploadProgress state is removed
+  // const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const form = useForm<MediaReportFormData>({
     resolver: zodResolver(mediaReportSchema),
@@ -55,7 +57,7 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
     }
     const fileToUpload = data.file[0];
     setIsUploading(true);
-    setUploadProgress(0); 
+    // setUploadProgress(0); // Removed
     
     let submissionSuccessful = false;
     try {
@@ -64,8 +66,9 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
         currentUser.employeeProfileId,
         fileToUpload,
         data.reportType as MediaReportType,
-        data.description,
-        (progress) => setUploadProgress(progress)
+        data.description
+        // Progress callback removed as Supabase basic upload doesn't use it here
+        // (progress) => setUploadProgress(progress) 
       );
       submissionSuccessful = true;
       form.reset();
@@ -73,15 +76,13 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
     } catch (error) {
       console.error("Error en submit de MediaUploadDialog:", error);
       submissionSuccessful = false;
-      // El toast de error ya lo maneja DataContext o addMediaReport internamente.
-      // react-hook-form limpiará isSubmitting si la promesa es rechazada.
+      // Toast for error is handled by DataContext or addMediaReport
     } finally {
       setIsUploading(false);
-      setUploadProgress(null);
+      // setUploadProgress(null); // Removed
       if (submissionSuccessful) {
-        onClose(); // Cerrar solo si la subida Y el registro fueron exitosos.
+        onClose(); 
       }
-      // Si no fue exitoso, el diálogo permanece abierto para reintentar o corregir.
     }
   };
 
@@ -89,8 +90,8 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
     if (isUploading) return; 
     form.reset();
     setFileName(null);
-    setUploadProgress(null);
-    setIsUploading(false); // Asegurarse de que isUploading se restablezca aquí también
+    // setUploadProgress(null); // Removed
+    setIsUploading(false); 
     onClose();
   };
 
@@ -105,7 +106,7 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
             Subir Evidencia Multimedia
           </DialogTitle>
           <DialogDescription>
-            Selecciona una foto o video (máx. 50MB) para adjuntar al reporte del departamento.
+            Selecciona una foto o video (máx. 50MB) para adjuntar al reporte del departamento. La subida se realizará a Supabase Storage.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -113,7 +114,7 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
             <FormField
               control={form.control}
               name="file"
-              render={({ field: { onChange, value, ...fieldProps } }) => ( // 'value' aquí es de RHF
+              render={({ field: { onChange, ...fieldProps } }) => (
                 <FormItem>
                   <FormLabel>Archivo (Foto o Video)</FormLabel>
                   <FormControl>
@@ -122,10 +123,9 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
                         type="file"
                         accept="image/*,video/*"
                         onChange={(e) => {
-                          onChange(e.target.files); // Actualiza RHF
+                          onChange(e.target.files); 
                           setFileName(e.target.files && e.target.files.length > 0 ? e.target.files[0].name : null);
                         }}
-                        // No pasar 'value' a <input type="file">
                         {...fieldProps} 
                         className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
                         disabled={isUploading}
@@ -142,12 +142,14 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
                 </FormItem>
               )}
             />
+            {/* Progress bar removed for Supabase basic upload
             {isUploading && uploadProgress !== null && (
               <div className="space-y-1">
                 <Progress value={uploadProgress} className="w-full h-2" />
                 <p className="text-xs text-muted-foreground text-center">Subiendo: {Math.round(uploadProgress)}%</p>
               </div>
             )}
+            */}
             <FormField
               control={form.control}
               name="reportType"
