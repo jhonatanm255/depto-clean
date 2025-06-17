@@ -8,27 +8,27 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-// import { toast } from '@/hooks/use-toast'; // Toast se maneja en DataContext
 import { ClipboardEdit } from 'lucide-react';
 import { LoadingSpinner } from '@/components/core/loading-spinner'; 
 
 const assignmentSchema = z.object({
   departmentId: z.string().min(1, "Se requiere el departamento"),
-  employeeId: z.string().min(1, "Se requiere el empleado"), // Este será el ID del EmployeeProfile
+  employeeId: z.string().min(1, "Se requiere la empleada"),
 });
 
 type AssignmentFormData = z.infer<typeof assignmentSchema>;
 
 export function AssignmentForm() {
-  const { departments, employees, assignTask, tasks, dataLoading } = useData();
+  const { departments, employees, assignTask, dataLoading } = useData();
   
   const form = useForm<AssignmentFormData>({
     resolver: zodResolver(assignmentSchema),
     defaultValues: { departmentId: '', employeeId: '' },
   });
 
-  const availableDepartments = departments.filter(
-    (dept) => !tasks.some(task => task.departmentId === dept.id && (task.status === 'pending' || task.status === 'in_progress'))
+  // Permitir seleccionar cualquier departamento que no esté 'completado' para reasignación
+  const assignableDepartments = departments.filter(
+    (dept) => dept.status !== 'completed'
   );
 
   const onSubmit: SubmitHandler<AssignmentFormData> = async (data) => {
@@ -36,8 +36,6 @@ export function AssignmentForm() {
       await assignTask(data.departmentId, data.employeeId);
       form.reset(); 
     } catch (error) {
-      // Error toast is handled by DataContext due to re-throw
-      // react-hook-form's isSubmitting state will automatically reset on promise rejection
       console.error("Submit error in AssignmentForm:", error);
     }
   };
@@ -47,7 +45,7 @@ export function AssignmentForm() {
       <Card className="w-full shadow-lg">
         <CardHeader>
           <CardTitle className="font-headline text-2xl flex items-center">
-            <ClipboardEdit className="mr-2 h-6 w-6 text-primary" /> Asignar Nueva Tarea
+            <ClipboardEdit className="mr-2 h-6 w-6 text-primary" /> Asignar o Reasignar Tarea
           </CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center p-6">
@@ -62,9 +60,11 @@ export function AssignmentForm() {
     <Card className="w-full shadow-lg">
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center">
-          <ClipboardEdit className="mr-2 h-6 w-6 text-primary" /> Asignar Nueva Tarea
+          <ClipboardEdit className="mr-2 h-6 w-6 text-primary" /> Asignar o Reasignar Tarea
         </CardTitle>
-        <CardDescription>Selecciona un departamento y una empleada para asignar una tarea de limpieza.</CardDescription>
+        <CardDescription>
+          Selecciona un departamento y una empleada. Si el departamento ya tiene una tarea activa, se reasignará.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -78,7 +78,7 @@ export function AssignmentForm() {
                   <Select 
                     onValueChange={field.onChange} 
                     value={field.value || ""} 
-                    disabled={availableDepartments.length === 0 || employees.length === 0 || form.formState.isSubmitting}
+                    disabled={assignableDepartments.length === 0 || employees.length === 0 || form.formState.isSubmitting}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -87,15 +87,15 @@ export function AssignmentForm() {
                     </FormControl>
                     <SelectContent>
                       <SelectGroup>
-                        <SelectLabel>Departamentos Disponibles</SelectLabel>
-                        {availableDepartments.length > 0 ? (
-                            availableDepartments.map((dept) => (
+                        <SelectLabel>Departamentos (No completados)</SelectLabel>
+                        {assignableDepartments.length > 0 ? (
+                            assignableDepartments.map((dept) => (
                                 <SelectItem key={dept.id} value={dept.id}>
-                                {dept.name}
+                                {dept.name} ({dept.status === 'pending' && dept.assignedTo ? 'Asignado, Pendiente' : dept.status === 'pending' ? 'Pendiente' : dept.status})
                                 </SelectItem>
                             ))
                         ) : (
-                            <SelectItem value="no-dept" disabled>No hay departamentos disponibles</SelectItem>
+                            <SelectItem value="no-dept" disabled>No hay departamentos para asignar/reasignar</SelectItem>
                         )}
                       </SelectGroup>
                     </SelectContent>
@@ -124,7 +124,7 @@ export function AssignmentForm() {
                        <SelectGroup>
                         <SelectLabel>Empleadas</SelectLabel>
                         {employees.length > 0 ? (
-                            employees.map((emp) => ( // emp es EmployeeProfile, emp.id es el ID del documento
+                            employees.map((emp) => ( 
                                 <SelectItem key={emp.id} value={emp.id}> 
                                 {emp.name} ({emp.email})
                                 </SelectItem>
@@ -142,10 +142,10 @@ export function AssignmentForm() {
             <Button 
               type="submit" 
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" 
-              disabled={availableDepartments.length === 0 || employees.length === 0 || form.formState.isSubmitting}
+              disabled={assignableDepartments.length === 0 || employees.length === 0 || form.formState.isSubmitting}
             >
               {form.formState.isSubmitting && <LoadingSpinner size={16} className="mr-2" />}
-              {form.formState.isSubmitting ? "Asignando..." : "Asignar Tarea"}
+              {form.formState.isSubmitting ? "Procesando..." : "Asignar / Reasignar Tarea"}
             </Button>
           </form>
         </Form>

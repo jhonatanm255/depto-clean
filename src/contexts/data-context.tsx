@@ -28,11 +28,8 @@ interface DataContextType {
   updateDepartment: (dept: Department) => Promise<void>;
   deleteDepartment: (id: string) => Promise<void>;
   
-  employees: EmployeeProfile[]; // Ahora usamos EmployeeProfile
-  // addEmployee: (emp: Omit<EmployeeProfile, 'id' | 'authUid'>) => Promise<void>; // Reemplazado
+  employees: EmployeeProfile[]; 
   addEmployeeWithAuth: (name: string, email: string, password: string) => Promise<void>;
-  // updateEmployeeProfile: (id: string, data: Partial<Omit<EmployeeProfile, 'id' | 'authUid'>>) => Promise<void>;
-  // deleteEmployeeProfile: (id: string) => Promise<void>;
 
   tasks: CleaningTask[];
   assignTask: (departmentId: string, employeeProfileId: string) => Promise<void>;
@@ -48,10 +45,10 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [employees, setEmployees] = useState<EmployeeProfile[]>([]); // Usar EmployeeProfile
+  const [employees, setEmployees] = useState<EmployeeProfile[]>([]);
   const [tasks, setTasks] = useState<CleaningTask[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
-  const { currentUser: adminUser, login: adminLogin } = useAuth(); // Para re-autenticar al admin
+  const { currentUser: adminUser } = useAuth(); 
 
   useEffect(() => {
     setDataLoading(true);
@@ -75,7 +72,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setEmployees(empsData);
     }, (error) => {
       console.error("Error fetching employees: ", error);
-      toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los empleados."});
+      toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar las empleadas."});
     });
 
     const unsubTasks = onSnapshot(collection(db, "tasks"), (snapshot) => {
@@ -163,7 +160,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const addEmployeeWithAuth = useCallback(async (name: string, email: string, password: string) => {
     const auth = getAuth();
-    const adminAuthUid = adminUser?.uid; // Guardar el UID del admin actual
+    const adminAuthUid = adminUser?.uid; 
     const adminAuthEmail = adminUser?.email;
 
     if (!adminAuthUid || !adminAuthEmail) {
@@ -172,11 +169,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // 1. Crear usuario en Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newEmployeeAuthUid = userCredential.user.uid;
 
-      // 2. Crear perfil de empleado en Firestore
       await addDoc(collection(db, "employees"), {
         authUid: newEmployeeAuthUid,
         name: name,
@@ -184,17 +179,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       });
       
       toast({ title: "Empleada Agregada", description: `Cuenta para "${name}" creada. El administrador deberá volver a iniciar sesión.` });
-
-      // IMPORTANTE: createUserWithEmailAndPassword loguea al nuevo usuario.
-      // Necesitamos desloguearlo y volver a loguear al admin.
-      // Esta es la parte "hacky" y menos ideal de hacerlo desde el cliente.
-      await firebaseSignOut(auth); // Desloguea a la nueva empleada
-      // Re-autenticar al administrador. Asumimos que ADMIN_PASSWORD está disponible o se maneja de otra forma.
-      // Aquí, la constante ADMIN_PASSWORD solo la conoce el AuthProvider.
-      // Esta es una limitación: no podemos re-loguear al admin de forma segura aquí sin su contraseña.
-      // Por ahora, el admin tendrá que loguearse manualmente de nuevo.
-      // await adminLogin(adminAuthEmail, "ADMIN_PASSWORD_PLACEHOLDER", 'admin', "ADMIN_PASSWORD_PLACEHOLDER");
-      // La línea anterior no funcionará directamente como está.
+      await firebaseSignOut(auth); 
 
     } catch (error: any) {
       console.error("Error adding employee with auth: ", error);
@@ -210,51 +195,65 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [adminUser]);
 
 
-  const assignTask = useCallback(async (departmentId: string, employeeProfileId: string) => {
+ const assignTask = useCallback(async (departmentId: string, employeeProfileId: string) => {
     const department = departments.find(d => d.id === departmentId);
     if (!department) {
       toast({ variant: "destructive", title: "Error", description: "Departamento no encontrado." });
       throw new Error("Departamento no encontrado");
     }
-     const employee = employees.find(e => e.id === employeeProfileId);
+    const employee = employees.find(e => e.id === employeeProfileId);
     if (!employee) {
-      toast({ variant: "destructive", title: "Error", description: "Perfil de empleado no encontrado." });
-      throw new Error("Perfil de empleado no encontrado");
+      toast({ variant: "destructive", title: "Error", description: "Perfil de empleada no encontrado." });
+      throw new Error("Perfil de empleada no encontrado");
     }
 
     try {
       const batch = writeBatch(db);
+      const deptRef = doc(db, "departments", departmentId);
+      
+      // Buscar tarea existente para este departamento que esté activa
       const existingTaskQuery = query(
-        collection(db, "tasks"), 
-        where("departmentId", "==", departmentId), 
+        collection(db, "tasks"),
+        where("departmentId", "==", departmentId),
         where("status", "in", ["pending", "in_progress"])
       );
       const existingTaskSnapshot = await getDocs(existingTaskQuery);
-      existingTaskSnapshot.forEach(docSnap => batch.delete(docSnap.ref));
-      
-      const newTaskData = {
-        departmentId,
-        employeeId: employeeProfileId, // Usar el ID del perfil de Firestore
-        assignedAt: Timestamp.now(),
-        status: 'pending' as 'pending' | 'in_progress' | 'completed',
-        completedAt: null,
-      };
-      const taskRef = doc(collection(db, "tasks")); 
-      batch.set(taskRef, newTaskData);
 
-      const deptRef = doc(db, "departments", departmentId);
-      batch.update(deptRef, { 
-        assignedTo: employeeProfileId, 
-        status: 'pending',
-        lastCleanedAt: null 
+      if (!existingTaskSnapshot.empty) {
+        // Si existe una tarea activa, la actualizamos (reasignamos)
+        const existingTaskDoc = existingTaskSnapshot.docs[0];
+        batch.update(existingTaskDoc.ref, {
+          employeeId: employeeProfileId,
+          assignedAt: Timestamp.now(),
+          status: 'pending', // Siempre se establece como pendiente al reasignar
+          completedAt: null, // Limpiar fecha de completado si la hubo
+        });
+        toast({ title: "Tarea Reasignada", description: `Departamento ${department.name} reasignado a ${employee.name}.` });
+      } else {
+        // Si no existe tarea activa, creamos una nueva
+        const taskRef = doc(collection(db, "tasks"));
+        batch.set(taskRef, {
+          departmentId,
+          employeeId: employeeProfileId,
+          assignedAt: Timestamp.now(),
+          status: 'pending',
+          completedAt: null,
+        });
+        toast({ title: "Tarea Asignada", description: `Departamento ${department.name} asignado a ${employee.name}.` });
+      }
+      
+      // Actualizar el departamento
+      batch.update(deptRef, {
+        assignedTo: employeeProfileId,
+        status: 'pending', // El departamento vuelve a pendiente
+        lastCleanedAt: null, // Limpiar última limpieza al reasignar
       });
       
       await batch.commit();
-      toast({ title: "Tarea Asignada", description: `Departamento asignado a ${employee.name}.` });
     } catch (error) {
-      console.error("Error assigning task: ", error);
-      toast({ variant: "destructive", title: "Error", description: "No se pudo asignar la tarea." });
-      throw error; 
+      console.error("Error assigning/reassigning task: ", error);
+      toast({ variant: "destructive", title: "Error", description: "No se pudo asignar o reasignar la tarea." });
+      throw error;
     }
   }, [departments, employees]);
 
@@ -275,12 +274,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const deptRef = doc(db, "departments", task.departmentId);
       batch.update(deptRef, { 
         status, 
-        lastCleanedAt: newCompletedAtTimestamp,
+        lastCleanedAt: newCompletedAtTimestamp, // Se actualiza también si la tarea se vuelve a poner pendiente o en progreso
         assignedTo: task.employeeId 
       });
 
       await batch.commit();
-      toast({ title: "Tarea Actualizada", description: `Estado de la tarea cambiado.` });
+      toast({ title: "Tarea Actualizada", description: `Estado de la tarea cambiado a ${status}.` });
     } catch (error) {
       console.error("Error updating task status: ", error);
       toast({ variant: "destructive", title: "Error", description: "No se pudo actualizar el estado de la tarea."});
@@ -289,7 +288,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [tasks]);
 
   const getTasksForEmployee = useCallback((employeeProfileId: string) => {
-    return tasks.filter((task) => task.employeeId === employeeProfileId);
+    return tasks.filter((task) => task.employeeId === employeeProfileId)
+                .sort((a,b) => new Date(b.assignedAt).getTime() - new Date(a.assignedAt).getTime());
   }, [tasks]);
 
   const getDepartmentById = useCallback((departmentId: string) => {

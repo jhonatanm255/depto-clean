@@ -3,7 +3,7 @@
 import type { EmployeeProfile, CleaningTask, Department } from '@/lib/types'; // Usar EmployeeProfile
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { UserCircle, Mail, Edit3, Trash2, Briefcase, Building2, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
+import { UserCircle, Mail, Edit3, Trash2, Briefcase, Building2, CheckCircle2, AlertTriangle, Loader2, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -52,12 +52,12 @@ export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeC
   // };
   
   const assignedTasksDetails = tasks
-    .filter(task => task.employeeId === employee.id) // Asegurar que filtramos por el ID del perfil de empleado
+    .filter(task => task.employeeId === employee.id) 
     .map(task => {
       const department = departments.find(d => d.id === task.departmentId);
-      return department ? { ...task, departmentName: department.name, departmentStatus: department.status } : null;
+      return department ? { ...task, departmentName: department.name, departmentStatus: department.status, departmentAddress: department.address } : null;
     })
-    .filter(Boolean) as (CleaningTask & { departmentName: string, departmentStatus: Department['status'] })[];
+    .filter(Boolean) as (CleaningTask & { departmentName: string, departmentStatus: Department['status'], departmentAddress?: string })[];
 
 
   return (
@@ -87,7 +87,7 @@ export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeC
               <Briefcase className="mr-2 h-4 w-4 text-primary" />
               Tareas Asignadas ({assignedTasksDetails.length})
             </h4>
-            <ScrollArea className="h-[100px] pr-2">
+            <ScrollArea className="h-[120px] pr-2">
               <ul className="space-y-1.5 text-xs">
                 {assignedTasksDetails.map(task => (
                   <li key={task.id} className="p-1.5 rounded-md bg-muted/50">
@@ -103,6 +103,11 @@ export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeC
                           {translateStatus(task.status)}
                         </Badge>
                     </div>
+                    {task.departmentAddress && (
+                        <p className="text-muted-foreground text-[10px] ml-5 flex items-center">
+                            <MapPin className="mr-1 h-3 w-3 shrink-0" /> {task.departmentAddress}
+                        </p>
+                    )}
                      <p className="text-muted-foreground text-[10px] ml-5">
                         Asignada: {new Date(task.assignedAt).toLocaleDateString('es-CL')}
                       </p>
