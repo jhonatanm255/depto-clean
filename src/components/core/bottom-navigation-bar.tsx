@@ -1,7 +1,7 @@
 
 "use client";
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { 
   LayoutDashboard, 
@@ -9,6 +9,7 @@ import {
   ClipboardEdit,
   Briefcase,
   Users,
+  History, // Importar History
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -25,10 +26,12 @@ const navItems: NavItem[] = [
   { href: '/admin/employees', label: 'Empleadas', icon: Users, roles: ['admin'] },
   { href: '/admin/assignments', label: 'Asignar', icon: ClipboardEdit, roles: ['admin'] },
   { href: '/employee/tasks', label: 'Tareas', icon: Briefcase, roles: ['employee'] },
+  { href: '/employee/tasks?tab=completed_history', label: 'Historial', icon: History, roles: ['employee'] }, // Nueva ruta
 ];
 
 export function BottomNavigationBar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { currentUser } = useAuth();
 
   if (!currentUser) return null;
@@ -38,7 +41,27 @@ export function BottomNavigationBar() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-center justify-around border-t bg-card text-card-foreground shadow-top md:hidden">
       {filteredNavItems.map((item) => {
-        const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+        const itemPathname = item.href.split('?')[0];
+        const itemQueryParam = item.href.split('?')[1]?.split('=')[1];
+        
+        let isActive = pathname === itemPathname;
+        if (itemQueryParam && isActive) {
+            isActive = searchParams.get('tab') === itemQueryParam;
+        } else if (itemPathname !== '/dashboard' && pathname.startsWith(itemPathname) && !itemQueryParam && !searchParams.get('tab')){
+            // Para casos como /employee/tasks (sin query param) cuando el item es /employee/tasks
+            isActive = true;
+        } else if (itemQueryParam && pathname === itemPathname && searchParams.get('tab') === itemQueryParam) {
+            isActive = true;
+        } else if (!itemQueryParam && pathname.startsWith(itemPathname) && itemPathname !== '/dashboard' && !searchParams.get('tab')){
+             // caso base para /employee/tasks
+             if (item.href === '/employee/tasks' && pathname === '/employee/tasks' && !searchParams.get('tab')){
+                isActive = true;
+             } else {
+                isActive = false;
+             }
+        }
+
+
         return (
           <Link key={item.href} href={item.href} legacyBehavior passHref>
             <a

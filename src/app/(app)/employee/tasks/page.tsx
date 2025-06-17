@@ -81,7 +81,7 @@ export default function EmployeeTasksPage() {
       </header>
 
       <Tabs defaultValue={initialTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:w-[600px] mb-6">
+        <TabsList className="grid w-full grid-cols-2 md:w-[400px] mb-6">
           <TabsTrigger value="pending">
             <CalendarDays className="mr-2 h-4 w-4 md:hidden lg:inline-block" />
             Pendientes ({appDataLoading && pendingTasks.length === 0 ? "..." : pendingTasks.length})
@@ -89,10 +89,6 @@ export default function EmployeeTasksPage() {
           <TabsTrigger value="completed_today">
              <Clock className="mr-2 h-4 w-4 md:hidden lg:inline-block" />
             Completadas Hoy ({appDataLoading && completedTodayTasks.length === 0 ? "..." : completedTodayTasks.length})
-          </TabsTrigger>
-          <TabsTrigger value="completed_history">
-             <History className="mr-2 h-4 w-4 md:hidden lg:inline-block" />
-            Historial ({appDataLoading && completedHistoryTasks.length === 0 ? "..." : completedHistoryTasks.length})
           </TabsTrigger>
         </TabsList>
 
@@ -140,8 +136,9 @@ export default function EmployeeTasksPage() {
           )}
         </TabsContent>
 
+        {/* El contenido del historial aún existe para ser activado por query param, pero no tiene un trigger de pestaña */}
         <TabsContent value="completed_history">
-           {appDataLoading && completedHistoryTasks.length === 0 && tasks.length > 0 ? ( // tasks.length > 0 to differentiate from initial load
+           {appDataLoading && completedHistoryTasks.length === 0 && tasks.length > 0 ? ( 
              <div className="text-center py-10 border rounded-lg bg-card shadow">
                <LoadingSpinner size={24} />
                <p className="mt-4 text-muted-foreground">Cargando historial de tareas...</p>

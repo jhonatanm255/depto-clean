@@ -108,7 +108,7 @@ export function AssignmentForm() {
                                 <SelectItem key={dept.id} value={dept.id}>
                                   {dept.name} ({assignedEmployee ? (
                                     <>
-                                      Asignado a: <strong className="text-primary font-semibold">{assignedEmployee.name || 'Desconocido'}</strong>, {statusDisplay}
+                                      Asignado a: <strong className="text-green-600 font-semibold">{assignedEmployee.name || 'Desconocido'}</strong>, {statusDisplay}
                                     </>
                                   ) : (
                                     statusDisplay

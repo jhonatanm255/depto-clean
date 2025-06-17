@@ -20,9 +20,10 @@ import {
   LogOut,
   ShieldCheck,
   Users,
+  History, // Importar History
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile
+import { useIsMobile } from '@/hooks/use-mobile'; 
 
 interface NavItem {
   href: string;
@@ -37,20 +38,21 @@ const navItems: NavItem[] = [
   { href: '/admin/employees', label: 'Gestionar Empleados', icon: Users, roles: ['admin'] },
   { href: '/admin/assignments', label: 'Asignar Tareas', icon: ClipboardEdit, roles: ['admin'] },
   { href: '/employee/tasks', label: 'Mis Tareas', icon: Briefcase, roles: ['employee'] },
+  { href: '/employee/tasks?tab=completed_history', label: 'Historial Tareas', icon: History, roles: ['employee'] }, // Nueva ruta
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { currentUser, logout } = useAuth();
-  const isMobile = useIsMobile(); // Check if mobile
+  const isMobile = useIsMobile(); 
 
-  // No renderizar el sidebar en móvil, ya que será reemplazado por BottomNavigationBar
+  
   if (isMobile || !currentUser) return null; 
 
   const filteredNavItems = navItems.filter(item => item.roles.includes(currentUser.role));
 
   return (
-    <Sidebar collapsible="icon" className="border-r hidden md:flex"> {/* Asegurar que solo se muestre en desktop */}
+    <Sidebar collapsible="icon" className="border-r hidden md:flex"> 
       <SidebarHeader className="p-4 flex items-center justify-between">
         <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
            <ShieldCheck className="h-7 w-7 text-primary" />
@@ -65,10 +67,10 @@ export function AppSidebar() {
               <Link href={item.href} legacyBehavior passHref>
                 <SidebarMenuButton
                   asChild
-                  isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
+                  isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href.split('?')[0]) && item.href.includes('?') && pathname.split('?')[0] === item.href.split('?')[0]) || (item.href !== '/dashboard' && !item.href.includes('?') && pathname.startsWith(item.href)) }
                   tooltip={item.label}
                   className={cn(
-                    (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))) 
+                    (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href.split('?')[0]) && item.href.includes('?') && pathname.split('?')[0] === item.href.split('?')[0]) || (item.href !== '/dashboard' && !item.href.includes('?') && pathname.startsWith(item.href)))
                     ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90" 
                     : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )}
