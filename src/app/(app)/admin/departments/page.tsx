@@ -6,9 +6,8 @@ import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
 import { DepartmentForm } from '@/components/department/department-form';
 import { DepartmentCard } from '@/components/department/department-card';
+import { DepartmentFilters } from '@/components/department/DepartmentFilters';
 import { PlusCircle, Building2, Search } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 
 export default function DepartmentsPage() {
@@ -76,36 +75,14 @@ export default function DepartmentsPage() {
         </p>
       </header>
 
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg bg-card shadow">
-        <Input 
-            placeholder="Buscar por nombre o dirección..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="md:col-span-1"
-        />
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="md:col-span-1">
-                <SelectValue placeholder="Filtrar por estado" />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem value="all">Todos los Estados</SelectItem>
-                <SelectItem value="pending">Pendiente</SelectItem>
-                <SelectItem value="pending_assignment">Pendiente (Sin Asignar)</SelectItem>
-                <SelectItem value="in_progress">En Progreso</SelectItem>
-                <SelectItem value="completed">Completado</SelectItem>
-            </SelectContent>
-        </Select>
-        <Select value={sortOrder} onValueChange={setSortOrder}>
-            <SelectTrigger className="md:col-span-1">
-                <SelectValue placeholder="Ordenar por" />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem value="name_asc">Nombre (A-Z)</SelectItem>
-                <SelectItem value="name_desc">Nombre (Z-A)</SelectItem>
-                <SelectItem value="status">Estado</SelectItem>
-            </SelectContent>
-        </Select>
-      </div>
+      <DepartmentFilters
+        searchTerm={searchTerm}
+        onSearchTermChange={setSearchTerm}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        sortOrder={sortOrder}
+        onSortOrderChange={setSortOrder}
+      />
       
       {dataLoading && departments.length > 0 && (
          <div className="flex items-center justify-center p-4 text-muted-foreground">

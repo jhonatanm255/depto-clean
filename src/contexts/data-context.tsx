@@ -3,8 +3,8 @@
 import type { Department, EmployeeProfile, CleaningTask, MediaReport, MediaReportType } from '@/lib/types';
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from 'react';
-import { db } from '@/lib/firebase'; // Firebase Firestore remains
-import { supabase, SUPABASE_MEDIA_BUCKET } from '@/lib/supabase'; // Import Supabase client and bucket name
+import { db } from '@/lib/firebase';
+import { supabase, SUPABASE_MEDIA_BUCKET } from '@/lib/supabase';
 import { 
   collection, 
   addDoc, 
@@ -19,8 +19,6 @@ import {
   writeBatch,
   orderBy
 } from 'firebase/firestore';
-// Firebase Storage imports are no longer needed here for upload/delete of media
-// import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { getAuth, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from './auth-context'; 
@@ -43,8 +41,7 @@ interface DataContextType {
     employeeProfileId: string, 
     file: File, 
     reportType: MediaReportType, 
-    description?: string,
-    onProgress?: (progress: number) => void // Kept for signature, but Supabase basic upload won't use it directly here
+    description?: string
   ) => Promise<void>;
   getMediaReportsForDepartment: (departmentId: string) => Promise<MediaReport[]>;
 
@@ -65,7 +62,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setDataLoading(true);
-    const unsubDepartments = onSnapshot(collection(db, "departments"), (snapshot) => {
+    const unsubDepartments = onSnapshot(query(collection(db, "departments"), orderBy("name")), (snapshot) => {
       const deptsData = snapshot.docs.map(docSnapshot => ({ 
         id: docSnapshot.id, 
         ...docSnapshot.data(),
@@ -74,10 +71,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setDepartments(deptsData);
     }, (error) => {
       console.error("Error fetching departments: ", error);
-      toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los departamentos."});
+      toast({ variant: "destructive", title: "Error de Datos", description: "No se pudieron cargar los departamentos."});
     });
 
-    const unsubEmployees = onSnapshot(collection(db, "employees"), (snapshot) => {
+    const unsubEmployees = onSnapshot(query(collection(db, "employees"), orderBy("name")), (snapshot) => {
       const empsData = snapshot.docs.map(docSnapshot => ({ 
         id: docSnapshot.id, 
         ...docSnapshot.data() 
@@ -85,10 +82,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setEmployees(empsData);
     }, (error) => {
       console.error("Error fetching employees: ", error);
-      toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar las empleadas."});
+      toast({ variant: "destructive", title: "Error de Datos", description: "No se pudieron cargar las empleadas."});
     });
 
-    const unsubTasks = onSnapshot(collection(db, "tasks"), (snapshot) => {
+    const unsubTasks = onSnapshot(query(collection(db, "tasks"), orderBy("assignedAt", "desc")), (snapshot) => {
       const tasksData = snapshot.docs.map(docSnapshot => ({ 
         id: docSnapshot.id, 
         ...docSnapshot.data(),
@@ -98,7 +95,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setTasks(tasksData);
     }, (error) => {
       console.error("Error fetching tasks: ", error);
-       toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar las tareas."});
+       toast({ variant: "destructive", title: "Error de Datos", description: "No se pudieron cargar las tareas."});
     });
     
     Promise.all([
@@ -108,7 +105,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     ]).then(() => {
         setDataLoading(false);
     }).catch((error) => {
-        console.error("Error en carga inicial de datos:", error);
+        console.error("Error en carga inicial de datos (Promise.all):", error);
         setDataLoading(false); 
     });
 
@@ -119,6 +116,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // --- Department Operations ---
   const addDepartment = useCallback(async (deptData: Omit<Department, 'id' | 'status' | 'lastCleanedAt' | 'assignedTo'>) => {
     try {
       await addDoc(collection(db, "departments"), {
@@ -131,7 +129,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       toast({ title: "Departamento Agregado", description: `"${deptData.name}" ha sido agregado.` });
     } catch (error) {
       console.error("Error adding department: ", error);
-      toast({ variant: "destructive", title: "Error", description: "No se pudo agregar el departamento."});
+      toast({ variant: "destructive", title: "Error al Guardar", description: "No se pudo agregar el departamento."});
       throw error; 
     }
   }, []);
@@ -148,7 +146,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       toast({ title: "Departamento Actualizado", description: `"${updatedDept.name}" ha sido actualizado.` });
     } catch (error) {
       console.error("Error updating department: ", error);
-      toast({ variant: "destructive", title: "Error", description: "No se pudo actualizar el departamento."});
+      toast({ variant: "destructive", title: "Error al Guardar", description: "No se pudo actualizar el departamento."});
       throw error; 
     }
   }, []);
@@ -172,9 +170,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (supabaseDeletePaths.length > 0) {
         const { error: supabaseError } = await supabase.storage.from(SUPABASE_MEDIA_BUCKET).remove(supabaseDeletePaths);
         if (supabaseError) {
-          console.warn("Error deleting files from Supabase storage:", supabaseError.message, supabaseDeletePaths);
-          toast({ variant: "destructive", title: "Error Parcial", description: "Algunos archivos en Supabase no se pudieron eliminar." });
-          // Decide if you want to proceed or throw error. For MVP, we might log and proceed.
+          console.warn("Error deleting files from Supabase storage:", supabaseError.message, "Paths:", supabaseDeletePaths);
+          toast({ variant: "destructive", title: "Error Parcial", description: "Algunos archivos en Supabase no se pudieron eliminar. Revise la consola." });
         }
       }
 
@@ -189,11 +186,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
       toast({ title: "Departamento Eliminado", description: "Departamento, tareas y reportes (Firestore y Supabase Storage) asociados eliminados." });
     } catch (error) {
       console.error("Error deleting department: ", error);
-      toast({ variant: "destructive", title: "Error", description: "No se pudo eliminar el departamento."});
+      toast({ variant: "destructive", title: "Error al Eliminar", description: "No se pudo eliminar el departamento. Revise la consola."});
       throw error; 
     }
   }, []);
 
+  // --- Employee Operations ---
   const addEmployeeWithAuth = useCallback(async (name: string, email: string, password: string) => {
     const auth = getAuth();
     const adminAuthUid = currentUser?.uid; 
@@ -229,16 +227,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [currentUser]);
 
-
+  // --- Task Operations ---
  const assignTask = useCallback(async (departmentId: string, employeeProfileId: string) => {
     const department = departments.find(d => d.id === departmentId);
     if (!department) {
-      toast({ variant: "destructive", title: "Error", description: "Departamento no encontrado." });
+      toast({ variant: "destructive", title: "Error de Asignación", description: "Departamento no encontrado." });
       throw new Error("Departamento no encontrado");
     }
     const employee = employees.find(e => e.id === employeeProfileId);
     if (!employee) {
-      toast({ variant: "destructive", title: "Error", description: "Perfil de empleada no encontrado." });
+      toast({ variant: "destructive", title: "Error de Asignación", description: "Perfil de empleada no encontrado." });
       throw new Error("Perfil de empleada no encontrado");
     }
 
@@ -283,7 +281,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       await batch.commit();
     } catch (error) {
       console.error("Error assigning/reassigning task: ", error);
-      toast({ variant: "destructive", title: "Error", description: "No se pudo asignar o reasignar la tarea." });
+      toast({ variant: "destructive", title: "Error de Asignación", description: "No se pudo asignar o reasignar la tarea." });
       throw error;
     }
   }, [departments, employees]);
@@ -291,7 +289,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const updateTaskStatus = useCallback(async (taskId: string, status: 'pending' | 'in_progress' | 'completed') => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) {
-      toast({ variant: "destructive", title: "Error", description: "Tarea no encontrada." });
+      toast({ variant: "destructive", title: "Error de Tarea", description: "Tarea no encontrada." });
       throw new Error("Tarea no encontrada");
     }
 
@@ -313,18 +311,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
       toast({ title: "Tarea Actualizada", description: `Estado de la tarea cambiado a ${status}.` });
     } catch (error) {
       console.error("Error updating task status: ", error);
-      toast({ variant: "destructive", title: "Error", description: "No se pudo actualizar el estado de la tarea."});
+      toast({ variant: "destructive", title: "Error de Tarea", description: "No se pudo actualizar el estado de la tarea."});
       throw error; 
     }
   }, [tasks]);
 
+  // --- Media Report Operations ---
   const addMediaReport = useCallback(async (
     departmentId: string, 
     employeeProfileId: string, 
     file: File, 
     reportType: MediaReportType, 
-    description?: string,
-    _onProgress?: (progress: number) => void // _onProgress is not used for Supabase basic upload here
+    description?: string
   ): Promise<void> => {
     if (!currentUser?.uid) {
       toast({ variant: "destructive", title: "Error de autenticación", description: "No se pudo verificar la empleada." });
@@ -337,23 +335,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     const uploadedByAuthUid = currentUser.uid;
     const uniqueFileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-    // Path for Supabase: public/departments/{departmentId}/media/{uniqueFileName}
-    // Supabase paths don't typically start with 'public/' in the API call, it's implied by bucket settings.
     const supabasePath = `departments/${departmentId}/media/${uniqueFileName}`;
     console.log(`[DataContext] Iniciando subida a Supabase para: ${supabasePath}, Archivo: ${file.name}, Tamaño: ${file.size}`);
 
     try {
-      // Upload to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(SUPABASE_MEDIA_BUCKET)
         .upload(supabasePath, file, {
-          cacheControl: '3600', // Optional: cache for 1 hour
-          upsert: false, // Do not overwrite if file exists (can be true if needed)
+          cacheControl: '3600',
+          upsert: false, 
         });
 
       if (uploadError) {
         console.error("[DataContext] Error subiendo archivo a Supabase Storage: ", uploadError);
-        toast({ variant: "destructive", title: "Error de Subida (Supabase)", description: uploadError.message });
+        toast({ variant: "destructive", title: "Error de Subida (Supabase)", description: `Detalle: ${uploadError.message}` });
         throw uploadError;
       }
 
@@ -365,7 +360,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       
       console.log(`[DataContext] Subida a Supabase completada para: ${uploadData.path}`);
 
-      // Get public URL from Supabase
       const { data: urlData } = supabase.storage
         .from(SUPABASE_MEDIA_BUCKET)
         .getPublicUrl(uploadData.path);
@@ -373,20 +367,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (!urlData || !urlData.publicUrl) {
           console.error("[DataContext] No se pudo obtener la URL pública de Supabase para:", uploadData.path);
           toast({ variant: "destructive", title: "Error de URL", description: "No se pudo obtener la URL pública del archivo subido." });
-          // Consider deleting the uploaded file if URL retrieval fails critically
-          // await supabase.storage.from(SUPABASE_MEDIA_BUCKET).remove([uploadData.path]);
           throw new Error("Failed to get public URL from Supabase.");
       }
       const publicUrl = urlData.publicUrl;
       console.log(`[DataContext] URL pública de Supabase obtenida: ${publicUrl}`);
 
-      // Save metadata to Firestore
       await addDoc(collection(db, "media_reports"), {
         departmentId,
         employeeProfileId, 
         uploadedByAuthUid,  
-        storagePath: uploadData.path, // Store Supabase path
-        downloadURL: publicUrl, // Store Supabase public URL
+        storagePath: uploadData.path,
+        downloadURL: publicUrl, 
         fileName: file.name,
         contentType: file.type,
         reportType,
@@ -397,9 +388,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       toast({ title: "Evidencia Subida", description: "El archivo se ha subido y registrado correctamente." });
       
     } catch (error) {
-      console.error("[DataContext] Error en addMediaReport: ", error);
-      // The specific error toast should have been thrown by the failing step (upload or Firestore write)
-      // This re-throw ensures the promise is rejected for the calling component
+      console.error("[DataContext] Error en addMediaReport (catch general): ", error);
+      // Ensure toast is shown if not already by specific error checks
+      if (!(error instanceof Error && (error.message.includes("Supabase") || error.message.includes("URL pública")))) {
+         toast({ variant: "destructive", title: "Error Inesperado", description: "Ocurrió un error al subir la evidencia."});
+      }
       throw error;
     }
   }, [currentUser]);
@@ -418,13 +411,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
         uploadedAt: (docSnapshot.data().uploadedAt as Timestamp).toDate(),
       })) as MediaReport[];
     } catch (error) {
-      console.error("Error obteniendo reportes multimedia: ", error);
-      toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los reportes." });
+      console.error(`Error obteniendo reportes multimedia para departmentId ${departmentId}: `, error);
+      toast({ variant: "destructive", title: "Error de Carga", description: "No se pudieron cargar los reportes multimedia. Revise la consola para detalles del índice." });
       return [];
     }
   }, []);
 
-
+  // --- Getter Functions ---
   const getTasksForEmployee = useCallback((employeeProfileId: string) => {
     return tasks.filter((task) => task.employeeId === employeeProfileId)
                 .sort((a,b) => new Date(b.assignedAt).getTime() - new Date(a.assignedAt).getTime());
@@ -460,7 +453,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     tasks, assignTask, updateTaskStatus, 
     addMediaReport, getMediaReportsForDepartment,
     getTasksForEmployee, getDepartmentById, getEmployeeProfileById,
-    dataLoading, currentUser 
+    dataLoading
   ]);
 
 
@@ -474,3 +467,4 @@ export function useData() {
   }
   return context;
 }
+

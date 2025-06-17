@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
-import { TaskCard } from '@/components/task/task-card';
+import { TaskListSection } from '@/components/task/TaskListSection';
 import { Briefcase, CheckSquare, Info, Clock, History, CalendarDays } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingSpinner } from '@/components/core/loading-spinner';
@@ -15,7 +15,7 @@ import { useSearchParams } from 'next/navigation';
 
 export default function EmployeeTasksPage() {
   const { currentUser, loading: authLoading } = useAuth();
-  const { getTasksForEmployee, getDepartmentById, dataLoading: appDataLoading } = useData();
+  const { getTasksForEmployee, getDepartmentById, dataLoading: appDataLoading, tasks: allTasksFromContext } = useData();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') || "pending";
 
@@ -39,8 +39,11 @@ export default function EmployeeTasksPage() {
 
 
   const globalLoading = authLoading || appDataLoading;
+  // Check if data context has loaded at least once (i.e., allTasksFromContext is not empty or appDataLoading is false)
+  const initialDataContextLoadDone = !appDataLoading || allTasksFromContext.length > 0;
 
-  if (globalLoading && (!currentUser || tasks.length === 0)) {
+
+  if (globalLoading && (!currentUser || !initialDataContextLoadDone)) {
     return (
       <div className="flex flex-grow items-center justify-center min-h-[calc(100vh-200px)]">
         <LoadingSpinner size={32} /> 
@@ -86,86 +89,56 @@ export default function EmployeeTasksPage() {
 
       <Tabs defaultValue={initialTab} className="w-full" value={initialTab}>
         {initialTab !== 'completed_history' && (
-            <TabsList className="grid w-full grid-cols-2 md:w-[400px] mb-6">
+          <TabsList className="grid w-full grid-cols-2 md:w-[400px] mb-6">
             <TabsTrigger value="pending" asChild>
-                <Link href="/employee/tasks?tab=pending">
-                    <CalendarDays className="mr-2 h-4 w-4 md:hidden lg:inline-block" />
-                    Pendientes ({appDataLoading && pendingTasks.length === 0 ? "..." : pendingTasks.length})
-                </Link>
+              <Link href="/employee/tasks?tab=pending">
+                <CalendarDays className="mr-2 h-4 w-4 md:hidden lg:inline-block" />
+                Pendientes ({appDataLoading && pendingTasks.length === 0 && !initialDataContextLoadDone ? "..." : pendingTasks.length})
+              </Link>
             </TabsTrigger>
             <TabsTrigger value="completed_today" asChild>
-                <Link href="/employee/tasks?tab=completed_today">
-                    <Clock className="mr-2 h-4 w-4 md:hidden lg:inline-block" />
-                    Completadas Hoy ({appDataLoading && completedTodayTasks.length === 0 ? "..." : completedTodayTasks.length})
-                </Link>
+              <Link href="/employee/tasks?tab=completed_today">
+                <Clock className="mr-2 h-4 w-4 md:hidden lg:inline-block" />
+                Completadas Hoy ({appDataLoading && completedTodayTasks.length === 0 && !initialDataContextLoadDone ? "..." : completedTodayTasks.length})
+              </Link>
             </TabsTrigger>
-            </TabsList>
+          </TabsList>
         )}
 
         <TabsContent value="pending">
-          {appDataLoading && pendingTasks.length === 0 && tasks.length === 0 ? (
-            <div className="text-center py-10 border rounded-lg bg-card shadow">
-              <LoadingSpinner size={24} />
-              <p className="mt-4 text-muted-foreground">Cargando tareas pendientes...</p>
-            </div>
-          ) : pendingTasks.length === 0 ? (
-            <div className="text-center py-10 border rounded-lg bg-card shadow">
-              <CheckSquare className="mx-auto h-16 w-16 text-green-500" />
-              <p className="mt-4 text-xl text-muted-foreground">¡Todo al día!</p>
-              <p className="text-sm text-muted-foreground">No tienes tareas pendientes.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {pendingTasks.map((task) => {
-                const department = getDepartmentById(task.departmentId);
-                return <TaskCard key={task.id} task={task} department={department} />;
-              })}
-            </div>
-          )}
+          <TaskListSection
+            tasks={pendingTasks}
+            getDepartmentById={getDepartmentById}
+            isLoading={appDataLoading}
+            initialLoadDone={initialDataContextLoadDone}
+            emptyStateTitle="¡Todo al día!"
+            emptyStateMessage="No tienes tareas pendientes."
+            emptyStateIcon={CheckSquare}
+          />
         </TabsContent>
 
         <TabsContent value="completed_today">
-           {appDataLoading && completedTodayTasks.length === 0 && tasks.length === 0 ? (
-             <div className="text-center py-10 border rounded-lg bg-card shadow">
-               <LoadingSpinner size={24} />
-               <p className="mt-4 text-muted-foreground">Cargando tareas completadas hoy...</p>
-             </div>
-           ) : completedTodayTasks.length === 0 ? (
-            <div className="text-center py-10 border rounded-lg bg-card shadow">
-              <Clock className="mx-auto h-16 w-16 text-muted-foreground" />
-              <p className="mt-4 text-xl text-muted-foreground">Ninguna tarea completada hoy.</p>
-              <p className="text-sm text-muted-foreground">Las tareas que completes hoy aparecerán aquí.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {completedTodayTasks.map((task) => {
-                const department = getDepartmentById(task.departmentId);
-                return <TaskCard key={task.id} task={task} department={department} />;
-              })}
-            </div>
-          )}
+          <TaskListSection
+            tasks={completedTodayTasks}
+            getDepartmentById={getDepartmentById}
+            isLoading={appDataLoading}
+            initialLoadDone={initialDataContextLoadDone}
+            emptyStateTitle="Ninguna tarea completada hoy."
+            emptyStateMessage="Las tareas que completes hoy aparecerán aquí."
+            emptyStateIcon={Clock}
+          />
         </TabsContent>
 
         <TabsContent value="completed_history">
-           {appDataLoading && completedHistoryTasks.length === 0 && tasks.length > 0 ? ( 
-             <div className="text-center py-10 border rounded-lg bg-card shadow">
-               <LoadingSpinner size={24} />
-               <p className="mt-4 text-muted-foreground">Cargando historial de tareas...</p>
-             </div>
-           ) : completedHistoryTasks.length === 0 ? (
-            <div className="text-center py-10 border rounded-lg bg-card shadow">
-              <History className="mx-auto h-16 w-16 text-muted-foreground" />
-              <p className="mt-4 text-xl text-muted-foreground">No hay historial de tareas completadas.</p>
-              <p className="text-sm text-muted-foreground">Las tareas completadas en días anteriores aparecerán aquí.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {completedHistoryTasks.map((task) => {
-                const department = getDepartmentById(task.departmentId);
-                return <TaskCard key={task.id} task={task} department={department} />;
-              })}
-            </div>
-          )}
+          <TaskListSection
+            tasks={completedHistoryTasks}
+            getDepartmentById={getDepartmentById}
+            isLoading={appDataLoading}
+            initialLoadDone={initialDataContextLoadDone}
+            emptyStateTitle="No hay historial de tareas completadas."
+            emptyStateMessage="Las tareas completadas en días anteriores aparecerán aquí."
+            emptyStateIcon={History}
+          />
         </TabsContent>
       </Tabs>
     </div>
