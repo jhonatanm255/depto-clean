@@ -9,7 +9,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ClipboardEdit } from 'lucide-react';
-import { LoadingSpinner } from '@/components/core/loading-spinner'; 
+import { LoadingSpinner } from '@/components/core/loading-spinner';
+import type { Department } from '@/lib/types'; // Import Department type
 
 const assignmentSchema = z.object({
   departmentId: z.string().min(1, "Se requiere el departamento"),
@@ -17,6 +18,16 @@ const assignmentSchema = z.object({
 });
 
 type AssignmentFormData = z.infer<typeof assignmentSchema>;
+
+// Helper function to translate status for display
+function translateDepartmentStatus(status: Department['status']): string {
+  switch (status) {
+    case 'pending': return 'Pendiente';
+    case 'in_progress': return 'En Progreso';
+    case 'completed': return 'Completado';
+    default: return status;
+  }
+}
 
 export function AssignmentForm() {
   const { departments, employees, assignTask, dataLoading } = useData();
@@ -89,11 +100,22 @@ export function AssignmentForm() {
                       <SelectGroup>
                         <SelectLabel>Departamentos (No completados)</SelectLabel>
                         {assignableDepartments.length > 0 ? (
-                            assignableDepartments.map((dept) => (
+                            assignableDepartments.map((dept) => {
+                              const assignedEmployee = dept.assignedTo ? employees.find(emp => emp.id === dept.assignedTo) : null;
+                              const statusDisplay = translateDepartmentStatus(dept.status);
+                              
+                              return (
                                 <SelectItem key={dept.id} value={dept.id}>
-                                {dept.name} ({dept.status === 'pending' && dept.assignedTo ? 'Asignado, Pendiente' : dept.status === 'pending' ? 'Pendiente' : dept.status})
+                                  {dept.name} ({assignedEmployee ? (
+                                    <>
+                                      Asignado a: <strong className="text-primary font-semibold">{assignedEmployee.name || 'Desconocido'}</strong>, {statusDisplay}
+                                    </>
+                                  ) : (
+                                    statusDisplay
+                                  )})
                                 </SelectItem>
-                            ))
+                              );
+                            })
                         ) : (
                             <SelectItem value="no-dept" disabled>No hay departamentos para asignar/reasignar</SelectItem>
                         )}
