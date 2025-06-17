@@ -1,5 +1,6 @@
 
 "use client";
+import React, { useMemo } from 'react'; // Added useMemo
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,10 +9,26 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LoadingSpinner } from '@/components/core/loading-spinner'; 
-import type { AppUser } from '@/lib/types'; // Import AppUser
+import type { AppUser } from '@/lib/types'; 
 
 function AdminDashboard() {
   const { departments, employees, dataLoading, getEmployeeProfileById } = useData(); 
+
+  const pendingCount = useMemo(() => departments.filter(d => d.status === 'pending').length, [departments]);
+  const completedCount = useMemo(() => departments.filter(d => d.status === 'completed').length, [departments]);
+
+  const recentlyCompleted = useMemo(() => {
+    return departments
+      .filter(d => d.status === 'completed' && d.lastCleanedAt)
+      .sort((a, b) => new Date(b.lastCleanedAt!).getTime() - new Date(a.lastCleanedAt!).getTime())
+      .slice(0, 5);
+  }, [departments]);
+
+  const needsAttention = useMemo(() => {
+    return departments
+      .filter(d => d.status === 'pending' && !d.assignedTo)
+      .slice(0,5);
+  }, [departments]);
 
   if (dataLoading) { 
     return (
@@ -21,18 +38,6 @@ function AdminDashboard() {
       </div>
     );
   }
-
-  const pendingCount = departments.filter(d => d.status === 'pending').length;
-  const completedCount = departments.filter(d => d.status === 'completed').length;
-
-  const recentlyCompleted = departments
-    .filter(d => d.status === 'completed' && d.lastCleanedAt)
-    .sort((a, b) => new Date(b.lastCleanedAt!).getTime() - new Date(a.lastCleanedAt!).getTime())
-    .slice(0, 5);
-
-  const needsAttention = departments
-    .filter(d => d.status === 'pending' && !d.assignedTo)
-    .slice(0,5);
 
   return (
     <div className="space-y-6">
@@ -134,10 +139,23 @@ function AdminDashboard() {
   );
 }
 
-function EmployeeDashboard({user}: {user: AppUser}) { // Recibe AppUser
+function EmployeeDashboard({user}: {user: AppUser}) { 
   const { getTasksForEmployee, getDepartmentById, dataLoading } = useData(); 
 
-  if (dataLoading) { 
+  const tasks = useMemo(() => {
+    return user.employeeProfileId ? getTasksForEmployee(user.employeeProfileId) : [];
+  }, [user.employeeProfileId, getTasksForEmployee]);
+  
+  const pendingTasks = useMemo(() => {
+    return tasks.filter(t => t.status === 'pending' || t.status === 'in_progress');
+  }, [tasks]);
+
+  const completedTasksCount = useMemo(() => {
+    return tasks.filter(t => t.status === 'completed').length;
+  }, [tasks]);
+
+
+  if (dataLoading && !tasks.length) { // Check if tasks are loaded or still in initial dataLoading
      return (
       <div className="flex flex-col items-center justify-center p-8">
         <LoadingSpinner size={32} />
@@ -145,12 +163,7 @@ function EmployeeDashboard({user}: {user: AppUser}) { // Recibe AppUser
       </div>
     );
   }
-  // Usa employeeProfileId de AppUser para obtener tareas
-  const tasks = user.employeeProfileId ? getTasksForEmployee(user.employeeProfileId) : [];
   
-  const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress');
-  const completedTasksCount = tasks.filter(t => t.status === 'completed').length;
-
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-bold font-headline text-foreground">¡Bienvenido/a, {user?.name}!</h2>
@@ -211,10 +224,10 @@ function EmployeeDashboard({user}: {user: AppUser}) { // Recibe AppUser
 
 
 export default function DashboardPage() {
-  const { currentUser, loading: authLoading } = useAuth(); // Renombrado de dataLoading a authLoading
-  const { dataLoading: appDataLoading } = useData(); // Loading específico de datos de la app
+  const { currentUser, loading: authLoading } = useAuth(); 
+  const { dataLoading: appDataLoading } = useData(); 
 
-  if (authLoading || (!currentUser && appDataLoading)) { // Esperar a que auth y datos iniciales carguen si no hay user
+  if (authLoading || (!currentUser && appDataLoading)) { 
      return (
       <div className="flex flex-grow items-center justify-center">
         <LoadingSpinner size={32} /> 
@@ -224,12 +237,11 @@ export default function DashboardPage() {
   }
 
   if (!currentUser) {
-    // Esto no debería pasar si AppLayout funciona bien, pero como fallback
     return <p className="text-center text-muted-foreground">Por favor, inicia sesión para ver el panel.</p>;
   }
 
 
   return currentUser?.role === 'admin' 
     ? <AdminDashboard /> 
-    : <EmployeeDashboard user={currentUser} />; // Pasar currentUser al EmployeeDashboard
+    : <EmployeeDashboard user={currentUser} />; 
 }

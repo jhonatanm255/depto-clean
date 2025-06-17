@@ -1,6 +1,6 @@
 
 "use client";
-import { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react'; // Added useMemo, useCallback
 import type { Department } from '@/lib/types';
 import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
@@ -20,33 +20,35 @@ export default function DepartmentsPage() {
   const [sortOrder, setSortOrder] = useState('name_asc');
 
 
-  const handleOpenForm = (department?: Department) => {
+  const handleOpenForm = useCallback((department?: Department) => {
     setEditingDepartment(department || null);
     setIsFormOpen(true);
-  };
+  }, []);
 
-  const handleCloseForm = () => {
+  const handleCloseForm = useCallback(() => {
     setIsFormOpen(false);
     setEditingDepartment(null);
-  };
+  }, []);
   
-  const filteredDepartments = departments
-    .filter(dept => dept.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .filter(dept => {
-        if (statusFilter === 'all') return true;
-        if (statusFilter === 'pending_assignment') {
-            return dept.status === 'pending' && !dept.assignedTo;
-        }
-        return dept.status === statusFilter;
-    })
-    .sort((a, b) => {
-        switch (sortOrder) {
-            case 'name_asc': return a.name.localeCompare(b.name);
-            case 'name_desc': return b.name.localeCompare(a.name);
-            case 'status': return a.status.localeCompare(b.status);
-            default: return 0;
-        }
-    });
+  const filteredDepartments = useMemo(() => {
+    return departments
+      .filter(dept => dept.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      .filter(dept => {
+          if (statusFilter === 'all') return true;
+          if (statusFilter === 'pending_assignment') {
+              return dept.status === 'pending' && !dept.assignedTo;
+          }
+          return dept.status === statusFilter;
+      })
+      .sort((a, b) => {
+          switch (sortOrder) {
+              case 'name_asc': return a.name.localeCompare(b.name);
+              case 'name_desc': return b.name.localeCompare(a.name);
+              case 'status': return a.status.localeCompare(b.status);
+              default: return 0;
+          }
+      });
+  }, [departments, searchTerm, statusFilter, sortOrder]);
 
   if (dataLoading) {
     return (

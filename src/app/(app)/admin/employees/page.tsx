@@ -1,7 +1,7 @@
 
 "use client";
-import { useState, useEffect } from 'react';
-import type { EmployeeProfile } from '@/lib/types'; // Usar EmployeeProfile
+import React, { useState, useEffect, useMemo, useCallback } from 'react'; // Added useMemo, useCallback
+import type { EmployeeProfile } from '@/lib/types'; 
 import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
 import { EmployeeForm } from '@/components/employee/employee-form';
@@ -17,20 +17,22 @@ export default function EmployeesPage() {
   const [editingEmployee, setEditingEmployee] = useState<EmployeeProfile | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const handleOpenForm = (employee?: EmployeeProfile) => {
+  const handleOpenForm = useCallback((employee?: EmployeeProfile) => {
     setEditingEmployee(employee || null);
     setIsFormOpen(true);
-  };
+  }, []);
 
-  const handleCloseForm = () => {
+  const handleCloseForm = useCallback(() => {
     setIsFormOpen(false);
     setEditingEmployee(null);
-  };
+  }, []);
   
-  const filteredEmployees = employees.filter(emp => 
-    emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    emp.email.toLowerCase().includes(searchTerm.toLowerCase())
-  ).sort((a,b) => a.name.localeCompare(b.name));
+  const filteredEmployees = useMemo(() => {
+    return employees.filter(emp => 
+      emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      emp.email.toLowerCase().includes(searchTerm.toLowerCase())
+    ).sort((a,b) => a.name.localeCompare(b.name));
+  }, [employees, searchTerm]);
 
   if (dataLoading && employees.length === 0) { 
     return (
@@ -94,7 +96,7 @@ export default function EmployeesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredEmployees.map((emp) => {
-            const employeeTasks = getTasksForEmployee(emp.id); // emp.id es el ID del documento de Firestore
+            const employeeTasks = getTasksForEmployee(emp.id); 
             return (
               <EmployeeCard 
                 key={emp.id} 

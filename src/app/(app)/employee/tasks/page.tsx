@@ -1,5 +1,6 @@
 
 "use client";
+import React, { useMemo } from 'react'; // Added useMemo
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { TaskCard } from '@/components/task/task-card';
@@ -10,6 +11,20 @@ import { LoadingSpinner } from '@/components/core/loading-spinner';
 export default function EmployeeTasksPage() {
   const { currentUser, loading: authLoading } = useAuth();
   const { getTasksForEmployee, getDepartmentById, dataLoading: appDataLoading } = useData();
+
+  const tasks = useMemo(() => {
+    if (!currentUser || !currentUser.employeeProfileId) return [];
+    return getTasksForEmployee(currentUser.employeeProfileId)
+      .sort((a,b) => new Date(b.assignedAt).getTime() - new Date(a.assignedAt).getTime());
+  }, [currentUser, getTasksForEmployee]);
+  
+  const pendingTasks = useMemo(() => {
+    return tasks.filter(task => task.status === 'pending' || task.status === 'in_progress');
+  }, [tasks]);
+  
+  const completedTasks = useMemo(() => {
+    return tasks.filter(task => task.status === 'completed');
+  }, [tasks]);
 
   if (authLoading || (!currentUser && appDataLoading)) {
     return (
@@ -23,13 +38,6 @@ export default function EmployeeTasksPage() {
   if (!currentUser || !currentUser.employeeProfileId) {
      return <p className="text-center text-muted-foreground">No se pudo identificar el perfil de empleado. Por favor, contacta al administrador.</p>;
   }
-
-  // Usar employeeProfileId de AppUser para obtener tareas
-  const tasks = getTasksForEmployee(currentUser.employeeProfileId)
-    .sort((a,b) => new Date(b.assignedAt).getTime() - new Date(a.assignedAt).getTime());
-  
-  const pendingTasks = tasks.filter(task => task.status === 'pending' || task.status === 'in_progress');
-  const completedTasks = tasks.filter(task => task.status === 'completed');
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
