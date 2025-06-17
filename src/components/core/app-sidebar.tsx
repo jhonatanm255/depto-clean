@@ -19,10 +19,10 @@ import {
   Briefcase,
   LogOut,
   ShieldCheck,
-  Users, // Added Users icon
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
+import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile
 
 interface NavItem {
   href: string;
@@ -34,7 +34,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, roles: ['admin', 'employee'] },
   { href: '/admin/departments', label: 'Departamentos', icon: Building2, roles: ['admin'] },
-  { href: '/admin/employees', label: 'Gestionar Empleados', icon: Users, roles: ['admin'] }, // New item
+  { href: '/admin/employees', label: 'Gestionar Empleados', icon: Users, roles: ['admin'] },
   { href: '/admin/assignments', label: 'Asignar Tareas', icon: ClipboardEdit, roles: ['admin'] },
   { href: '/employee/tasks', label: 'Mis Tareas', icon: Briefcase, roles: ['employee'] },
 ];
@@ -42,13 +42,15 @@ const navItems: NavItem[] = [
 export function AppSidebar() {
   const pathname = usePathname();
   const { currentUser, logout } = useAuth();
+  const isMobile = useIsMobile(); // Check if mobile
 
-  if (!currentUser) return null;
+  // No renderizar el sidebar en móvil, ya que será reemplazado por BottomNavigationBar
+  if (isMobile || !currentUser) return null; 
 
   const filteredNavItems = navItems.filter(item => item.roles.includes(currentUser.role));
 
   return (
-    <Sidebar collapsible="icon" className="border-r">
+    <Sidebar collapsible="icon" className="border-r hidden md:flex"> {/* Asegurar que solo se muestre en desktop */}
       <SidebarHeader className="p-4 flex items-center justify-between">
         <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
            <ShieldCheck className="h-7 w-7 text-primary" />

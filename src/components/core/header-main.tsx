@@ -13,8 +13,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LogOut, Moon, Sun, PanelLeft } from "lucide-react";
-import { useSidebar } from "@/components/ui/sidebar";
+import { useSidebar } from "@/components/ui/sidebar"; // Todavía puede ser usado por AppSidebar desktop
 import { useTheme } from "next-themes";
+import { useIsMobile } from '@/hooks/use-mobile'; // Para ocultar el botón del panel
 
 function ThemeToggle() {
   const { setTheme, theme } = useTheme();
@@ -39,7 +40,8 @@ function ThemeToggle() {
 
 export function HeaderMain() {
   const { currentUser, logout } = useAuth();
-  const { toggleSidebar, isMobile } = useSidebar(); 
+  const { toggleSidebar } = useSidebar(); 
+  const isMobileView = useIsMobile(); // Hook para determinar si es vista móvil
 
   const getInitials = (name?: string) => {
     if (!name) return "CS"; 
@@ -49,12 +51,14 @@ export function HeaderMain() {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background/80 px-4 backdrop-blur-md sm:px-6">
       <div className="flex items-center gap-2">
-        {isMobile && ( 
+        {/* Ocultar el botón PanelLeft en móvil ya que usamos BottomNavigationBar */}
+        {!isMobileView && ( 
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleSidebar}
             aria-label="Abrir/cerrar panel lateral"
+            className="md:hidden" // Aseguramos que solo se muestre en desktop si es parte del colapso del sidebar de escritorio
           >
             <PanelLeft className="h-6 w-6" />
           </Button>
