@@ -20,7 +20,7 @@ import {
   LogOut,
   ShieldCheck,
   Users,
-  History, // Importar History
+  History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile'; 
@@ -38,7 +38,7 @@ const navItems: NavItem[] = [
   { href: '/admin/employees', label: 'Gestionar Empleados', icon: Users, roles: ['admin'] },
   { href: '/admin/assignments', label: 'Asignar Tareas', icon: ClipboardEdit, roles: ['admin'] },
   { href: '/employee/tasks', label: 'Mis Tareas', icon: Briefcase, roles: ['employee'] },
-  { href: '/employee/tasks?tab=completed_history', label: 'Historial Tareas', icon: History, roles: ['employee'] }, // Nueva ruta
+  { href: '/employee/tasks?tab=completed_history', label: 'Historial Tareas', icon: History, roles: ['employee'] },
 ];
 
 export function AppSidebar() {
@@ -62,27 +62,44 @@ export function AppSidebar() {
       
       <SidebarContent className="p-2">
         <SidebarMenu>
-          {filteredNavItems.map((item) => (
+          {filteredNavItems.map((item) => {
+            const currentTab = pathname.includes('?') ? pathname.substring(pathname.indexOf('?') + 1) : null;
+            const itemTab = item.href.includes('?') ? item.href.substring(item.href.indexOf('?') + 1) : null;
+            const basePath = pathname.split('?')[0];
+            const itemBasePath = item.href.split('?')[0];
+
+            let isActive = basePath === itemBasePath;
+            if (itemTab) {
+              isActive = isActive && currentTab === itemTab;
+            } else if (currentTab && basePath === itemBasePath) {
+              // If current path has a tab but item doesn't, it's not active unless it's the base /employee/tasks without specific tab
+               isActive = false;
+            }
+             if (item.href === '/employee/tasks' && basePath === '/employee/tasks' && !currentTab && !itemTab) {
+              isActive = true; // Special case for base /employee/tasks (pending)
+            }
+
+
+            return (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href} legacyBehavior passHref>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href.split('?')[0]) && item.href.includes('?') && pathname.split('?')[0] === item.href.split('?')[0]) || (item.href !== '/dashboard' && !item.href.includes('?') && pathname.startsWith(item.href)) }
-                  tooltip={item.label}
-                  className={cn(
-                    (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href.split('?')[0]) && item.href.includes('?') && pathname.split('?')[0] === item.href.split('?')[0]) || (item.href !== '/dashboard' && !item.href.includes('?') && pathname.startsWith(item.href)))
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90" 
-                    : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  )}
-                >
-                  <a>
-                    <item.icon className="h-5 w-5" />
-                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                  </a>
-                </SidebarMenuButton>
-              </Link>
+              <SidebarMenuButton
+                asChild
+                isActive={isActive}
+                tooltip={item.label}
+                className={cn(
+                  isActive
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90" 
+                  : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                )}
+              >
+                <Link href={item.href}>
+                  <item.icon className="h-5 w-5" />
+                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
-          ))}
+          );
+        })}
         </SidebarMenu>
       </SidebarContent>
 

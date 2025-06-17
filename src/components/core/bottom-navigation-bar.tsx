@@ -9,7 +9,7 @@ import {
   ClipboardEdit,
   Briefcase,
   Users,
-  History, // Importar History
+  History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -26,7 +26,7 @@ const navItems: NavItem[] = [
   { href: '/admin/employees', label: 'Empleadas', icon: Users, roles: ['admin'] },
   { href: '/admin/assignments', label: 'Asignar', icon: ClipboardEdit, roles: ['admin'] },
   { href: '/employee/tasks', label: 'Tareas', icon: Briefcase, roles: ['employee'] },
-  { href: '/employee/tasks?tab=completed_history', label: 'Historial', icon: History, roles: ['employee'] }, // Nueva ruta
+  { href: '/employee/tasks?tab=completed_history', label: 'Historial', icon: History, roles: ['employee'] },
 ];
 
 export function BottomNavigationBar() {
@@ -48,33 +48,30 @@ export function BottomNavigationBar() {
         if (itemQueryParam && isActive) {
             isActive = searchParams.get('tab') === itemQueryParam;
         } else if (itemPathname !== '/dashboard' && pathname.startsWith(itemPathname) && !itemQueryParam && !searchParams.get('tab')){
-            // Para casos como /employee/tasks (sin query param) cuando el item es /employee/tasks
-            isActive = true;
-        } else if (itemQueryParam && pathname === itemPathname && searchParams.get('tab') === itemQueryParam) {
-            isActive = true;
-        } else if (!itemQueryParam && pathname.startsWith(itemPathname) && itemPathname !== '/dashboard' && !searchParams.get('tab')){
-             // caso base para /employee/tasks
-             if (item.href === '/employee/tasks' && pathname === '/employee/tasks' && !searchParams.get('tab')){
+            if (item.href === '/employee/tasks' && pathname === '/employee/tasks' && !searchParams.get('tab')){
                 isActive = true;
-             } else {
+             } else if (item.href.includes('?')) {
+                // If item.href has query params but current path doesn't match query params, it's not active
                 isActive = false;
+             } else if (!item.href.includes('?') && pathname.startsWith(itemPathname) && itemPathname !== '/dashboard') {
+                isActive = true;
              }
         }
 
 
         return (
-          <Link key={item.href} href={item.href} legacyBehavior passHref>
-            <a
-              className={cn(
-                "flex flex-col items-center justify-center p-2 rounded-md transition-colors w-full h-full",
-                isActive 
-                  ? "text-primary" 
-                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-              )}
-            >
-              <item.icon className={cn("h-6 w-6 mb-0.5", isActive ? "text-primary" : "")} />
-              <span className={cn("text-xs leading-tight", isActive ? "font-medium" : "")}>{item.label}</span>
-            </a>
+          <Link
+            key={item.href}
+            href={item.href}
+            className={cn(
+              "flex flex-col items-center justify-center p-2 rounded-md transition-colors w-full h-full",
+              isActive 
+                ? "text-primary" 
+                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+            )}
+          >
+            <item.icon className={cn("h-6 w-6 mb-0.5", isActive ? "text-primary" : "")} />
+            <span className={cn("text-xs leading-tight", isActive ? "font-medium" : "")}>{item.label}</span>
           </Link>
         );
       })}

@@ -1,6 +1,6 @@
 
 "use client";
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { TaskCard } from '@/components/task/task-card';
@@ -15,14 +15,14 @@ import { useSearchParams } from 'next/navigation';
 
 export default function EmployeeTasksPage() {
   const { currentUser, loading: authLoading } = useAuth();
-  const { getTasksForEmployee, getDepartmentById, dataLoading: appDataLoading, tasks: allTasks } = useData();
+  const { getTasksForEmployee, getDepartmentById, dataLoading: appDataLoading } = useData();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') || "pending";
 
 
   const tasks = useMemo(() => {
     if (!currentUser || !currentUser.employeeProfileId) return [];
-    return getTasksForEmployee(currentUser.employeeProfileId) // Already sorted by assignedAt desc in context
+    return getTasksForEmployee(currentUser.employeeProfileId)
   }, [currentUser, getTasksForEmployee]); 
   
   const pendingTasks = useMemo(() => {
@@ -54,9 +54,9 @@ export default function EmployeeTasksPage() {
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
             <Info className="h-10 w-10 text-destructive mb-2" />
             <p className="text-center text-muted-foreground text-lg">Debes iniciar sesión para ver tus tareas.</p>
-            <Link href="/login" legacyBehavior>
-                <Button className="mt-4">Ir a Iniciar Sesión</Button>
-            </Link>
+            <Button className="mt-4" asChild>
+                <Link href="/login">Ir a Iniciar Sesión</Link>
+            </Button>
         </div>
      );
   }
@@ -75,22 +75,32 @@ export default function EmployeeTasksPage() {
       <header className="mb-8">
         <h1 className="text-3xl font-bold font-headline text-foreground flex items-center">
           <Briefcase className="mr-3 h-8 w-8 text-primary" />
-          Mis Tareas de Limpieza
+          {initialTab === 'completed_history' ? 'Historial de Tareas Completadas' : 'Mis Tareas de Limpieza'}
         </h1>
-        <p className="text-muted-foreground mt-1">Ve y gestiona tus tareas de limpieza asignadas.</p>
+        <p className="text-muted-foreground mt-1">
+          {initialTab === 'completed_history' 
+            ? 'Revisa tus tareas completadas en días anteriores.'
+            : 'Ve y gestiona tus tareas de limpieza asignadas.'}
+        </p>
       </header>
 
-      <Tabs defaultValue={initialTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:w-[400px] mb-6">
-          <TabsTrigger value="pending">
-            <CalendarDays className="mr-2 h-4 w-4 md:hidden lg:inline-block" />
-            Pendientes ({appDataLoading && pendingTasks.length === 0 ? "..." : pendingTasks.length})
-          </TabsTrigger>
-          <TabsTrigger value="completed_today">
-             <Clock className="mr-2 h-4 w-4 md:hidden lg:inline-block" />
-            Completadas Hoy ({appDataLoading && completedTodayTasks.length === 0 ? "..." : completedTodayTasks.length})
-          </TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue={initialTab} className="w-full" value={initialTab}>
+        {initialTab !== 'completed_history' && (
+            <TabsList className="grid w-full grid-cols-2 md:w-[400px] mb-6">
+            <TabsTrigger value="pending" asChild>
+                <Link href="/employee/tasks?tab=pending">
+                    <CalendarDays className="mr-2 h-4 w-4 md:hidden lg:inline-block" />
+                    Pendientes ({appDataLoading && pendingTasks.length === 0 ? "..." : pendingTasks.length})
+                </Link>
+            </TabsTrigger>
+            <TabsTrigger value="completed_today" asChild>
+                <Link href="/employee/tasks?tab=completed_today">
+                    <Clock className="mr-2 h-4 w-4 md:hidden lg:inline-block" />
+                    Completadas Hoy ({appDataLoading && completedTodayTasks.length === 0 ? "..." : completedTodayTasks.length})
+                </Link>
+            </TabsTrigger>
+            </TabsList>
+        )}
 
         <TabsContent value="pending">
           {appDataLoading && pendingTasks.length === 0 && tasks.length === 0 ? (
@@ -136,7 +146,6 @@ export default function EmployeeTasksPage() {
           )}
         </TabsContent>
 
-        {/* El contenido del historial aún existe para ser activado por query param, pero no tiene un trigger de pestaña */}
         <TabsContent value="completed_history">
            {appDataLoading && completedHistoryTasks.length === 0 && tasks.length > 0 ? ( 
              <div className="text-center py-10 border rounded-lg bg-card shadow">
