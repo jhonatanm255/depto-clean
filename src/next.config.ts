@@ -1,27 +1,15 @@
+/**
+ * Este archivo (src/next.config.ts) generalmente no es utilizado por Next.js,
+ * que busca next.config.js o next.config.ts en la raíz del proyecto.
+ * Se está neutralizando para prevenir posibles problemas.
+ * Idealmente, este archivo debería ser eliminado si no es utilizado
+ * intencionalmente por una configuración personalizada.
+ */
+import type { NextConfig } from 'next';
 
-import type {NextConfig} from 'next';
-
-const nextConfig: NextConfig = {
-  /* config options here */
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
-      },
-    ],
-  },
-  allowedDevOrigins: [
-    'https://6000-firebase-studio-1749918560344.cluster-ve345ymguzcd6qqzuko2qbxtfe.cloudworkstations.dev',
-  ],
+const config: NextConfig = {
+  // Se mantiene mínimo para evitar interferencias.
+  // La configuración real debe estar en el archivo next.config.ts de la raíz.
 };
 
-export default nextConfig;
+export default config;
