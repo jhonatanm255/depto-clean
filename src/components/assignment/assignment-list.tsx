@@ -170,7 +170,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange?.from ? format(dateRange.from, "PPP") : <span>Desde</span>}
+                    {dateRange?.from ? format(dateRange.from, "PPP", { locale: (await import('date-fns/locale/es')).default }) : <span>Desde</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -180,6 +180,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                     onSelect={setDateRange}
                     initialFocus
                     numberOfMonths={1}
+                    locale={(await import('date-fns/locale/es')).default}
                   />
                 </PopoverContent>
               </Popover>
@@ -193,7 +194,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange?.to ? format(dateRange.to, "PPP") : <span>Hasta</span>}
+                    {dateRange?.to ? format(dateRange.to, "PPP", { locale: (await import('date-fns/locale/es')).default }) : <span>Hasta</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -203,6 +204,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                     onSelect={setDateRange}
                     initialFocus
                     numberOfMonths={1}
+                    locale={(await import('date-fns/locale/es')).default}
                   />
                 </PopoverContent>
               </Popover>
@@ -225,7 +227,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
           {filteredEmployees.length > 0 && (
             <Accordion type="multiple" className="w-full space-y-2">
               {filteredEmployees.map((employee) => {
-                const employeeTasks = employee.assignedTasks; // These are already filtered by date
+                const employeeTasks = employee.assignedTasks; 
                 return (
                   <AccordionItem value={employee.id} key={employee.id} className="border bg-card rounded-lg p-0">
                     <AccordionTrigger className="p-4 hover:no-underline hover:bg-muted/50 rounded-t-lg">
@@ -257,10 +259,10 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                                     {department.address && (
                                         <p className="flex items-center"><MapPin className="mr-1.5 h-3 w-3 shrink-0"/> {department.address}</p>
                                     )}
-                                    <p className="flex items-center"><CalendarDays className="mr-1.5 h-3 w-3"/> Asignado: {new Date(task.assignedAt).toLocaleDateString('es-CL')}</p>
+                                    <p className="flex items-center"><CalendarDays className="mr-1.5 h-3 w-3"/> Asignado: {new Date(task.assignedAt).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
                                     {task.status === 'completed' && task.completedAt && (
                                       <>
-                                        <p className="flex items-center text-green-600"><CheckCircle2 className="mr-1.5 h-3 w-3"/> Completado: {new Date(task.completedAt).toLocaleDateString('es-CL')}</p>
+                                        <p className="flex items-center text-green-600"><CheckCircle2 className="mr-1.5 h-3 w-3"/> Completado: {new Date(task.completedAt).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
                                         <Button 
                                           variant="outline" 
                                           size="sm" 
@@ -278,7 +280,6 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                           </ul>
                         </ScrollArea>
                       ) : (
-                        // This case should not be reached if filteredEmployees only includes those with tasks
                         <p className="text-sm text-muted-foreground">Esta empleada no tiene tareas asignadas en el rango seleccionado.</p>
                       )}
                     </AccordionContent>
@@ -312,3 +313,4 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
   );
 }
 
+    
