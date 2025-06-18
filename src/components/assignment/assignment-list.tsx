@@ -135,7 +135,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                             return (
                               <li key={task.id} className="p-3 border rounded-md hover:shadow-sm transition-shadow bg-background">
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1">
-                                  <h4 className="text-md font-medium text-foreground flex items-center">
+                                  <h4 className="text-base font-medium text-foreground flex items-center">
                                     <Building2 className="mr-2 h-4 w-4 text-muted-foreground"/> {department.name}
                                   </h4>
                                   <Badge variant="default" className={cn("text-primary-foreground capitalize mt-1 sm:mt-0 text-xs", getStatusBadgeVariant(task.status))}>
@@ -143,7 +143,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                                     {translateStatus(task.status)}
                                   </Badge>
                                 </div>
-                                <div className="text-xs text-muted-foreground space-y-0.5">
+                                <div className="text-sm text-muted-foreground space-y-0.5">
                                   {department.address && (
                                       <p className="flex items-center"><MapPin className="mr-1.5 h-3 w-3 shrink-0"/> {department.address}</p>
                                   )}
