@@ -22,6 +22,8 @@ import {
 import { getAuth, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from './auth-context'; 
+import type { UploadFileResponse } from '@supabase/storage-js';
+
 
 interface DataContextType {
   departments: Department[];
@@ -41,7 +43,8 @@ interface DataContextType {
     employeeProfileId: string, 
     file: File, 
     reportType: MediaReportType, 
-    description?: string
+    description?: string,
+    onProgress?: (percentage: number) => void
   ) => Promise<void>;
   getMediaReportsForDepartment: (departmentId: string) => Promise<MediaReport[]>;
 
@@ -122,7 +125,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       await addDoc(collection(db, "departments"), {
         ...deptData,
         address: deptData.address || '', 
-        status: 'pending',
+        status: 'pending', // Departamentos nuevos necesitan limpieza
         assignedTo: null,
         lastCleanedAt: null,
       });
@@ -228,7 +231,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [currentUser]);
 
   // --- Task Operations ---
- const assignTask = useCallback(async (departmentId: string, employeeProfileId: string) => {
+  const assignTask = useCallback(async (departmentId: string, employeeProfileId: string) => {
     const department = departments.find(d => d.id === departmentId);
     if (!department) {
       toast({ variant: "destructive", title: "Error de Asignación", description: "Departamento no encontrado." });
@@ -244,6 +247,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const batch = writeBatch(db);
       const deptRef = doc(db, "departments", departmentId);
       
+      // Buscar una tarea existente para este departamento que NO esté completada
       const existingTaskQuery = query(
         collection(db, "tasks"),
         where("departmentId", "==", departmentId),
@@ -252,15 +256,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const existingTaskSnapshot = await getDocs(existingTaskQuery);
 
       if (!existingTaskSnapshot.empty) {
+        // Hay una tarea activa, la reasignamos
         const existingTaskDoc = existingTaskSnapshot.docs[0];
         batch.update(existingTaskDoc.ref, {
           employeeId: employeeProfileId,
           assignedAt: Timestamp.now(),
-          status: 'pending', 
+          status: 'pending', // Al reasignar, vuelve a pendiente si no estaba ya así
           completedAt: null, 
         });
-        toast({ title: "Tarea Reasignada", description: `Departamento ${department.name} reasignado a ${employee.name}.` });
+        batch.update(deptRef, {
+          assignedTo: employeeProfileId,
+          status: 'pending', // El departamento tiene una tarea activa pendiente
+        });
+        toast({ title: "Tarea Reasignada", description: `Limpieza de ${department.name} reasignada a ${employee.name}.` });
       } else {
+        // No hay tarea activa o la anterior se completó, creamos una nueva
         const taskRef = doc(collection(db, "tasks"));
         batch.set(taskRef, {
           departmentId,
@@ -269,14 +279,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
           status: 'pending',
           completedAt: null,
         });
-        toast({ title: "Tarea Asignada", description: `Departamento ${department.name} asignado a ${employee.name}.` });
+        batch.update(deptRef, {
+          assignedTo: employeeProfileId,
+          status: 'pending', // El departamento ahora necesita limpieza (tiene una nueva tarea pendiente)
+        });
+        toast({ title: "Tarea Asignada", description: `Limpieza de ${department.name} asignada a ${employee.name}.` });
       }
-      
-      batch.update(deptRef, {
-        assignedTo: employeeProfileId,
-        status: 'pending', 
-        lastCleanedAt: null, 
-      });
       
       await batch.commit();
     } catch (error) {
@@ -286,7 +294,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [departments, employees]);
 
-  const updateTaskStatus = useCallback(async (taskId: string, status: 'pending' | 'in_progress' | 'completed') => {
+  const updateTaskStatus = useCallback(async (taskId: string, newStatus: 'pending' | 'in_progress' | 'completed') => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) {
       toast({ variant: "destructive", title: "Error de Tarea", description: "Tarea no encontrada." });
@@ -296,19 +304,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       const batch = writeBatch(db);
       const taskRef = doc(db, "tasks", taskId);
-      const newCompletedAtTimestamp = status === 'completed' ? Timestamp.now() : task.completedAt ? Timestamp.fromDate(new Date(task.completedAt)) : null;
-      
-      batch.update(taskRef, { status, completedAt: newCompletedAtTimestamp });
-
       const deptRef = doc(db, "departments", task.departmentId);
-      batch.update(deptRef, { 
-        status, 
-        lastCleanedAt: newCompletedAtTimestamp, 
-        assignedTo: task.employeeId 
-      });
+
+      const taskUpdates: Partial<CleaningTask> = { status: newStatus };
+      const departmentUpdates: Partial<Department> = { status: newStatus };
+
+      if (newStatus === 'completed') {
+        taskUpdates.completedAt = Timestamp.now();
+        departmentUpdates.lastCleanedAt = Timestamp.now();
+        departmentUpdates.assignedTo = null; // Departamento queda sin asignación activa
+      } else if (newStatus === 'in_progress') {
+         // Asegurarse que assignedTo esté correcto en el departamento
+        departmentUpdates.assignedTo = task.employeeId;
+      } else if (newStatus === 'pending') {
+        // Si se vuelve a poner pendiente (ej. admin lo revierte), asegurarse que assignedTo esté correcto
+        departmentUpdates.assignedTo = task.employeeId;
+      }
+      
+      batch.update(taskRef, taskUpdates);
+      batch.update(deptRef, departmentUpdates);
 
       await batch.commit();
-      toast({ title: "Tarea Actualizada", description: `Estado de la tarea cambiado a ${status}.` });
+      toast({ title: "Tarea Actualizada", description: `Estado de la tarea cambiado a ${newStatus}.` });
     } catch (error) {
       console.error("Error updating task status: ", error);
       toast({ variant: "destructive", title: "Error de Tarea", description: "No se pudo actualizar el estado de la tarea."});
@@ -322,80 +339,103 @@ export function DataProvider({ children }: { children: ReactNode }) {
     employeeProfileId: string, 
     file: File, 
     reportType: MediaReportType, 
-    description?: string
+    description?: string,
+    onProgress?: (percentage: number) => void // Callback para el progreso
   ): Promise<void> => {
-    if (!currentUser?.uid) {
-      toast({ variant: "destructive", title: "Error de autenticación", description: "No se pudo verificar la empleada." });
-      throw new Error("Usuario no autenticado para subir archivo.");
-    }
-     if (!employeeProfileId) {
-        toast({ variant: "destructive", title: "Error de Perfil", description: "No se pudo identificar el perfil de la empleada para el reporte." });
-        throw new Error("Perfil de empleada no identificado para el reporte.");
-    }
 
-    const uploadedByAuthUid = currentUser.uid;
-    const uniqueFileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-    const supabasePath = `departments/${departmentId}/media/${uniqueFileName}`;
-    console.log(`[DataContext] Iniciando subida a Supabase para: ${supabasePath}, Archivo: ${file.name}, Tamaño: ${file.size}`);
+    return new Promise(async (resolve, reject) => {
+      if (!currentUser?.uid) {
+        toast({ variant: "destructive", title: "Error de autenticación", description: "No se pudo verificar la empleada." });
+        reject(new Error("Usuario no autenticado para subir archivo."));
+        return;
+      }
+      if (!employeeProfileId) {
+          toast({ variant: "destructive", title: "Error de Perfil", description: "No se pudo identificar el perfil de la empleada para el reporte." });
+          reject(new Error("Perfil de empleada no identificado para el reporte."));
+          return;
+      }
 
-    try {
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from(SUPABASE_MEDIA_BUCKET)
-        .upload(supabasePath, file, {
-          cacheControl: '3600',
-          upsert: false, 
+      const uploadedByAuthUid = currentUser.uid;
+      const uniqueFileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+      const supabasePath = `departments/${departmentId}/media/${uniqueFileName}`;
+      
+      console.log(`[DataContext] Iniciando subida a Supabase para: ${supabasePath}, Archivo: ${file.name}, Tamaño: ${file.size}`);
+      if(onProgress) onProgress(0);
+
+      try {
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from(SUPABASE_MEDIA_BUCKET)
+          .upload(supabasePath, file, {
+            cacheControl: '3600',
+            upsert: false,
+          });
+
+        // Supabase no tiene un onProgress nativo como Firebase en esta API básica de upload.
+        // Si se necesitara progreso detallado, se usaría .createSignedUploadUrl y XHR/Fetch manual.
+        // Por ahora, simularemos un progreso al 100% al finalizar la llamada de upload.
+        // O podríamos usar onProgress(50) antes y onProgress(100) después si uploadData es exitoso.
+        // Para MVP, vamos a asumir que si no hay error, es 100%.
+
+        if (uploadError) {
+          console.error("[DataContext] Error subiendo archivo a Supabase Storage: ", uploadError);
+          toast({ variant: "destructive", title: "Error de Subida (Supabase)", description: `Detalle: ${uploadError.message}` });
+          if(onProgress) onProgress(0); // Reset progress on error
+          reject(uploadError);
+          return;
+        }
+
+        if (!uploadData) {
+          console.error("[DataContext] No se recibieron datos de la subida a Supabase.");
+          toast({ variant: "destructive", title: "Error de Subida (Supabase)", description: "No se completó la subida del archivo."});
+          if(onProgress) onProgress(0);
+          reject(new Error("Supabase upload failed to return data."));
+          return;
+        }
+        
+        console.log(`[DataContext] Subida a Supabase completada para: ${uploadData.path}`);
+        if(onProgress) onProgress(100);
+
+
+        const { data: urlData } = supabase.storage
+          .from(SUPABASE_MEDIA_BUCKET)
+          .getPublicUrl(uploadData.path);
+
+        if (!urlData || !urlData.publicUrl) {
+            console.error("[DataContext] No se pudo obtener la URL pública de Supabase para:", uploadData.path);
+            toast({ variant: "destructive", title: "Error de URL", description: "No se pudo obtener la URL pública del archivo subido." });
+            reject(new Error("Failed to get public URL from Supabase."));
+            return;
+        }
+        const publicUrl = urlData.publicUrl;
+        console.log(`[DataContext] URL pública de Supabase obtenida: ${publicUrl}`);
+
+        await addDoc(collection(db, "media_reports"), {
+          departmentId,
+          employeeProfileId, 
+          uploadedByAuthUid,  
+          storagePath: uploadData.path,
+          downloadURL: publicUrl, 
+          fileName: file.name,
+          contentType: file.type,
+          reportType,
+          description: description || "",
+          uploadedAt: Timestamp.now(),
         });
-
-      if (uploadError) {
-        console.error("[DataContext] Error subiendo archivo a Supabase Storage: ", uploadError);
-        toast({ variant: "destructive", title: "Error de Subida (Supabase)", description: `Detalle: ${uploadError.message}` });
-        throw uploadError;
+        console.log(`[DataContext] Metadatos guardados en Firestore para: ${file.name}`);
+        toast({ title: "Evidencia Subida", description: "El archivo se ha subido y registrado correctamente." });
+        resolve();
+        
+      } catch (error) {
+        console.error("[DataContext] Error en addMediaReport (catch general): ", error);
+        if(onProgress) onProgress(0);
+        if (!(error instanceof Error && (error.message.includes("Supabase") || error.message.includes("URL pública") || error.message.includes("autenticado") || error.message.includes("Perfil")))) {
+           toast({ variant: "destructive", title: "Error Inesperado", description: "Ocurrió un error al subir la evidencia."});
+        }
+        reject(error);
       }
-
-      if (!uploadData) {
-        console.error("[DataContext] No se recibieron datos de la subida a Supabase.");
-        toast({ variant: "destructive", title: "Error de Subida (Supabase)", description: "No se completó la subida del archivo."});
-        throw new Error("Supabase upload failed to return data.");
-      }
-      
-      console.log(`[DataContext] Subida a Supabase completada para: ${uploadData.path}`);
-
-      const { data: urlData } = supabase.storage
-        .from(SUPABASE_MEDIA_BUCKET)
-        .getPublicUrl(uploadData.path);
-
-      if (!urlData || !urlData.publicUrl) {
-          console.error("[DataContext] No se pudo obtener la URL pública de Supabase para:", uploadData.path);
-          toast({ variant: "destructive", title: "Error de URL", description: "No se pudo obtener la URL pública del archivo subido." });
-          throw new Error("Failed to get public URL from Supabase.");
-      }
-      const publicUrl = urlData.publicUrl;
-      console.log(`[DataContext] URL pública de Supabase obtenida: ${publicUrl}`);
-
-      await addDoc(collection(db, "media_reports"), {
-        departmentId,
-        employeeProfileId, 
-        uploadedByAuthUid,  
-        storagePath: uploadData.path,
-        downloadURL: publicUrl, 
-        fileName: file.name,
-        contentType: file.type,
-        reportType,
-        description: description || "",
-        uploadedAt: Timestamp.now(),
-      });
-      console.log(`[DataContext] Metadatos guardados en Firestore para: ${file.name}`);
-      toast({ title: "Evidencia Subida", description: "El archivo se ha subido y registrado correctamente." });
-      
-    } catch (error) {
-      console.error("[DataContext] Error en addMediaReport (catch general): ", error);
-      // Ensure toast is shown if not already by specific error checks
-      if (!(error instanceof Error && (error.message.includes("Supabase") || error.message.includes("URL pública")))) {
-         toast({ variant: "destructive", title: "Error Inesperado", description: "Ocurrió un error al subir la evidencia."});
-      }
-      throw error;
-    }
-  }, [currentUser]);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]); // currentUser es la dependencia correcta aquí
 
   const getMediaReportsForDepartment = useCallback(async (departmentId: string): Promise<MediaReport[]> => {
     try {
@@ -412,7 +452,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       })) as MediaReport[];
     } catch (error) {
       console.error(`Error obteniendo reportes multimedia para departmentId ${departmentId}: `, error);
-      toast({ variant: "destructive", title: "Error de Carga", description: "No se pudieron cargar los reportes multimedia. Revise la consola para detalles del índice." });
+      toast({ variant: "destructive", title: "Error de Carga", description: "No se pudieron cargar los reportes multimedia. Verifica los índices de Firestore si el error persiste." });
       return [];
     }
   }, []);

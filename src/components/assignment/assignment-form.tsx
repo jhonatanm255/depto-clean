@@ -10,7 +10,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ClipboardEdit } from 'lucide-react';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
-import type { Department } from '@/lib/types'; // Import Department type
+import type { Department } from '@/lib/types';
 
 const assignmentSchema = z.object({
   departmentId: z.string().min(1, "Se requiere el departamento"),
@@ -19,12 +19,11 @@ const assignmentSchema = z.object({
 
 type AssignmentFormData = z.infer<typeof assignmentSchema>;
 
-// Helper function to translate status for display
 function translateDepartmentStatus(status: Department['status']): string {
   switch (status) {
-    case 'pending': return 'Pendiente';
-    case 'in_progress': return 'En Progreso';
-    case 'completed': return 'Completado';
+    case 'pending': return 'Necesita Limpieza';
+    case 'in_progress': return 'Limpieza en Progreso';
+    case 'completed': return 'Limpio'; // "Completed" para el departamento significa que está limpio.
     default: return status;
   }
 }
@@ -37,10 +36,8 @@ export function AssignmentForm() {
     defaultValues: { departmentId: '', employeeId: '' },
   });
 
-  // Permitir seleccionar cualquier departamento que no esté 'completado' para reasignación
-  const assignableDepartments = departments.filter(
-    (dept) => dept.status !== 'completed'
-  );
+  // TODOS los departamentos son seleccionables. La lógica de si es nueva tarea o reasignación está en assignTask.
+  const allDepartments = departments;
 
   const onSubmit: SubmitHandler<AssignmentFormData> = async (data) => {
     try {
@@ -51,12 +48,12 @@ export function AssignmentForm() {
     }
   };
 
-  if (dataLoading) { 
+  if (dataLoading && departments.length === 0 && employees.length === 0) { 
     return (
       <Card className="w-full shadow-lg">
         <CardHeader>
           <CardTitle className="font-headline text-2xl flex items-center">
-            <ClipboardEdit className="mr-2 h-6 w-6 text-primary" /> Asignar o Reasignar Tarea
+            <ClipboardEdit className="mr-2 h-6 w-6 text-primary" /> Asignar Tarea
           </CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center p-6">
@@ -71,10 +68,10 @@ export function AssignmentForm() {
     <Card className="w-full shadow-lg">
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center">
-          <ClipboardEdit className="mr-2 h-6 w-6 text-primary" /> Asignar o Reasignar Tarea
+          <ClipboardEdit className="mr-2 h-6 w-6 text-primary" /> Asignar Tarea
         </CardTitle>
         <CardDescription>
-          Selecciona un departamento y una empleada. Si el departamento ya tiene una tarea activa, se reasignará.
+          Selecciona un departamento y una empleada. Si el departamento ya tiene una tarea activa no completada, se reasignará. Si está limpio o es nuevo, se creará una nueva tarea.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -89,7 +86,7 @@ export function AssignmentForm() {
                   <Select 
                     onValueChange={field.onChange} 
                     value={field.value || ""} 
-                    disabled={assignableDepartments.length === 0 || employees.length === 0 || form.formState.isSubmitting}
+                    disabled={allDepartments.length === 0 || employees.length === 0 || form.formState.isSubmitting}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -98,26 +95,28 @@ export function AssignmentForm() {
                     </FormControl>
                     <SelectContent>
                       <SelectGroup>
-                        <SelectLabel>Departamentos (No completados)</SelectLabel>
-                        {assignableDepartments.length > 0 ? (
-                            assignableDepartments.map((dept) => {
+                        <SelectLabel>Departamentos</SelectLabel>
+                        {allDepartments.length > 0 ? (
+                            allDepartments.map((dept) => {
                               const assignedEmployee = dept.assignedTo ? employees.find(emp => emp.id === dept.assignedTo) : null;
                               const statusDisplay = translateDepartmentStatus(dept.status);
+                              let displayText = `${dept.name} (${statusDisplay})`;
+                              if (assignedEmployee && (dept.status === 'pending' || dept.status === 'in_progress')) {
+                                displayText += ` - Asignado a: ${assignedEmployee.name}`;
+                              } else if (dept.status === 'completed') {
+                                displayText += ` - Listo para nueva asignación`;
+                              } else if (dept.status === 'pending' && !assignedEmployee) {
+                                displayText += ` - Pendiente de asignación`;
+                              }
                               
                               return (
                                 <SelectItem key={dept.id} value={dept.id}>
-                                  {dept.name} ({assignedEmployee ? (
-                                    <>
-                                      Asignado a: <strong className="text-green-600 font-semibold">{assignedEmployee.name || 'Desconocido'}</strong>, {statusDisplay}
-                                    </>
-                                  ) : (
-                                    statusDisplay
-                                  )})
+                                  {displayText}
                                 </SelectItem>
                               );
                             })
                         ) : (
-                            <SelectItem value="no-dept" disabled>No hay departamentos para asignar/reasignar</SelectItem>
+                            <SelectItem value="no-dept" disabled>No hay departamentos disponibles</SelectItem>
                         )}
                       </SelectGroup>
                     </SelectContent>
@@ -164,7 +163,7 @@ export function AssignmentForm() {
             <Button 
               type="submit" 
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" 
-              disabled={assignableDepartments.length === 0 || employees.length === 0 || form.formState.isSubmitting}
+              disabled={allDepartments.length === 0 || employees.length === 0 || form.formState.isSubmitting}
             >
               {form.formState.isSubmitting && <LoadingSpinner size={16} className="mr-2" />}
               {form.formState.isSubmitting ? "Procesando..." : "Asignar / Reasignar Tarea"}

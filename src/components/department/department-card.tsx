@@ -19,7 +19,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useData } from '@/contexts/data-context';
 import React, { useState } from 'react';
-import { MediaReportsDialog } from '@/components/media/media-reports-dialog'; // Importar
+import { MediaReportsDialog } from '@/components/media/media-reports-dialog';
 
 interface DepartmentCardProps {
   department: Department;
@@ -29,9 +29,9 @@ interface DepartmentCardProps {
 
 function translateStatus(status: Department['status']) {
   switch (status) {
-    case 'completed': return 'Completado';
+    case 'completed': return 'Limpio';
     case 'in_progress': return 'En Progreso';
-    case 'pending': return 'Pendiente';
+    case 'pending': return 'Necesita Limpieza';
     default: return status;
   }
 }
@@ -39,13 +39,13 @@ function translateStatus(status: Department['status']) {
 export function DepartmentCard({ department, onEdit, employees }: DepartmentCardProps) {
   const { deleteDepartment } = useData();
   const [isMediaReportsOpen, setIsMediaReportsOpen] = useState(false);
-  const assignedEmployee = employees.find(emp => emp.id === department.assignedTo);
+  const assignedEmployee = department.assignedTo ? employees.find(emp => emp.id === department.assignedTo) : null;
 
   const getStatusBadgeVariant = (status: Department['status']) => {
     switch (status) {
-      case 'completed': return 'bg-green-500 hover:bg-green-600';
-      case 'in_progress': return 'bg-blue-500 hover:bg-blue-600';
-      case 'pending': return 'bg-yellow-500 hover:bg-yellow-600';
+      case 'completed': return 'bg-green-500 hover:bg-green-600'; // Limpio
+      case 'in_progress': return 'bg-blue-500 hover:bg-blue-600'; // En progreso
+      case 'pending': return 'bg-yellow-500 hover:bg-yellow-600'; // Necesita limpieza
       default: return 'bg-gray-500 hover:bg-gray-600';
     }
   };
@@ -93,16 +93,22 @@ export function DepartmentCard({ department, onEdit, employees }: DepartmentCard
           )}
         </CardHeader>
         <CardContent className="flex-grow space-y-2">
-          {assignedEmployee && (
+          {assignedEmployee && (department.status === 'pending' || department.status === 'in_progress') && (
             <div className="flex items-center text-sm text-muted-foreground">
               <User className="mr-2 h-4 w-4" />
-              Asignado a: {assignedEmployee.name}
+              Tarea asignada a: {assignedEmployee.name}
             </div>
           )}
-          {!assignedEmployee && department.status === 'pending' && (
+          {!department.assignedTo && department.status === 'pending' && (
             <div className="flex items-center text-sm text-yellow-600">
               <AlertTriangle className="mr-2 h-4 w-4" />
               Necesita asignación
+            </div>
+          )}
+          {department.status === 'completed' && (
+             <div className="flex items-center text-sm text-green-600">
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              Listo para nueva asignación
             </div>
           )}
           {department.lastCleanedAt && (

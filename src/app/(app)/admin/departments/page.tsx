@@ -34,7 +34,8 @@ export default function DepartmentsPage() {
       .filter(dept => dept.name.toLowerCase().includes(searchTerm.toLowerCase()) || (dept.address && dept.address.toLowerCase().includes(searchTerm.toLowerCase())))
       .filter(dept => {
           if (statusFilter === 'all') return true;
-          if (statusFilter === 'pending_assignment') {
+          // "pending_assignment" ahora significa "Necesita Limpieza" Y no tiene tarea asignada actualmente.
+          if (statusFilter === 'pending_assignment') { 
               return dept.status === 'pending' && !dept.assignedTo;
           }
           return dept.status === statusFilter;
@@ -43,7 +44,7 @@ export default function DepartmentsPage() {
           switch (sortOrder) {
               case 'name_asc': return a.name.localeCompare(b.name);
               case 'name_desc': return b.name.localeCompare(a.name);
-              case 'status': return a.status.localeCompare(b.status);
+              case 'status': return a.status.localeCompare(b.status); // 'completed', 'in_progress', 'pending'
               default: return 0;
           }
       });
@@ -71,7 +72,7 @@ export default function DepartmentsPage() {
           </Button>
         </div>
          <p className="text-muted-foreground mt-1">
-            Crea, visualiza y organiza los departamentos o áreas que necesitan limpieza.
+            Crea, visualiza y organiza los departamentos o áreas que necesitan limpieza. Los departamentos 'Limpio' están listos para una nueva asignación de tarea.
         </p>
       </header>
 

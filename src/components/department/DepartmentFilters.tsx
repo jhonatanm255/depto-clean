@@ -35,10 +35,10 @@ export function DepartmentFilters({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todos los Estados</SelectItem>
-          <SelectItem value="pending">Pendiente</SelectItem>
-          <SelectItem value="pending_assignment">Pendiente (Sin Asignar)</SelectItem>
-          <SelectItem value="in_progress">En Progreso</SelectItem>
-          <SelectItem value="completed">Completado</SelectItem>
+          <SelectItem value="pending">Necesita Limpieza</SelectItem>
+          <SelectItem value="pending_assignment">Necesita Limpieza (Sin Asignar Tarea)</SelectItem>
+          <SelectItem value="in_progress">Limpieza en Progreso</SelectItem>
+          <SelectItem value="completed">Limpio (Completado)</SelectItem>
         </SelectContent>
       </Select>
       <Select value={sortOrder} onValueChange={onSortOrderChange}>
