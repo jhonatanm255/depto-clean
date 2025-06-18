@@ -1,6 +1,6 @@
 
 "use client";
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { CleaningTask, Department, EmployeeProfile } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { es } from 'date-fns/locale'; // Importación síncrona de la localización
 import type { DateRange } from 'react-day-picker';
 
 interface AssignmentListProps {
@@ -75,15 +76,15 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
       let employeeTasks = getTasksForEmployee(employee.id);
       if (dateRange?.from && dateRange?.to) {
         employeeTasks = employeeTasks.filter(task => 
-          isWithinInterval(new Date(task.assignedAt), { start: startOfDay(dateRange.from!), end: endOfDay(dateRange.to!) })
+          task.assignedAt && isWithinInterval(new Date(task.assignedAt), { start: startOfDay(dateRange.from!), end: endOfDay(dateRange.to!) })
         );
       } else if (dateRange?.from) {
          employeeTasks = employeeTasks.filter(task => 
-          new Date(task.assignedAt) >= startOfDay(dateRange.from!)
+          task.assignedAt && new Date(task.assignedAt) >= startOfDay(dateRange.from!)
         );
       } else if (dateRange?.to) {
          employeeTasks = employeeTasks.filter(task => 
-          new Date(task.assignedAt) <= endOfDay(dateRange.to!)
+          task.assignedAt && new Date(task.assignedAt) <= endOfDay(dateRange.to!)
         );
       }
       return { ...employee, assignedTasks: employeeTasks };
@@ -98,15 +99,15 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
         let employeeTasks = getTasksForEmployee(employee.id);
          if (dateRange?.from && dateRange?.to) {
             employeeTasks = employeeTasks.filter(task => 
-            isWithinInterval(new Date(task.assignedAt), { start: startOfDay(dateRange.from!), end: endOfDay(dateRange.to!) })
+            task.assignedAt && isWithinInterval(new Date(task.assignedAt), { start: startOfDay(dateRange.from!), end: endOfDay(dateRange.to!) })
             );
         } else if (dateRange?.from) {
             employeeTasks = employeeTasks.filter(task => 
-            new Date(task.assignedAt) >= startOfDay(dateRange.from!)
+            task.assignedAt && new Date(task.assignedAt) >= startOfDay(dateRange.from!)
             );
         } else if (dateRange?.to) {
             employeeTasks = employeeTasks.filter(task => 
-            new Date(task.assignedAt) <= endOfDay(dateRange.to!)
+            task.assignedAt && new Date(task.assignedAt) <= endOfDay(dateRange.to!)
             );
         }
         return employeeTasks.length === 0;
@@ -170,7 +171,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange?.from ? format(dateRange.from, "PPP", { locale: (await import('date-fns/locale/es')).default }) : <span>Desde</span>}
+                    {dateRange?.from ? format(dateRange.from, "PPP", { locale: es }) : <span>Desde</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -180,7 +181,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                     onSelect={setDateRange}
                     initialFocus
                     numberOfMonths={1}
-                    locale={(await import('date-fns/locale/es')).default}
+                    locale={es}
                   />
                 </PopoverContent>
               </Popover>
@@ -194,7 +195,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange?.to ? format(dateRange.to, "PPP", { locale: (await import('date-fns/locale/es')).default }) : <span>Hasta</span>}
+                    {dateRange?.to ? format(dateRange.to, "PPP", { locale: es }) : <span>Hasta</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -204,7 +205,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                     onSelect={setDateRange}
                     initialFocus
                     numberOfMonths={1}
-                    locale={(await import('date-fns/locale/es')).default}
+                    locale={es}
                   />
                 </PopoverContent>
               </Popover>
@@ -247,7 +248,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                               return (
                                 <li key={task.id} className="p-3 border rounded-md hover:shadow-sm transition-shadow bg-background">
                                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1">
-                                    <h4 className="text-lg font-semibold text-foreground flex items-center">
+                                    <h4 className="text-base font-semibold text-foreground flex items-center"> {/* Cambiado a text-base */}
                                       <Building2 className="mr-2 h-4 w-4 text-muted-foreground"/> {department.name}
                                     </h4>
                                     <Badge variant="default" className={cn("text-primary-foreground capitalize mt-1 sm:mt-0 text-xs", getStatusBadgeVariant(task.status))}>
@@ -255,11 +256,15 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                                       {translateStatus(task.status)}
                                     </Badge>
                                   </div>
-                                  <div className="text-sm text-muted-foreground space-y-0.5">
+                                  <div className="text-sm text-muted-foreground space-y-0.5"> {/* Cambiado a text-sm */}
                                     {department.address && (
                                         <p className="flex items-center"><MapPin className="mr-1.5 h-3 w-3 shrink-0"/> {department.address}</p>
                                     )}
-                                    <p className="flex items-center"><CalendarDays className="mr-1.5 h-3 w-3"/> Asignado: {new Date(task.assignedAt).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
+                                    {task.assignedAt && (
+                                      <p className="flex items-center">
+                                        <CalendarDays className="mr-1.5 h-3 w-3"/> Asignado: {new Date(task.assignedAt).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                      </p>
+                                    )}
                                     {task.status === 'completed' && task.completedAt && (
                                       <>
                                         <p className="flex items-center text-green-600"><CheckCircle2 className="mr-1.5 h-3 w-3"/> Completado: {new Date(task.completedAt).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
@@ -312,5 +317,6 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
     </>
   );
 }
+    
 
     
