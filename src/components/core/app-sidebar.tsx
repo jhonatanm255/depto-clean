@@ -55,12 +55,12 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r hidden md:flex"> 
       <SidebarHeader className="p-4 flex items-center justify-between">
         <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-           <Image src="/logo.png" alt="CleanSweep Logo" width={32} height={32} className="h-8 w-8 object-contain" />
+           <Image src="/logo.png" alt="CleanSweep Logo" width={32} height={32} className="h-8 w-8 object-contain" data-ai-hint="company logo"/>
           <span className="font-headline text-lg font-semibold text-primary">CleanSweep</span>
         </Link>
          {/* Icon only for collapsed state */}
         <Link href="/dashboard" className="hidden items-center gap-2 group-data-[collapsible=icon]:flex">
-           <Image src="/logo.png" alt="CleanSweep Logo" width={28} height={28} className="h-7 w-7 object-contain" />
+           <Image src="/logo.png" alt="CleanSweep Logo" width={28} height={28} className="h-7 w-7 object-contain" data-ai-hint="company logo"/>
         </Link>
       </SidebarHeader>
       
