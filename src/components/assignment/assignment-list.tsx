@@ -55,7 +55,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
         <CardHeader>
            <CardTitle className="font-headline text-2xl flex items-center">
              <Users2 className="mr-2 h-6 w-6 text-primary"/> Asignaciones por Empleada
-          </Title>
+          </CardTitle>
           <CardDescription>No hay empleadas para mostrar asignaciones.</CardDescription>
         </CardHeader>
         <CardContent>
