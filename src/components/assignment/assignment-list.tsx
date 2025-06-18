@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
-import { es } from 'date-fns/locale'; 
+import { es } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 
 interface AssignmentListProps {
@@ -73,17 +73,20 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
 
   const employeesWithFilteredTasks = useMemo(() => {
     return employees.map(employee => {
-      let employeeTasks = getTasksForEmployee(employee.id); // Todas las tareas de la empleada
-      if (dateRange?.from || dateRange?.to) { // Aplicar filtro solo si hay un rango
+      let employeeTasks = getTasksForEmployee(employee.id); 
+      if (dateRange?.from || dateRange?.to) {
         employeeTasks = employeeTasks.filter(task => {
           if (!task.assignedAt) return false;
           const taskDate = new Date(task.assignedAt);
-          if (dateRange.from && dateRange.to) {
-            return isWithinInterval(taskDate, { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) });
-          } else if (dateRange.from) {
-            return taskDate >= startOfDay(dateRange.from);
-          } else if (dateRange.to) {
-            return taskDate <= endOfDay(dateRange.to);
+          const startDate = dateRange.from ? startOfDay(dateRange.from) : null;
+          const endDate = dateRange.to ? endOfDay(dateRange.to) : null;
+
+          if (startDate && endDate) {
+            return isWithinInterval(taskDate, { start: startDate, end: endDate });
+          } else if (startDate) {
+            return taskDate >= startDate;
+          } else if (endDate) {
+            return taskDate <= endDate;
           }
           return true;
         });
@@ -164,11 +167,10 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
-                    mode="range"
+                    mode="range" // Cambiado a range para seleccionar desde y hasta en el mismo calendario
                     selected={dateRange}
                     onSelect={setDateRange}
-                    initialFocus
-                    numberOfMonths={1}
+                    numberOfMonths={1} // Muestra un solo mes para simplificar
                     locale={es}
                   />
                 </PopoverContent>
@@ -187,11 +189,10 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
+                   <Calendar
                     mode="range"
                     selected={dateRange}
                     onSelect={setDateRange}
-                    initialFocus
                     numberOfMonths={1}
                     locale={es}
                   />
@@ -239,7 +240,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                                     <h4 className="text-lg font-semibold text-foreground flex items-center">
                                       <Building2 className="mr-2 h-4 w-4 text-muted-foreground"/> {department.name}
                                     </h4>
-                                    <Badge variant="default" className={cn("text-primary-foreground capitalize mt-1 sm:mt-0 text-xs", getStatusBadgeVariant(task.status))}>
+                                    <Badge variant="default" className={cn("text-primary-foreground capitalize mt-1 sm:mt-0 text-sm", getStatusBadgeVariant(task.status))}>
                                       {getStatusIcon(task.status)}
                                       {translateStatus(task.status)}
                                     </Badge>
@@ -259,7 +260,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                                         <Button 
                                           variant="outline" 
                                           size="sm" 
-                                          className="mt-2 text-xs"
+                                          className="mt-2 text-sm" // Aumentado de text-xs a text-sm
                                           onClick={() => handleOpenMediaDialog(department)}
                                         >
                                           <Camera className="mr-1.5 h-3 w-3" /> Ver Evidencias
@@ -305,8 +306,6 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
     </>
   );
 }
-    
-
     
 
     
