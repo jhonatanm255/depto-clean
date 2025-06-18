@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
-import { es } from 'date-fns/locale'; // Importación síncrona de la localización
+import { es } from 'date-fns/locale'; 
 import type { DateRange } from 'react-day-picker';
 
 interface AssignmentListProps {
@@ -71,48 +71,36 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
     }
   };
 
-  const filteredEmployees = useMemo(() => {
+  const employeesWithFilteredTasks = useMemo(() => {
     return employees.map(employee => {
-      let employeeTasks = getTasksForEmployee(employee.id);
-      if (dateRange?.from && dateRange?.to) {
-        employeeTasks = employeeTasks.filter(task => 
-          task.assignedAt && isWithinInterval(new Date(task.assignedAt), { start: startOfDay(dateRange.from!), end: endOfDay(dateRange.to!) })
-        );
-      } else if (dateRange?.from) {
-         employeeTasks = employeeTasks.filter(task => 
-          task.assignedAt && new Date(task.assignedAt) >= startOfDay(dateRange.from!)
-        );
-      } else if (dateRange?.to) {
-         employeeTasks = employeeTasks.filter(task => 
-          task.assignedAt && new Date(task.assignedAt) <= endOfDay(dateRange.to!)
-        );
+      let employeeTasks = getTasksForEmployee(employee.id); // Todas las tareas de la empleada
+      if (dateRange?.from || dateRange?.to) { // Aplicar filtro solo si hay un rango
+        employeeTasks = employeeTasks.filter(task => {
+          if (!task.assignedAt) return false;
+          const taskDate = new Date(task.assignedAt);
+          if (dateRange.from && dateRange.to) {
+            return isWithinInterval(taskDate, { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) });
+          } else if (dateRange.from) {
+            return taskDate >= startOfDay(dateRange.from);
+          } else if (dateRange.to) {
+            return taskDate <= endOfDay(dateRange.to);
+          }
+          return true;
+        });
       }
       return { ...employee, assignedTasks: employeeTasks };
-    })
-    .filter(employee => employee.assignedTasks.length > 0)
-    .sort((a,b) => a.name.localeCompare(b.name));
-  }, [employees, getTasksForEmployee, dateRange]);
-
-
-  const employeesWithoutTasksInFilter = useMemo(() => {
-    return employees.filter(employee => {
-        let employeeTasks = getTasksForEmployee(employee.id);
-         if (dateRange?.from && dateRange?.to) {
-            employeeTasks = employeeTasks.filter(task => 
-            task.assignedAt && isWithinInterval(new Date(task.assignedAt), { start: startOfDay(dateRange.from!), end: endOfDay(dateRange.to!) })
-            );
-        } else if (dateRange?.from) {
-            employeeTasks = employeeTasks.filter(task => 
-            task.assignedAt && new Date(task.assignedAt) >= startOfDay(dateRange.from!)
-            );
-        } else if (dateRange?.to) {
-            employeeTasks = employeeTasks.filter(task => 
-            task.assignedAt && new Date(task.assignedAt) <= endOfDay(dateRange.to!)
-            );
-        }
-        return employeeTasks.length === 0;
     }).sort((a,b) => a.name.localeCompare(b.name));
   }, [employees, getTasksForEmployee, dateRange]);
+
+  const filteredEmployeesWithTasks = useMemo(() => {
+    return employeesWithFilteredTasks.filter(employee => employee.assignedTasks.length > 0);
+  }, [employeesWithFilteredTasks]);
+
+  const employeesWithoutTasksInFilter = useMemo(() => {
+    return employeesWithFilteredTasks
+      .filter(employee => employee.assignedTasks.length === 0)
+      .sort((a,b) => a.name.localeCompare(b.name));
+  }, [employeesWithFilteredTasks]);
 
 
   if (dataLoading && employees.length === 0 && tasks.length === 0) {
@@ -219,15 +207,15 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
 
           {dataLoading && employees.length > 0 && tasks.length === 0 && <p className="text-muted-foreground">Cargando tareas...</p>}
           
-          {!dataLoading && filteredEmployees.length === 0 && (
+          {!dataLoading && filteredEmployeesWithTasks.length === 0 && (
               <p className="text-center text-muted-foreground py-4">
                 {dateRange?.from || dateRange?.to ? "Ninguna empleada tiene tareas en el rango de fechas seleccionado." : "No hay tareas asignadas a ninguna empleada."}
               </p>
           )}
 
-          {filteredEmployees.length > 0 && (
+          {filteredEmployeesWithTasks.length > 0 && (
             <Accordion type="multiple" className="w-full space-y-2">
-              {filteredEmployees.map((employee) => {
+              {filteredEmployeesWithTasks.map((employee) => {
                 const employeeTasks = employee.assignedTasks; 
                 return (
                   <AccordionItem value={employee.id} key={employee.id} className="border bg-card rounded-lg p-0">
@@ -248,7 +236,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                               return (
                                 <li key={task.id} className="p-3 border rounded-md hover:shadow-sm transition-shadow bg-background">
                                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1">
-                                    <h4 className="text-base font-semibold text-foreground flex items-center"> {/* Cambiado a text-base */}
+                                    <h4 className="text-lg font-semibold text-foreground flex items-center">
                                       <Building2 className="mr-2 h-4 w-4 text-muted-foreground"/> {department.name}
                                     </h4>
                                     <Badge variant="default" className={cn("text-primary-foreground capitalize mt-1 sm:mt-0 text-xs", getStatusBadgeVariant(task.status))}>
@@ -256,7 +244,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                                       {translateStatus(task.status)}
                                     </Badge>
                                   </div>
-                                  <div className="text-sm text-muted-foreground space-y-0.5"> {/* Cambiado a text-sm */}
+                                  <div className="text-sm text-muted-foreground space-y-0.5">
                                     {department.address && (
                                         <p className="flex items-center"><MapPin className="mr-1.5 h-3 w-3 shrink-0"/> {department.address}</p>
                                     )}
@@ -317,6 +305,8 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
     </>
   );
 }
+    
+
     
 
     
