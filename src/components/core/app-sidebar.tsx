@@ -18,12 +18,12 @@ import {
   ClipboardEdit,
   Briefcase,
   LogOut,
-  ShieldCheck,
   Users,
   History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile'; 
+import Image from 'next/image';
 
 interface NavItem {
   href: string;
@@ -55,8 +55,12 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r hidden md:flex"> 
       <SidebarHeader className="p-4 flex items-center justify-between">
         <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-           <ShieldCheck className="h-7 w-7 text-primary" />
+           <Image src="/logo.png" alt="CleanSweep Logo" width={32} height={32} className="h-8 w-8 object-contain" />
           <span className="font-headline text-lg font-semibold text-primary">CleanSweep</span>
+        </Link>
+         {/* Icon only for collapsed state */}
+        <Link href="/dashboard" className="hidden items-center gap-2 group-data-[collapsible=icon]:flex">
+           <Image src="/logo.png" alt="CleanSweep Logo" width={28} height={28} className="h-7 w-7 object-contain" />
         </Link>
       </SidebarHeader>
       
@@ -72,13 +76,11 @@ export function AppSidebar() {
             if (itemTab) {
               isActive = isActive && currentTab === itemTab;
             } else if (currentTab && basePath === itemBasePath) {
-              // If current path has a tab but item doesn't, it's not active unless it's the base /employee/tasks without specific tab
                isActive = false;
             }
              if (item.href === '/employee/tasks' && basePath === '/employee/tasks' && !currentTab && !itemTab) {
-              isActive = true; // Special case for base /employee/tasks (pending)
+              isActive = true; 
             }
-
 
             return (
             <SidebarMenuItem key={item.href}>
