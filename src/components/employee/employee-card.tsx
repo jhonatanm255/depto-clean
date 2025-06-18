@@ -88,11 +88,11 @@ export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeC
               Tareas Asignadas ({assignedTasksDetails.length})
             </h4>
             <ScrollArea className="h-[120px] pr-2">
-              <ul className="space-y-1.5 text-xs">
+              <ul className="space-y-1.5 text-sm"> {/* Base font size for list items now text-sm */}
                 {assignedTasksDetails.map(task => (
                   <li key={task.id} className="p-1.5 rounded-md bg-muted/50">
                     <div className="flex justify-between items-center">
-                       <span className="flex items-center text-foreground">
+                       <span className="flex items-center text-foreground font-semibold"> {/* Department name made semibold */}
                          <Building2 className="mr-1.5 h-3 w-3 text-muted-foreground" /> {task.departmentName}
                        </span>
                        <Badge 
@@ -104,11 +104,11 @@ export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeC
                         </Badge>
                     </div>
                     {task.departmentAddress && (
-                        <p className="text-muted-foreground text-[10px] ml-5 flex items-center">
+                        <p className="text-muted-foreground ml-5 flex items-center"> {/* Inherits text-sm */}
                             <MapPin className="mr-1 h-3 w-3 shrink-0" /> {task.departmentAddress}
                         </p>
                     )}
-                     <p className="text-muted-foreground text-[10px] ml-5">
+                     <p className="text-muted-foreground ml-5"> {/* Inherits text-sm */}
                         Asignada: {new Date(task.assignedAt).toLocaleDateString('es-CL')}
                       </p>
                   </li>
