@@ -39,7 +39,7 @@ export function BottomNavigationBar() {
   const filteredNavItems = navItems.filter(item => item.roles.includes(currentUser.role));
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-center justify-around border-t bg-card text-card-foreground shadow-top md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-center justify-around border-t bg-sidebar text-sidebar-foreground shadow-top md:hidden">
       {filteredNavItems.map((item) => {
         const itemPathname = item.href.split('?')[0];
         const itemQueryParam = item.href.split('?')[1]?.split('=')[1];
@@ -66,12 +66,12 @@ export function BottomNavigationBar() {
             className={cn(
               "flex flex-col items-center justify-center p-2 rounded-md transition-colors w-full h-full",
               isActive 
-                ? "text-primary" 
-                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             )}
           >
-            <item.icon className={cn("h-6 w-6 mb-0.5", isActive ? "text-primary" : "")} />
-            <span className={cn("text-xs leading-tight", isActive ? "font-medium" : "")}>{item.label}</span>
+            <item.icon className={cn("h-6 w-6 mb-0.5", isActive ? "text-sidebar-primary-foreground" : "text-sidebar-foreground")} />
+            <span className={cn("text-xs leading-tight", isActive ? "font-medium text-sidebar-primary-foreground" : "text-sidebar-foreground")}>{item.label}</span>
           </Link>
         );
       })}

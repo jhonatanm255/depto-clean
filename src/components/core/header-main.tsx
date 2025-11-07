@@ -49,7 +49,7 @@ export function HeaderMain() {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background/80 px-4 backdrop-blur-md sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-sidebar text-sidebar-foreground px-4 sm:px-6">
       <div className="flex items-center gap-2">
         {/* Ocultar el botón PanelLeft en móvil ya que usamos BottomNavigationBar */}
         {!isMobileView && ( 
@@ -63,7 +63,7 @@ export function HeaderMain() {
             <PanelLeft className="h-6 w-6" />
           </Button>
         )}
-        <h1 className="text-xl font-semibold font-headline text-primary">CleanSweep Manager</h1>
+        <h1 className="text-xl font-semibold font-headline text-sidebar-foreground">CleanSweep Manager</h1>
       </div>
       
       <div className="flex items-center gap-3">

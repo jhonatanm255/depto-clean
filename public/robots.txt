@@ -1,0 +1,15 @@
+# Robots.txt para CleanSweep Manager
+User-agent: *
+Allow: /
+
+# Archivos PWA
+Allow: /manifest.json
+Allow: /sw.js
+Allow: /workbox-*.js
+
+# Sitemap (si lo agregas más adelante)
+# Sitemap: https://tudominio.com/sitemap.xml
+
+
+
+
