@@ -29,7 +29,7 @@ export function CompletedTasksListCard({
   icon: IconComponent 
 }: CompletedTasksListCardProps) {
   
-  const getEmployeeNameById = (employeeId: string | undefined): string => {
+  const getEmployeeNameById = (employeeId: string | null | undefined): string => {
     if (!employeeId) return 'N/D';
     const employee = employees.find(emp => emp.id === employeeId);
     return employee?.name || 'Desconocido';
@@ -52,14 +52,17 @@ export function CompletedTasksListCard({
         ) : tasks.length > 0 ? (
           <ScrollArea className="h-[200px]">
             <ul className="space-y-2">
-              {tasks.map(task => (
-                <li key={task.id} className="p-2 rounded-md hover:bg-muted">
-                  <p className="font-medium">{task.department?.name || 'Departamento no encontrado'}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Completado por {getEmployeeNameById(task.employeeId)} el {task.completedAt ? new Date(task.completedAt).toLocaleDateString('es-CL') : 'N/A'}
-                  </p>
+              {tasks.map(task => {
+                const completedDate = typeof task.completedAt === 'string' ? new Date(task.completedAt) : null;
+                return (
+                  <li key={task.id} className="p-2 rounded-md hover:bg-muted">
+                    <p className="font-medium">{task.department?.name || 'Departamento no encontrado'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Completado por {getEmployeeNameById(task.employeeId)} el {completedDate ? completedDate.toLocaleDateString('es-CL') : 'N/A'}
+                    </p>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           </ScrollArea>
         ) : (

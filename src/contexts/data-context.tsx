@@ -1,48 +1,30 @@
-
 "use client";
-import type { Department, EmployeeProfile, CleaningTask, MediaReport, MediaReportType } from '@/lib/types';
+import type { Company, Department, EmployeeProfile, CleaningTask, MediaReport, MediaReportType, TaskStatus } from '@/lib/types';
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from 'react';
-import { db } from '@/lib/firebase';
 import { supabase, SUPABASE_MEDIA_BUCKET } from '@/lib/supabase';
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  onSnapshot,
-  Timestamp,
-  query,
-  where,
-  getDocs,
-  writeBatch,
-  orderBy
-} from 'firebase/firestore';
-import { getAuth, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
 import { toast } from '@/hooks/use-toast';
-import { useAuth } from './auth-context'; 
-import type { UploadFileResponse } from '@supabase/storage-js';
-
+import { useAuth } from './auth-context';
 
 interface DataContextType {
+  company: Company | null;
   departments: Department[];
-  addDepartment: (dept: Omit<Department, 'id' | 'status' | 'lastCleanedAt' | 'assignedTo'>) => Promise<void>;
+  addDepartment: (input: { name: string; accessCode?: string | null; address?: string | null; notes?: string | null }) => Promise<void>;
   updateDepartment: (dept: Department) => Promise<void>;
   deleteDepartment: (id: string) => Promise<void>;
-  
-  employees: EmployeeProfile[]; 
+
+  employees: EmployeeProfile[];
   addEmployeeWithAuth: (name: string, email: string, password: string) => Promise<void>;
 
   tasks: CleaningTask[];
   assignTask: (departmentId: string, employeeProfileId: string) => Promise<void>;
-  updateTaskStatus: (taskId: string, status: 'pending' | 'in_progress' | 'completed') => Promise<void>;
-  
+  updateTaskStatus: (taskId: string, status: TaskStatus) => Promise<void>;
+
   addMediaReport: (
-    departmentId: string, 
-    employeeProfileId: string, 
-    file: File, 
-    reportType: MediaReportType, 
+    departmentId: string,
+    employeeProfileId: string | null,
+    file: File,
+    reportType: MediaReportType,
     description?: string,
     onProgress?: (percentage: number) => void
   ) => Promise<void>;
@@ -56,446 +38,951 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+type DepartmentRow = {
+  id: string;
+  company_id: string;
+  name: string;
+  access_code: string | null;
+  address: string | null;
+  status: TaskStatus;
+  assigned_to: string | null;
+  last_cleaned_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type ProfileRow = {
+  id: string;
+  company_id: string;
+  role: EmployeeProfile['role'];
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  avatar_url: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type TaskRow = {
+  id: string;
+  company_id: string;
+  department_id: string;
+  employee_id: string | null;
+  assigned_by: string | null;
+  status: TaskStatus;
+  assigned_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type MediaReportRow = {
+  id: string;
+  company_id: string;
+  department_id: string;
+  employee_id: string | null;
+  uploaded_by: string;
+  report_type: MediaReportType;
+  storage_path: string;
+  download_url: string | null;
+  file_name: string | null;
+  content_type: string | null;
+  description: string | null;
+  uploaded_at: string;
+  metadata: Record<string, unknown> | null;
+};
+
+type CompanyRow = {
+  id: string;
+  name: string;
+  display_name: string | null;
+  slug: string;
+  legal_name: string | null;
+  tax_id: string | null;
+  timezone: string | null;
+  plan_code: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+};
+
+const mapDepartment = (row: DepartmentRow): Department => ({
+  id: row.id,
+  companyId: row.company_id,
+  name: row.name,
+  accessCode: row.access_code,
+  address: row.address,
+  status: row.status,
+  assignedTo: row.assigned_to,
+  lastCleanedAt: row.last_cleaned_at,
+  notes: row.notes,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const mapEmployee = (row: ProfileRow): EmployeeProfile => ({
+  id: row.id,
+  companyId: row.company_id,
+  name: row.full_name ?? row.email ?? 'Sin nombre',
+  fullName: row.full_name ?? undefined,
+  email: row.email ?? undefined,
+  role: row.role,
+  phone: row.phone ?? undefined,
+  avatarUrl: row.avatar_url ?? undefined,
+  metadata: row.metadata ?? undefined,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const mapTask = (row: TaskRow): CleaningTask => ({
+  id: row.id,
+  companyId: row.company_id,
+  departmentId: row.department_id,
+  employeeId: row.employee_id ?? undefined,
+  assignedBy: row.assigned_by ?? undefined,
+  status: row.status,
+  assignedAt: row.assigned_at,
+  startedAt: row.started_at ?? undefined,
+  completedAt: row.completed_at ?? undefined,
+  notes: row.notes ?? undefined,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const mapMediaReport = (row: MediaReportRow): MediaReport => ({
+  id: row.id,
+  companyId: row.company_id,
+  departmentId: row.department_id,
+  employeeId: row.employee_id ?? undefined,
+  uploadedBy: row.uploaded_by,
+  storagePath: row.storage_path,
+  downloadUrl: row.download_url ?? undefined,
+  fileName: row.file_name ?? undefined,
+  contentType: row.content_type ?? undefined,
+  reportType: row.report_type,
+  description: row.description ?? undefined,
+  uploadedAt: row.uploaded_at,
+  metadata: row.metadata ?? undefined,
+});
+
+const mapCompany = (row: CompanyRow): Company => ({
+  id: row.id,
+  name: row.name,
+  displayName: row.display_name ?? row.name,
+  slug: row.slug,
+  legalName: row.legal_name ?? undefined,
+  taxId: row.tax_id ?? undefined,
+  timezone: row.timezone ?? undefined,
+  planCode: row.plan_code ?? 'starter',
+  metadata: row.metadata ?? undefined,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
 export function DataProvider({ children }: { children: ReactNode }) {
+  const [company, setCompany] = useState<Company | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [employees, setEmployees] = useState<EmployeeProfile[]>([]);
   const [tasks, setTasks] = useState<CleaningTask[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
-  const { currentUser } = useAuth(); 
+  const [dataLoading, setDataLoading] = useState<boolean>(true);
+  const { currentUser } = useAuth();
 
-  useEffect(() => {
-    setDataLoading(true);
-    const unsubDepartments = onSnapshot(query(collection(db, "departments"), orderBy("name")), (snapshot) => {
-      const deptsData = snapshot.docs.map(docSnapshot => ({ 
-        id: docSnapshot.id, 
-        ...docSnapshot.data(),
-        lastCleanedAt: docSnapshot.data().lastCleanedAt ? (docSnapshot.data().lastCleanedAt as Timestamp).toDate() : undefined,
-      })) as Department[];
-      setDepartments(deptsData);
-    }, (error) => {
-      console.error("Error fetching departments: ", error);
-      toast({ variant: "destructive", title: "Error de Datos", description: "No se pudieron cargar los departamentos."});
-    });
-
-    const unsubEmployees = onSnapshot(query(collection(db, "employees"), orderBy("name")), (snapshot) => {
-      const empsData = snapshot.docs.map(docSnapshot => ({ 
-        id: docSnapshot.id, 
-        ...docSnapshot.data() 
-      })) as EmployeeProfile[];
-      setEmployees(empsData);
-    }, (error) => {
-      console.error("Error fetching employees: ", error);
-      toast({ variant: "destructive", title: "Error de Datos", description: "No se pudieron cargar las empleadas."});
-    });
-
-    const unsubTasks = onSnapshot(query(collection(db, "tasks"), orderBy("assignedAt", "desc")), (snapshot) => {
-      const tasksData = snapshot.docs.map(docSnapshot => ({ 
-        id: docSnapshot.id, 
-        ...docSnapshot.data(),
-        assignedAt: (docSnapshot.data().assignedAt as Timestamp).toDate(),
-        completedAt: docSnapshot.data().completedAt ? (docSnapshot.data().completedAt as Timestamp).toDate() : undefined,
-      })) as CleaningTask[];
-      setTasks(tasksData);
-    }, (error) => {
-      console.error("Error fetching tasks: ", error);
-       toast({ variant: "destructive", title: "Error de Datos", description: "No se pudieron cargar las tareas."});
-    });
+  const loadData = useCallback(async () => {
+    if (!currentUser) {
+      console.log('[DataContext] No hay usuario actual, saltando carga de datos');
+      return;
+    }
     
-    Promise.all([
-        getDocs(collection(db, "departments")),
-        getDocs(collection(db, "employees")),
-        getDocs(collection(db, "tasks"))
-    ]).then(() => {
-        setDataLoading(false);
-    }).catch((error) => {
-        console.error("Error en carga inicial de datos (Promise.all):", error);
-        setDataLoading(false); 
-    });
-
-    return () => {
-      unsubDepartments();
-      unsubEmployees();
-      unsubTasks();
-    };
-  }, []);
-
-  // --- Department Operations ---
-  const addDepartment = useCallback(async (deptData: Omit<Department, 'id' | 'status' | 'lastCleanedAt' | 'assignedTo'>) => {
+    console.log('[DataContext] Iniciando carga de datos para companyId:', currentUser.companyId);
+    setDataLoading(true);
+    const startTime = Date.now();
+    
     try {
-      await addDoc(collection(db, "departments"), {
-        ...deptData,
-        address: deptData.address || '', 
-        status: 'pending', // Departamentos nuevos necesitan limpieza
-        assignedTo: null,
-        lastCleanedAt: null,
-      });
-      toast({ title: "Departamento Agregado", description: `"${deptData.name}" ha sido agregado.` });
-    } catch (error) {
-      console.error("Error adding department: ", error);
-      toast({ variant: "destructive", title: "Error al Guardar", description: "No se pudo agregar el departamento."});
-      throw error; 
-    }
-  }, []);
+      const [companyResp, departmentsResp, employeesResp, tasksResp] = await Promise.all([
+        supabase
+          .from('companies')
+          .select('id, name, slug, legal_name, tax_id, timezone, plan_code, metadata, created_at, updated_at')
+          .eq('id', currentUser.companyId)
+          .maybeSingle<CompanyRow>(),
+        supabase
+          .from('departments')
+          .select('*')
+          .eq('company_id', currentUser.companyId)
+          .order('name', { ascending: true }),
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('company_id', currentUser.companyId)
+          .in('role', ['manager', 'employee'])
+          .order('full_name', { ascending: true }),
+        supabase
+          .from('tasks')
+          .select('*')
+          .eq('company_id', currentUser.companyId)
+          .order('assigned_at', { ascending: false }),
+      ]);
 
-  const updateDepartment = useCallback(async (updatedDept: Department) => {
-    try {
-      const deptRef = doc(db, "departments", updatedDept.id);
-      const { id, ...dataToUpdate } = updatedDept; 
-      await updateDoc(deptRef, {
-        ...dataToUpdate,
-        address: dataToUpdate.address || '',
-        lastCleanedAt: dataToUpdate.lastCleanedAt ? Timestamp.fromDate(new Date(dataToUpdate.lastCleanedAt)) : null,
-      });
-      toast({ title: "Departamento Actualizado", description: `"${updatedDept.name}" ha sido actualizado.` });
-    } catch (error) {
-      console.error("Error updating department: ", error);
-      toast({ variant: "destructive", title: "Error al Guardar", description: "No se pudo actualizar el departamento."});
-      throw error; 
-    }
-  }, []);
-  
-  const deleteDepartment = useCallback(async (id: string) => {
-    try {
-      const batch = writeBatch(db);
+      const elapsed = Date.now() - startTime;
+      console.log(`[DataContext] Consultas completadas en ${elapsed}ms`);
 
-      const mediaReportsQuery = query(collection(db, "media_reports"), where("departmentId", "==", id));
-      const mediaReportsSnapshot = await getDocs(mediaReportsQuery);
-      
-      const supabaseDeletePaths: string[] = [];
-      mediaReportsSnapshot.forEach((reportDoc) => {
-        const reportData = reportDoc.data() as MediaReport;
-        if (reportData.storagePath) {
-          supabaseDeletePaths.push(reportData.storagePath);
-        }
-        batch.delete(doc(db, "media_reports", reportDoc.id));
-      });
-      
-      if (supabaseDeletePaths.length > 0) {
-        const { error: supabaseError } = await supabase.storage.from(SUPABASE_MEDIA_BUCKET).remove(supabaseDeletePaths);
-        if (supabaseError) {
-          console.warn("Error deleting files from Supabase storage:", supabaseError.message, "Paths:", supabaseDeletePaths);
-          toast({ variant: "destructive", title: "Error Parcial", description: "Algunos archivos en Supabase no se pudieron eliminar. Revise la consola." });
-        }
+      if (companyResp.error) {
+        console.error('[DataContext] Error cargando company:', companyResp.error);
+        throw companyResp.error;
+      }
+      if (departmentsResp.error) {
+        console.error('[DataContext] Error cargando departments:', departmentsResp.error);
+        throw departmentsResp.error;
+      }
+      if (employeesResp.error) {
+        console.error('[DataContext] Error cargando employees:', employeesResp.error);
+        throw employeesResp.error;
+      }
+      if (tasksResp.error) {
+        console.error('[DataContext] Error cargando tasks:', tasksResp.error);
+        throw tasksResp.error;
       }
 
-      const tasksQuery = query(collection(db, "tasks"), where("departmentId", "==", id));
-      const tasksSnapshot = await getDocs(tasksQuery);
-      tasksSnapshot.forEach((taskDoc) => {
-        batch.delete(doc(db, "tasks", taskDoc.id));
+      const departmentsData = (departmentsResp.data as DepartmentRow[]) || [];
+      const employeesData = (employeesResp.data as ProfileRow[]) || [];
+      const tasksData = (tasksResp.data as TaskRow[]) || [];
+
+      console.log('[DataContext] Datos cargados:', {
+        company: companyResp.data ? '✓' : '✗',
+        departments: departmentsData.length,
+        employees: employeesData.length,
+        tasks: tasksData.length,
       });
-      
-      batch.delete(doc(db, "departments", id));
-      await batch.commit();
-      toast({ title: "Departamento Eliminado", description: "Departamento, tareas y reportes (Firestore y Supabase Storage) asociados eliminados." });
-    } catch (error) {
-      console.error("Error deleting department: ", error);
-      toast({ variant: "destructive", title: "Error al Eliminar", description: "No se pudo eliminar el departamento. Revise la consola."});
-      throw error; 
-    }
-  }, []);
 
-  // --- Employee Operations ---
-  const addEmployeeWithAuth = useCallback(async (name: string, email: string, password: string) => {
-    const auth = getAuth();
-    const adminAuthUid = currentUser?.uid; 
-
-    if (!adminAuthUid) {
-        toast({ variant: "destructive", title: "Error de Administrador", description: "No se pudo verificar la sesión del administrador." });
-        throw new Error("Admin no autenticado");
-    }
-
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const newEmployeeAuthUid = userCredential.user.uid;
-
-      await addDoc(collection(db, "employees"), {
-        authUid: newEmployeeAuthUid,
-        name: name,
-        email: email,
-      });
-      
-      toast({ title: "Empleada Agregada", description: `Cuenta para "${name}" creada. El administrador deberá volver a iniciar sesión.` });
-      await firebaseSignOut(auth); 
-
-    } catch (error: any) {
-      console.error("Error adding employee with auth: ", error);
-      let description = "No se pudo crear la cuenta de la empleada.";
-      if (error.code === 'auth/email-already-in-use') {
-        description = "Este correo electrónico ya está en uso por otra cuenta.";
-      } else if (error.code === 'auth/weak-password') {
-        description = "La contraseña es demasiado débil.";
+      // Mapear company (display_name puede no existir en la BD aún)
+      if (companyResp.data) {
+        const companyData = companyResp.data as any;
+        const company: Company = {
+          id: companyData.id,
+          name: companyData.name,
+          displayName: companyData.display_name ?? companyData.name, // Usar name si display_name no existe
+          slug: companyData.slug,
+          legalName: companyData.legal_name ?? undefined,
+          taxId: companyData.tax_id ?? undefined,
+          timezone: companyData.timezone ?? undefined,
+          planCode: companyData.plan_code ?? 'starter',
+          metadata: companyData.metadata ?? undefined,
+          createdAt: companyData.created_at,
+          updatedAt: companyData.updated_at,
+        };
+        setCompany(company);
+      } else {
+        setCompany(null);
       }
-      toast({ variant: "destructive", title: "Error al Crear Cuenta", description });
-      throw error; 
+      setDepartments(departmentsData.map(mapDepartment));
+      setEmployees(employeesData.map(mapEmployee));
+      setTasks(tasksData.map(mapTask));
+      
+      console.log('[DataContext] ✓ Datos actualizados en estado');
+    } catch (error) {
+      console.error('[DataContext] Error cargando datos:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error de datos',
+        description: 'No se pudo cargar la información. Intenta nuevamente.',
+      });
+    } finally {
+      setDataLoading(false);
+      console.log('[DataContext] Carga de datos finalizada, dataLoading = false');
     }
   }, [currentUser]);
 
-  // --- Task Operations ---
-  const assignTask = useCallback(async (departmentId: string, employeeProfileId: string) => {
-    const department = departments.find(d => d.id === departmentId);
-    if (!department) {
-      toast({ variant: "destructive", title: "Error de Asignación", description: "Departamento no encontrado." });
-      throw new Error("Departamento no encontrado");
+  useEffect(() => {
+    if (!currentUser) {
+      console.log('[DataContext] Usuario no autenticado, limpiando datos');
+      setCompany(null);
+      setDepartments([]);
+      setEmployees([]);
+      setTasks([]);
+      setDataLoading(false);
+      return;
     }
-    const employee = employees.find(e => e.id === employeeProfileId);
-    if (!employee) {
-      toast({ variant: "destructive", title: "Error de Asignación", description: "Perfil de empleada no encontrado." });
-      throw new Error("Perfil de empleada no encontrado");
+    console.log('[DataContext] Usuario autenticado detectado, cargando datos...');
+    void loadData();
+  }, [currentUser, loadData]);
+
+  const addDepartment = useCallback<DataContextType['addDepartment']>(async (input) => {
+    if (!currentUser) {
+      console.error('[DataContext] ❌ Intento de agregar departamento sin usuario autenticado');
+      throw new Error('Usuario no autenticado');
     }
+
+    console.log('[DataContext] 📝 Agregando departamento:', {
+      name: input.name,
+      companyId: currentUser.companyId,
+      userId: currentUser.id,
+    });
 
     try {
-      const batch = writeBatch(db);
-      const deptRef = doc(db, "departments", departmentId);
-      
-      // Buscar una tarea existente para este departamento que NO esté completada
-      const existingTaskQuery = query(
-        collection(db, "tasks"),
-        where("departmentId", "==", departmentId),
-        where("status", "in", ["pending", "in_progress"])
-      );
-      const existingTaskSnapshot = await getDocs(existingTaskQuery);
-
-      if (!existingTaskSnapshot.empty) {
-        // Hay una tarea activa, la reasignamos
-        const existingTaskDoc = existingTaskSnapshot.docs[0];
-        batch.update(existingTaskDoc.ref, {
-          employeeId: employeeProfileId,
-          assignedAt: Timestamp.now(),
-          status: 'pending', // Al reasignar, vuelve a pendiente si no estaba ya así
-          completedAt: null, 
-        });
-        batch.update(deptRef, {
-          assignedTo: employeeProfileId,
-          status: 'pending', // El departamento tiene una tarea activa pendiente
-        });
-        toast({ title: "Tarea Reasignada", description: `Limpieza de ${department.name} reasignada a ${employee.name}.` });
-      } else {
-        // No hay tarea activa o la anterior se completó, creamos una nueva
-        const taskRef = doc(collection(db, "tasks"));
-        batch.set(taskRef, {
-          departmentId,
-          employeeId: employeeProfileId,
-          assignedAt: Timestamp.now(),
-          status: 'pending',
-          completedAt: null,
-        });
-        batch.update(deptRef, {
-          assignedTo: employeeProfileId,
-          status: 'pending', // El departamento ahora necesita limpieza (tiene una nueva tarea pendiente)
-        });
-        toast({ title: "Tarea Asignada", description: `Limpieza de ${department.name} asignada a ${employee.name}.` });
+      // Verificar que tenemos una sesión activa
+      const { data: session, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('[DataContext] ❌ Error al obtener sesión:', sessionError);
+        throw new Error('Error al verificar la sesión. Por favor, inicia sesión nuevamente.');
       }
+      if (!session?.session) {
+        console.error('[DataContext] ❌ No hay sesión activa');
+        throw new Error('No hay sesión activa. Por favor, inicia sesión nuevamente.');
+      }
+      console.log('[DataContext] ✓ Sesión activa verificada:', {
+        userId: session.session.user.id,
+        email: session.session.user.email,
+      });
+
+      // Verificar que el usuario tiene un perfil válido en la base de datos
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, company_id, role')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (profileError) {
+        console.error('[DataContext] ❌ Error al verificar perfil:', profileError);
+        throw new Error('No se pudo verificar tu perfil. Por favor, contacta al administrador.');
+      }
+
+      if (!profile || !profile.company_id) {
+        console.error('[DataContext] ❌ Perfil sin company_id');
+        throw new Error('Tu perfil no tiene una empresa asignada. Por favor, contacta al administrador.');
+      }
+
+      if (profile.company_id !== currentUser.companyId) {
+        console.error('[DataContext] ❌ company_id no coincide entre perfil y usuario:', {
+          profile_company_id: profile.company_id,
+          user_company_id: currentUser.companyId,
+        });
+        throw new Error('Error de seguridad: El company_id no coincide. Por favor, inicia sesión nuevamente.');
+      }
+
+      console.log('[DataContext] ✓ Perfil verificado:', {
+        userId: profile.id,
+        companyId: profile.company_id,
+        role: profile.role,
+      });
+
+      // Insertar el departamento
+      const insertData = {
+        company_id: currentUser.companyId,
+        name: input.name.trim(),
+        access_code: input.accessCode?.trim() || null,
+        address: input.address?.trim() || null,
+        notes: input.notes?.trim() || null,
+      };
       
-      await batch.commit();
+      console.log('[DataContext] 🔄 Insertando en Supabase:', insertData);
+      
+      const { data, error } = await supabase
+        .from('departments')
+        .insert(insertData)
+        .select('*')
+        .single<DepartmentRow>();
+
+      if (error) {
+        console.error('[DataContext] ❌ Error al insertar departamento:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
+        throw error;
+      }
+
+      if (!data) {
+        console.error('[DataContext] ❌ Insert exitoso pero no se devolvieron datos');
+        throw new Error('El departamento se creó pero no se pudo recuperar. Por favor, recarga la página.');
+      }
+
+      console.log('[DataContext] ✅ Departamento insertado exitosamente:', {
+        id: data.id,
+        name: data.name,
+        company_id: data.company_id,
+        expected_company_id: currentUser.companyId,
+        match: data.company_id === currentUser.companyId,
+      });
+
+      // Verificar que el company_id coincide
+      if (data.company_id !== currentUser.companyId) {
+        console.error('[DataContext] ❌ ERROR CRÍTICO: company_id no coincide!', {
+          inserted: data.company_id,
+          expected: currentUser.companyId,
+        });
+        toast({
+          variant: 'destructive',
+          title: 'Error de seguridad',
+          description: 'El departamento se creó con un company_id incorrecto. Contacta al administrador.',
+        });
+      }
+
+      // Verificar que el departamento se puede leer inmediatamente después de insertarlo
+      console.log('[DataContext] 🔍 Verificando que el departamento se puede leer...');
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('departments')
+        .select('*')
+        .eq('id', data.id)
+        .single<DepartmentRow>();
+
+      if (verifyError) {
+        console.error('[DataContext] ❌ Error al verificar el departamento:', {
+          code: verifyError.code,
+          message: verifyError.message,
+          details: verifyError.details,
+          hint: verifyError.hint,
+        });
+        console.error('[DataContext] ⚠️ Esto puede indicar un problema con las políticas RLS');
+      } else if (!verifyData) {
+        console.warn('[DataContext] ⚠️ No se devolvieron datos al verificar el departamento');
+      } else {
+        console.log('[DataContext] ✅ Departamento verificado correctamente:', {
+          id: verifyData.id,
+          name: verifyData.name,
+          company_id: verifyData.company_id,
+        });
+      }
+
+      // También verificar que podemos listar todos los departamentos de la empresa
+      const { data: allDepartments, error: listError } = await supabase
+        .from('departments')
+        .select('id, name, company_id')
+        .eq('company_id', currentUser.companyId);
+
+      if (listError) {
+        console.error('[DataContext] ❌ Error al listar departamentos después de insertar:', listError);
+      } else {
+        console.log('[DataContext] 📋 Total de departamentos de la empresa:', allDepartments?.length || 0);
+        const found = allDepartments?.find(d => d.id === data.id);
+        if (!found) {
+          console.error('[DataContext] ❌ El departamento recién creado NO aparece en la lista!');
+        } else {
+          console.log('[DataContext] ✅ El departamento recién creado SÍ aparece en la lista');
+        }
+      }
+
+      // Actualizar el estado local
+      const mapped = mapDepartment(data);
+      setDepartments((prev) => {
+        const updated = [...prev, mapped].sort((a, b) => a.name.localeCompare(b.name));
+        console.log('[DataContext] 📊 Estado actualizado. Total de departamentos:', updated.length);
+        return updated;
+      });
+
+      toast({ 
+        title: 'Departamento agregado', 
+        description: `"${input.name}" fue creado correctamente.` 
+      });
+
+      // Recargar los datos después de un breve delay para asegurar consistencia
+      setTimeout(() => {
+        console.log('[DataContext] 🔄 Recargando datos después de crear departamento...');
+        void loadData();
+      }, 500);
+
     } catch (error) {
-      console.error("Error assigning/reassigning task: ", error);
-      toast({ variant: "destructive", title: "Error de Asignación", description: "No se pudo asignar o reasignar la tarea." });
+      console.error('[DataContext] ❌ Error completo al agregar departamento:', error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'No se pudo agregar el departamento. Verifica tu conexión e intenta nuevamente.';
+      
+      toast({
+        variant: 'destructive',
+        title: 'Error al guardar',
+        description: errorMessage,
+      });
       throw error;
     }
-  }, [departments, employees]);
+  }, [currentUser, loadData]);
 
-  const updateTaskStatus = useCallback(async (taskId: string, newStatus: 'pending' | 'in_progress' | 'completed') => {
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) {
-      toast({ variant: "destructive", title: "Error de Tarea", description: "Tarea no encontrada." });
-      throw new Error("Tarea no encontrada");
+  const updateDepartment = useCallback<DataContextType['updateDepartment']>(async (dept) => {
+    if (!currentUser) {
+      throw new Error('Usuario no autenticado');
     }
 
     try {
-      const batch = writeBatch(db);
-      const taskRef = doc(db, "tasks", taskId);
-      const deptRef = doc(db, "departments", task.departmentId);
+      const { data, error } = await supabase
+        .from('departments')
+        .update({
+          name: dept.name,
+          access_code: dept.accessCode ?? null,
+          address: dept.address ?? null,
+          status: dept.status,
+          assigned_to: dept.assignedTo ?? null,
+          last_cleaned_at: dept.lastCleanedAt ?? null,
+          notes: dept.notes ?? null,
+        })
+        .eq('id', dept.id)
+        .eq('company_id', currentUser.companyId)
+        .select('*')
+        .single<DepartmentRow>();
 
-      const taskUpdates: Partial<CleaningTask> = { status: newStatus };
-      const departmentUpdates: Partial<Department> = { status: newStatus };
-
-      if (newStatus === 'completed') {
-        taskUpdates.completedAt = Timestamp.now();
-        departmentUpdates.lastCleanedAt = Timestamp.now();
-        departmentUpdates.assignedTo = null; // Departamento queda sin asignación activa
-      } else if (newStatus === 'in_progress') {
-         // Asegurarse que assignedTo esté correcto en el departamento
-        departmentUpdates.assignedTo = task.employeeId;
-      } else if (newStatus === 'pending') {
-        // Si se vuelve a poner pendiente (ej. admin lo revierte), asegurarse que assignedTo esté correcto
-        departmentUpdates.assignedTo = task.employeeId;
+      if (error) {
+        throw error;
       }
-      
-      batch.update(taskRef, taskUpdates);
-      batch.update(deptRef, departmentUpdates);
 
-      await batch.commit();
-      toast({ title: "Tarea Actualizada", description: `Estado de la tarea cambiado a ${newStatus}.` });
+      const updated = mapDepartment(data);
+      setDepartments((prev) => prev.map((d) => (d.id === dept.id ? updated : d)));
+      toast({ title: 'Departamento actualizado', description: `"${dept.name}" fue actualizado.` });
     } catch (error) {
-      console.error("Error updating task status: ", error);
-      toast({ variant: "destructive", title: "Error de Tarea", description: "No se pudo actualizar el estado de la tarea."});
-      throw error; 
+      console.error('Error actualizando departamento:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error al guardar',
+        description: 'No se pudo actualizar el departamento.',
+      });
+      throw error;
     }
-  }, [tasks]);
+  }, [currentUser]);
 
-  // --- Media Report Operations ---
-  const addMediaReport = useCallback(async (
-    departmentId: string, 
-    employeeProfileId: string, 
-    file: File, 
-    reportType: MediaReportType, 
-    description?: string,
-    onProgress?: (percentage: number) => void // Callback para el progreso
-  ): Promise<void> => {
+  const deleteDepartment = useCallback<DataContextType['deleteDepartment']>(async (id) => {
+    if (!currentUser) {
+      throw new Error('Usuario no autenticado');
+    }
 
-    return new Promise(async (resolve, reject) => {
-      if (!currentUser?.uid) {
-        toast({ variant: "destructive", title: "Error de autenticación", description: "No se pudo verificar la empleada." });
-        reject(new Error("Usuario no autenticado para subir archivo."));
-        return;
-      }
-      if (!employeeProfileId) {
-          toast({ variant: "destructive", title: "Error de Perfil", description: "No se pudo identificar el perfil de la empleada para el reporte." });
-          reject(new Error("Perfil de empleada no identificado para el reporte."));
-          return;
+    try {
+      const { data: mediaRows, error: mediaError } = await supabase
+        .from('media_reports')
+        .select('id, storage_path')
+        .eq('company_id', currentUser.companyId)
+        .eq('department_id', id);
+
+      if (mediaError) {
+        throw mediaError;
       }
 
-      const uploadedByAuthUid = currentUser.uid;
-      const uniqueFileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-      const supabasePath = `departments/${departmentId}/media/${uniqueFileName}`;
-      
-      console.log(`[DataContext] Iniciando subida a Supabase para: ${supabasePath}, Archivo: ${file.name}, Tamaño: ${file.size}`);
-      if(onProgress) onProgress(0);
-
-      try {
-        const { data: uploadData, error: uploadError } = await supabase.storage
+      const storagePaths = (mediaRows ?? []).map((row) => row.storage_path).filter(Boolean);
+      if (storagePaths.length > 0) {
+        const { error: storageError } = await supabase.storage
           .from(SUPABASE_MEDIA_BUCKET)
-          .upload(supabasePath, file, {
-            cacheControl: '3600',
-            upsert: false,
+          .remove(storagePaths);
+        if (storageError) {
+          console.warn('Error eliminando archivos de storage:', storageError);
+          toast({
+            variant: 'destructive',
+            title: 'Error parcial',
+            description: 'Algunos archivos no se pudieron eliminar del storage.',
           });
-
-        // Supabase no tiene un onProgress nativo como Firebase en esta API básica de upload.
-        // Si se necesitara progreso detallado, se usaría .createSignedUploadUrl y XHR/Fetch manual.
-        // Por ahora, simularemos un progreso al 100% al finalizar la llamada de upload.
-        // O podríamos usar onProgress(50) antes y onProgress(100) después si uploadData es exitoso.
-        // Para MVP, vamos a asumir que si no hay error, es 100%.
-
-        if (uploadError) {
-          console.error("[DataContext] Error subiendo archivo a Supabase Storage: ", uploadError);
-          toast({ variant: "destructive", title: "Error de Subida (Supabase)", description: `Detalle: ${uploadError.message}` });
-          if(onProgress) onProgress(0); // Reset progress on error
-          reject(uploadError);
-          return;
         }
-
-        if (!uploadData) {
-          console.error("[DataContext] No se recibieron datos de la subida a Supabase.");
-          toast({ variant: "destructive", title: "Error de Subida (Supabase)", description: "No se completó la subida del archivo."});
-          if(onProgress) onProgress(0);
-          reject(new Error("Supabase upload failed to return data."));
-          return;
-        }
-        
-        console.log(`[DataContext] Subida a Supabase completada para: ${uploadData.path}`);
-        if(onProgress) onProgress(100);
-
-
-        const { data: urlData } = supabase.storage
-          .from(SUPABASE_MEDIA_BUCKET)
-          .getPublicUrl(uploadData.path);
-
-        if (!urlData || !urlData.publicUrl) {
-            console.error("[DataContext] No se pudo obtener la URL pública de Supabase para:", uploadData.path);
-            toast({ variant: "destructive", title: "Error de URL", description: "No se pudo obtener la URL pública del archivo subido." });
-            reject(new Error("Failed to get public URL from Supabase."));
-            return;
-        }
-        const publicUrl = urlData.publicUrl;
-        console.log(`[DataContext] URL pública de Supabase obtenida: ${publicUrl}`);
-
-        await addDoc(collection(db, "media_reports"), {
-          departmentId,
-          employeeProfileId, 
-          uploadedByAuthUid,  
-          storagePath: uploadData.path,
-          downloadURL: publicUrl, 
-          fileName: file.name,
-          contentType: file.type,
-          reportType,
-          description: description || "",
-          uploadedAt: Timestamp.now(),
-        });
-        console.log(`[DataContext] Metadatos guardados en Firestore para: ${file.name}`);
-        toast({ title: "Evidencia Subida", description: "El archivo se ha subido y registrado correctamente." });
-        resolve();
-        
-      } catch (error) {
-        console.error("[DataContext] Error en addMediaReport (catch general): ", error);
-        if(onProgress) onProgress(0);
-        if (!(error instanceof Error && (error.message.includes("Supabase") || error.message.includes("URL pública") || error.message.includes("autenticado") || error.message.includes("Perfil")))) {
-           toast({ variant: "destructive", title: "Error Inesperado", description: "Ocurrió un error al subir la evidencia."});
-        }
-        reject(error);
       }
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser]); // currentUser es la dependencia correcta aquí
 
-  const getMediaReportsForDepartment = useCallback(async (departmentId: string): Promise<MediaReport[]> => {
-    try {
-      const q = query(
-        collection(db, "media_reports"), 
-        where("departmentId", "==", departmentId),
-        orderBy("uploadedAt", "desc")
-      );
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(docSnapshot => ({
-        id: docSnapshot.id,
-        ...docSnapshot.data(),
-        uploadedAt: (docSnapshot.data().uploadedAt as Timestamp).toDate(),
-      })) as MediaReport[];
+      const { error } = await supabase
+        .from('departments')
+        .delete()
+        .eq('id', id)
+        .eq('company_id', currentUser.companyId);
+
+      if (error) {
+        throw error;
+      }
+
+      setDepartments((prev) => prev.filter((dept) => dept.id !== id));
+      setTasks((prev) => prev.filter((task) => task.departmentId !== id));
+      toast({ title: 'Departamento eliminado', description: 'Departamento y datos asociados eliminados.' });
     } catch (error) {
-      console.error(`Error obteniendo reportes multimedia para departmentId ${departmentId}: `, error);
-      toast({ variant: "destructive", title: "Error de Carga", description: "No se pudieron cargar los reportes multimedia. Verifica los índices de Firestore si el error persiste." });
+      console.error('Error eliminando departamento:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error al eliminar',
+        description: 'No se pudo eliminar el departamento.',
+      });
+      throw error;
+    }
+  }, [currentUser]);
+
+  const addEmployeeWithAuth = useCallback<DataContextType['addEmployeeWithAuth']>(async (name, email, password) => {
+    if (!currentUser) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    try {
+      const signUpResult = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password,
+        options: {
+          data: {
+            company_id: currentUser.companyId,
+            role: 'employee',
+            full_name: name,
+          },
+        },
+      });
+
+      if (signUpResult.error) {
+        throw signUpResult.error;
+      }
+
+      const newUserId = signUpResult.data.user?.id;
+      if (!newUserId) {
+        throw new Error('No se obtuvo el identificador del nuevo usuario.');
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: newUserId,
+          company_id: currentUser.companyId,
+          role: 'employee',
+          full_name: name,
+          email: normalizedEmail,
+        })
+        .select('*')
+        .single<ProfileRow>();
+
+      if (error) {
+        throw error;
+      }
+
+      const mapped = mapEmployee(data);
+      setEmployees((prev) => [...prev, mapped].sort((a, b) => a.name.localeCompare(b.name)));
+
+      toast({
+        title: 'Empleada agregada',
+        description: `Se creó la cuenta para "${name}". La persona recibirá un correo para activar su acceso.`,
+      });
+    } catch (error) {
+      console.error('Error creando empleada:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error al crear cuenta',
+        description: error instanceof Error ? error.message : 'No se pudo crear la cuenta.',
+      });
+      throw error;
+    }
+  }, [currentUser]);
+
+  const assignTask = useCallback<DataContextType['assignTask']>(async (departmentId, employeeProfileId) => {
+    if (!currentUser) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const department = departments.find((d) => d.id === departmentId);
+    if (!department) {
+      toast({ variant: 'destructive', title: 'Error de asignación', description: 'Departamento no encontrado.' });
+      throw new Error('Departamento no encontrado');
+    }
+
+    const employee = employees.find((e) => e.id === employeeProfileId);
+    if (!employee) {
+      toast({ variant: 'destructive', title: 'Error de asignación', description: 'Empleada no encontrada.' });
+      throw new Error('Empleada no encontrada');
+    }
+
+    const now = new Date().toISOString();
+    const activeTask = tasks.find(
+      (task) => task.departmentId === departmentId && (task.status === 'pending' || task.status === 'in_progress')
+    );
+
+    try {
+      let updatedTaskRow: TaskRow | null = null;
+
+      if (activeTask) {
+        const { data, error } = await supabase
+          .from('tasks')
+          .update({
+            employee_id: employeeProfileId,
+            assigned_at: now,
+            status: 'pending',
+            started_at: null,
+            completed_at: null,
+          })
+          .eq('id', activeTask.id)
+          .eq('company_id', currentUser.companyId)
+          .select('*')
+          .single<TaskRow>();
+
+        if (error) {
+          throw error;
+        }
+        updatedTaskRow = data;
+      } else {
+        const { data, error } = await supabase
+          .from('tasks')
+          .insert({
+            company_id: currentUser.companyId,
+            department_id: departmentId,
+            employee_id: employeeProfileId,
+            status: 'pending',
+            assigned_at: now,
+          })
+          .select('*')
+          .single<TaskRow>();
+
+        if (error) {
+          throw error;
+        }
+        updatedTaskRow = data;
+      }
+
+      if (!updatedTaskRow) {
+        throw new Error('No se pudo obtener la tarea actualizada.');
+      }
+
+      const { data: deptRow, error: deptError } = await supabase
+        .from('departments')
+        .update({
+          assigned_to: employeeProfileId,
+          status: 'pending',
+        })
+        .eq('id', departmentId)
+        .eq('company_id', currentUser.companyId)
+        .select('*')
+        .single<DepartmentRow>();
+
+      if (deptError) {
+        throw deptError;
+      }
+
+      const updatedTask = mapTask(updatedTaskRow);
+      setTasks((prev) => {
+        const filtered = prev.filter((task) => task.id !== updatedTask.id);
+        return [updatedTask, ...filtered].sort(
+          (a, b) => new Date(b.assignedAt).getTime() - new Date(a.assignedAt).getTime()
+        );
+      });
+
+      setDepartments((prev) => prev.map((d) => (d.id === departmentId ? mapDepartment(deptRow) : d)));
+
+      toast({
+        title: activeTask ? 'Tarea reasignada' : 'Tarea asignada',
+        description: `Limpieza de ${department.name} asignada a ${employee.name}.`,
+      });
+    } catch (error) {
+      console.error('Error asignando tarea:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error de asignación',
+        description: 'No se pudo asignar o reasignar la tarea.',
+      });
+      throw error;
+    }
+  }, [currentUser, departments, employees, tasks]);
+
+  const updateTaskStatus = useCallback<DataContextType['updateTaskStatus']>(async (taskId, newStatus) => {
+    if (!currentUser) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) {
+      toast({ variant: 'destructive', title: 'Error de tarea', description: 'Tarea no encontrada.' });
+      throw new Error('Tarea no encontrada');
+    }
+
+    const now = new Date().toISOString();
+    const taskUpdates: Partial<TaskRow> = { status: newStatus };
+
+    if (newStatus === 'completed') {
+      taskUpdates.completed_at = now;
+    } else if (newStatus === 'in_progress') {
+      taskUpdates.started_at = task.startedAt ?? now;
+      taskUpdates.completed_at = null;
+    } else if (newStatus === 'pending') {
+      taskUpdates.started_at = null;
+      taskUpdates.completed_at = null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .update(taskUpdates)
+        .eq('id', taskId)
+        .eq('company_id', currentUser.companyId)
+        .select('*')
+        .single<TaskRow>();
+
+      if (error) {
+        throw error;
+      }
+
+      const departmentUpdates: Partial<DepartmentRow> = { status: newStatus };
+      if (newStatus === 'completed') {
+        departmentUpdates.last_cleaned_at = now;
+        departmentUpdates.assigned_to = null;
+      } else {
+        departmentUpdates.assigned_to = data.employee_id;
+      }
+
+      const { data: deptRow, error: deptError } = await supabase
+        .from('departments')
+        .update(departmentUpdates)
+        .eq('id', data.department_id)
+        .eq('company_id', currentUser.companyId)
+        .select('*')
+        .single<DepartmentRow>();
+
+      if (deptError) {
+        throw deptError;
+      }
+
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? mapTask(data) : t)));
+      setDepartments((prev) => prev.map((d) => (d.id === data.department_id ? mapDepartment(deptRow) : d)));
+
+      toast({ title: 'Tarea actualizada', description: `Estado cambiado a ${newStatus}.` });
+    } catch (error) {
+      console.error('Error actualizando tarea:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error de tarea',
+        description: 'No se pudo actualizar el estado.',
+      });
+      throw error;
+    }
+  }, [currentUser, tasks]);
+
+  const addMediaReport = useCallback<DataContextType['addMediaReport']>(async (
+    departmentId,
+    employeeProfileId,
+    file,
+    reportType,
+    description,
+    onProgress
+  ) => {
+    if (!currentUser) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const uniqueFileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+    const storagePath = `companies/${currentUser.companyId}/departments/${departmentId}/media/${uniqueFileName}`;
+
+    try {
+      onProgress?.(0);
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(SUPABASE_MEDIA_BUCKET)
+        .upload(storagePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      if (!uploadData?.path) {
+        throw new Error('No se pudo determinar la ruta del archivo subido.');
+      }
+
+      onProgress?.(100);
+      const { data: urlData } = supabase.storage
+        .from(SUPABASE_MEDIA_BUCKET)
+        .getPublicUrl(uploadData.path);
+
+      const { error } = await supabase
+        .from('media_reports')
+        .insert({
+          company_id: currentUser.companyId,
+          department_id: departmentId,
+          employee_id: employeeProfileId,
+          uploaded_by: currentUser.id,
+          storage_path: uploadData.path,
+          download_url: urlData?.publicUrl ?? null,
+          file_name: file.name,
+          content_type: file.type,
+          report_type: reportType,
+          description: description ?? null,
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({ title: 'Evidencia subida', description: 'El archivo fue registrado correctamente.' });
+    } catch (error) {
+      console.error('Error subiendo media report:', error);
+      onProgress?.(0);
+      toast({
+        variant: 'destructive',
+        title: 'Error al subir',
+        description: 'No se pudo subir la evidencia.',
+      });
+      throw error;
+    }
+  }, [currentUser]);
+
+  const getMediaReportsForDepartment = useCallback<DataContextType['getMediaReportsForDepartment']>(async (departmentId) => {
+    if (!currentUser) {
       return [];
     }
-  }, []);
 
-  // --- Getter Functions ---
-  const getTasksForEmployee = useCallback((employeeProfileId: string) => {
-    return tasks.filter((task) => task.employeeId === employeeProfileId)
-                .sort((a,b) => new Date(b.assignedAt).getTime() - new Date(a.assignedAt).getTime());
+    try {
+      const { data, error } = await supabase
+        .from('media_reports')
+        .select('*')
+        .eq('company_id', currentUser.companyId)
+        .eq('department_id', departmentId)
+        .order('uploaded_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      return (data as MediaReportRow[]).map(mapMediaReport);
+    } catch (error) {
+      console.error('Error cargando media reports:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error de carga',
+        description: 'No se pudieron obtener las evidencias.',
+      });
+      return [];
+    }
+  }, [currentUser]);
+
+  const getTasksForEmployee = useCallback<DataContextType['getTasksForEmployee']>((employeeProfileId) => {
+    return tasks
+      .filter((task) => task.employeeId === employeeProfileId)
+      .sort((a, b) => new Date(b.assignedAt).getTime() - new Date(a.assignedAt).getTime());
   }, [tasks]);
 
-  const getDepartmentById = useCallback((departmentId: string) => {
-    return departments.find(d => d.id === departmentId);
+  const getDepartmentById = useCallback<DataContextType['getDepartmentById']>((departmentId) => {
+    return departments.find((dept) => dept.id === departmentId);
   }, [departments]);
 
-  const getEmployeeProfileById = useCallback((employeeProfileId: string) => {
-    return employees.find(e => e.id === employeeProfileId);
+  const getEmployeeProfileById = useCallback<DataContextType['getEmployeeProfileById']>((employeeProfileId) => {
+    return employees.find((emp) => emp.id === employeeProfileId);
   }, [employees]);
-  
-  const value = useMemo(() => ({
-    departments, 
-    addDepartment, 
-    updateDepartment, 
+
+  const value = useMemo<DataContextType>(() => ({
+    company,
+    departments,
+    addDepartment,
+    updateDepartment,
     deleteDepartment,
     employees,
     addEmployeeWithAuth,
-    tasks, 
-    assignTask, 
-    updateTaskStatus, 
+    tasks,
+    assignTask,
+    updateTaskStatus,
     addMediaReport,
     getMediaReportsForDepartment,
-    getTasksForEmployee, 
+    getTasksForEmployee,
     getDepartmentById,
     getEmployeeProfileById,
-    dataLoading
+    dataLoading,
   }), [
-    departments, addDepartment, updateDepartment, deleteDepartment, 
-    employees, addEmployeeWithAuth,
-    tasks, assignTask, updateTaskStatus, 
-    addMediaReport, getMediaReportsForDepartment,
-    getTasksForEmployee, getDepartmentById, getEmployeeProfileById,
-    dataLoading
+    company,
+    departments,
+    addDepartment,
+    updateDepartment,
+    deleteDepartment,
+    employees,
+    addEmployeeWithAuth,
+    tasks,
+    assignTask,
+    updateTaskStatus,
+    addMediaReport,
+    getMediaReportsForDepartment,
+    getTasksForEmployee,
+    getDepartmentById,
+    getEmployeeProfileById,
+    dataLoading,
   ]);
-
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }
@@ -507,4 +994,5 @@ export function useData() {
   }
   return context;
 }
+
 

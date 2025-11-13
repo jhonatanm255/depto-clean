@@ -1,95 +1,211 @@
 
 "use client";
-import type { AppUser, UserRole, EmployeeProfile } from '@/lib/types';
+import type { AppUser, UserRole } from '@/lib/types';
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useEffect, useMemo, useCallback, useState }from 'react';
 import { toast } from '@/hooks/use-toast';
-import { 
-  getAuth, 
-  onAuthStateChanged, 
-  signInWithEmailAndPassword, 
-  signOut,
-  User as FirebaseAuthUser 
-} from 'firebase/auth';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, query, collection, where, getDocs } from 'firebase/firestore';
+import type { User } from '@supabase/supabase-js';
 
 interface AuthContextType {
   currentUser: AppUser | null;
   loading: boolean;
-  login: (email: string, actualPassword?: string) => Promise<void>; // Simplified parameters
+  login: (email: string, password?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ADMIN_EMAIL = "admin@cleansweep.com";
-// ADMIN_PASSWORD constant is no longer used for the login check itself,
-// but the instruction to use 'admin123' (or similar) in Firebase setup remains crucial.
+type ProfileRow = {
+  id: string;
+  company_id: string;
+  role: UserRole;
+  full_name: string | null;
+  email: string | null;
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const auth = getAuth();
+
+  const hydrateUser = useCallback(async (user: User | null): Promise<boolean> => {
+    if (!user) {
+      setCurrentUser(null);
+      return false;
+    }
+
+    try {
+      console.log('[AuthContext] Intentando cargar perfil para usuario:', user.id);
+      const startTime = Date.now();
+      
+      // Realizar la consulta con timeout usando Promise.race
+      const profileQuery = supabase
+        .from('profiles')
+        .select('company_id, role, full_name, email')
+        .eq('id', user.id)
+        .maybeSingle<ProfileRow>();
+      
+      // Crear una promesa de timeout que rechaza después de 5 segundos
+      const timeoutPromise = new Promise<{ data: null; error: { message: string; code: string } }>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('TIMEOUT: La consulta tardó más de 5 segundos'));
+        }, 5000);
+      });
+
+      let result;
+      try {
+        result = await Promise.race([profileQuery, timeoutPromise]);
+      } catch (raceError) {
+        if (raceError instanceof Error && raceError.message === 'TIMEOUT: La consulta tardó más de 5 segundos') {
+          console.error('[AuthContext] ⚠️ Timeout en consulta a profiles (5s)');
+          console.error('[AuthContext] Posibles causas:');
+          console.error('  - Problema de red/conectividad');
+          console.error('  - Problema con políticas RLS');
+          console.error('  - Problema con la base de datos de Supabase');
+          setCurrentUser(null);
+          return false;
+        }
+        throw raceError;
+      }
+
+      const { data, error } = result;
+      const elapsed = Date.now() - startTime;
+      console.log(`[AuthContext] Consulta completada en ${elapsed}ms`);
+
+      if (error) {
+        console.error('[AuthContext] Error obteniendo perfil:', error);
+        // PGRST116 es "no rows returned", que es esperado si no hay perfil aún
+        if (error.code !== 'PGRST116') {
+          toast({
+            variant: "destructive",
+            title: "Error de perfil",
+            description: "No se pudo cargar tu información. Intenta iniciar sesión nuevamente.",
+          });
+        }
+        setCurrentUser(null);
+        return false;
+      }
+
+      if (!data || !data.company_id) {
+        console.warn('[AuthContext] Perfil sin company_id para usuario:', user.id);
+        setCurrentUser(null);
+        return false;
+      }
+
+      console.log('[AuthContext] ✓ Perfil cargado exitosamente:', {
+        userId: user.id,
+        companyId: data.company_id,
+        role: data.role,
+        elapsed: `${elapsed}ms`
+      });
+
+      setCurrentUser({
+        id: user.id,
+        email: user.email ?? null,
+        role: data.role,
+        companyId: data.company_id,
+        name: data.full_name ?? data.email ?? user.email,
+        fullName: data.full_name ?? undefined,
+      });
+      return true;
+    } catch (err) {
+      console.error('[AuthContext] Error inesperado en hydrateUser:', err);
+      setCurrentUser(null);
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseAuthUser | null) => {
+    let mounted = true;
+    let timeoutId: NodeJS.Timeout | null = null;
+
+    const initSession = async () => {
       setLoading(true);
-      if (firebaseUser) {
-        let userRole: UserRole = 'employee';
-        let userName: string | undefined = firebaseUser.displayName || firebaseUser.email || 'Usuario';
-        let employeeProfileId: string | undefined = undefined;
-
-        if (firebaseUser.email === ADMIN_EMAIL) {
-          userRole = 'admin';
-          userName = 'Usuario Administrador';
-           setCurrentUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            role: userRole,
-            name: userName,
-          });
-        } else {
-          const q = query(collection(db, "employees"), where("authUid", "==", firebaseUser.uid));
-          const querySnapshot = await getDocs(q);
-          if (!querySnapshot.empty) {
-            const employeeDoc = querySnapshot.docs[0];
-            const employeeData = employeeDoc.data() as EmployeeProfile;
-            userName = employeeData.name;
-            employeeProfileId = employeeDoc.id;
-            userRole = 'employee';
-             setCurrentUser({
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              role: userRole,
-              name: userName,
-              employeeProfileId: employeeProfileId,
-            });
-          } else {
-            console.warn("Usuario de Firebase Auth sin perfil de empleado en Firestore:", firebaseUser.uid);
-            // Consider logging out the user if no profile is found after successful auth
-            // This prevents a partially logged-in state.
-            await signOut(auth); 
-            setCurrentUser(null);
-            // router.push('/login'); // Avoid push here if it causes loops with AppLayout
-          }
+      console.log('[AuthContext] Iniciando carga de sesión...');
+      
+      // Timeout de seguridad: si después de 8 segundos no se ha resuelto, forzar loading = false
+      timeoutId = setTimeout(() => {
+        if (mounted) {
+          console.warn('[AuthContext] ⚠️ Timeout en carga inicial de sesión (8s). Forzando loading = false');
+          setLoading(false);
         }
-      } else {
-        setCurrentUser(null);
-      }
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, [auth]); // Removed router from dependencies here as push was removed from this effect
+      }, 8000);
 
-  // Simplified login function: always uses email and password from form.
-  // Firebase Auth is the sole decider of validity.
+      try {
+        const sessionStartTime = Date.now();
+        const { data: sessionData, error } = await supabase.auth.getSession();
+        const sessionElapsed = Date.now() - sessionStartTime;
+        console.log(`[AuthContext] getSession completado en ${sessionElapsed}ms`);
+        
+        if (error) {
+          console.error('[AuthContext] Error obteniendo sesión inicial:', error);
+          if (mounted) {
+            setLoading(false);
+          }
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+          return;
+        }
+        
+        if (!mounted) {
+          if (timeoutId) clearTimeout(timeoutId);
+          return;
+        }
+
+        if (sessionData?.session?.user) {
+          console.log('[AuthContext] Sesión encontrada, hidratando usuario...');
+          const hydrateStartTime = Date.now();
+          await hydrateUser(sessionData.session.user);
+          const hydrateElapsed = Date.now() - hydrateStartTime;
+          console.log(`[AuthContext] hydrateUser completado en ${hydrateElapsed}ms`);
+        } else {
+          console.log('[AuthContext] No hay sesión activa');
+          setCurrentUser(null);
+        }
+      } catch (err) {
+        console.error('[AuthContext] Error inesperado en initSession:', err);
+      } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        if (mounted) {
+          console.log('[AuthContext] Finalizando carga de sesión, estableciendo loading = false');
+          setLoading(false);
+        }
+      }
+    };
+
+    initSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // No actualizar loading durante cambios de autenticación para evitar bloqueos
+      // Solo hidratar el usuario silenciosamente
+      if (mounted) {
+        try {
+          await hydrateUser(session?.user ?? null);
+        } catch (err) {
+          console.error('Error en onAuthStateChange:', err);
+        }
+      }
+    });
+
+    return () => {
+      mounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      authListener.subscription.unsubscribe();
+    };
+  }, [hydrateUser]);
+
   const login = useCallback(async (email: string, password?: string) => {
     setLoading(true);
-    const providedEmail = email.toLowerCase();
-    
+    const providedEmail = email.trim().toLowerCase();
+
     if (!password) {
       toast({
         variant: "destructive",
@@ -101,46 +217,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      await signInWithEmailAndPassword(auth, providedEmail, password);
-      // Successful login will trigger onAuthStateChanged, which updates currentUser.
-      // AppLayout or DashboardPage will handle redirection based on currentUser.
-      // We can push to dashboard here as a direct consequence of successful login action.
-      router.push('/dashboard');
-    } catch (error: any) {
-      console.error('Error de inicio de sesión:', error);
-      let description = "Credenciales inválidas o error de red.";
-      // auth/invalid-credential covers user-not-found, wrong-password, etc.
-      if (error.code === 'auth/invalid-credential') {
-        description = "Email o contraseña incorrectos.";
-      }
-      toast({
-        variant: "destructive",
-        title: "Error de inicio de sesión",
-        description: description,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: providedEmail,
+        password,
       });
-      setCurrentUser(null); // Clear user on failed login
+
+      if (error) {
+        console.error('Error de inicio de sesión:', error);
+        toast({
+          variant: "destructive",
+          title: "Error de inicio de sesión",
+          description: error.message ?? "Credenciales inválidas o error de red.",
+        });
+        setCurrentUser(null);
+        setLoading(false);
+        return;
+      }
+
+      const success = await hydrateUser(data.session?.user ?? null);
+      if (success) {
+        router.push('/dashboard');
+      }
+    } catch (err) {
+      console.error('Error inesperado en login:', err);
+      setCurrentUser(null);
     } finally {
       setLoading(false);
     }
-  }, [auth, router]);
+  }, [hydrateUser, router]);
 
   const logout = useCallback(async () => {
     setLoading(true);
     try {
-      await signOut(auth);
-      // onAuthStateChanged will set currentUser to null
-      router.push('/login'); // Redirect to login after sign out
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        throw error;
+      }
+      setCurrentUser(null);
+      router.push('/login');
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "No se pudo cerrar la sesión.",
+        description: "No se pudo cerrar la sesión. Intenta nuevamente.",
       });
     } finally {
       setLoading(false);
     }
-  }, [auth, router]);
+  }, [router]);
   
   const value = useMemo(() => ({ currentUser, loading, login, logout }), 
     [currentUser, loading, login, logout]

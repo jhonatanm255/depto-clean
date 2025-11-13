@@ -2,6 +2,7 @@
 "use client";
 import React from 'react';
 import { useAuth } from "@/contexts/auth-context";
+import { useData } from "@/contexts/data-context";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -40,13 +41,16 @@ function ThemeToggle() {
 
 export function HeaderMain() {
   const { currentUser, logout } = useAuth();
+  const { company } = useData();
   const { toggleSidebar } = useSidebar(); 
   const isMobileView = useIsMobile(); // Hook para determinar si es vista móvil
 
-  const getInitials = (name?: string) => {
+  const getInitials = (name?: string | null) => {
     if (!name) return "CS"; 
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
+
+  const displayName = company?.displayName ?? currentUser?.name ?? currentUser?.email ?? 'Usuario';
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-sidebar text-sidebar-foreground px-4 sm:px-6">
@@ -63,7 +67,9 @@ export function HeaderMain() {
             <PanelLeft className="h-6 w-6" />
           </Button>
         )}
-        <h1 className="text-xl font-semibold font-headline text-sidebar-foreground">CleanSweep Manager</h1>
+        <h1 className="text-xl font-semibold font-headline text-sidebar-foreground">
+          {company?.displayName ?? 'CleanSweep Manager'}
+        </h1>
       </div>
       
       <div className="flex items-center gap-3">
@@ -73,15 +79,15 @@ export function HeaderMain() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src={`https://placehold.co/100x100.png?text=${getInitials(currentUser.name)}`} alt={currentUser.name || "Usuario"} data-ai-hint="avatar person" />
-                  <AvatarFallback>{getInitials(currentUser.name)}</AvatarFallback>
+                  <AvatarImage src={`https://placehold.co/100x100.png?text=${getInitials(displayName)}`} alt={displayName} data-ai-hint="avatar person" />
+                  <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{currentUser.name || "Usuario"}</p>
+                  <p className="text-sm font-medium leading-none">{displayName}</p>
                   <p className="text-xs leading-none text-muted-foreground">
                     {currentUser.email}
                   </p>

@@ -1,59 +1,104 @@
 
-export type UserRole = 'admin' | 'employee';
+export type UserRole = 'owner' | 'admin' | 'manager' | 'employee';
 
-// Representa el usuario en el contexto de la aplicación,
-// puede combinar datos de Firebase Auth y Firestore.
-export interface AppUser {
-  uid: string; // Firebase Auth UID
-  email: string | null; // Firebase Auth email
-  role: UserRole;
-  name?: string; // Obtenido de Firestore
-  // id de empleado de Firestore, si es un empleado
-  // para facilitar la búsqueda de su perfil específico en la colección 'employees'
-  employeeProfileId?: string; 
-}
-
-
-export interface Department {
-  id: string;
-  name: string;
-  accessCode: string;
-  address?: string; 
-  status: 'pending' | 'in_progress' | 'completed';
-  assignedTo?: string; // employeeProfileId
-  lastCleanedAt?: Date; 
-}
-
-// Representa el perfil de datos de una empleada en Firestore
-export interface EmployeeProfile {
-  id: string; // Document ID en Firestore
-  authUid?: string; // UID de Firebase Auth si tiene cuenta individual
-  name: string;
-  email: string; 
-  // No almacenamos la contraseña aquí
-}
-
-export interface CleaningTask {
-  id: string; 
-  departmentId: string; 
-  employeeId: string; // employeeProfileId (el ID del documento en la colección 'employees')
-  assignedAt: Date; 
-  status: 'pending' | 'in_progress' | 'completed';
-  completedAt?: Date; 
-}
+export type TaskStatus = 'pending' | 'in_progress' | 'completed';
 
 export type MediaReportType = 'before' | 'after' | 'incident';
 
+export interface Company {
+  id: string;
+  name: string;
+  displayName: string;
+  slug: string;
+  legalName?: string | null;
+  taxId?: string | null;
+  timezone?: string | null;
+  planCode: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Profile {
+  id: string;
+  companyId: string;
+  role: UserRole;
+  fullName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  avatarUrl?: string | null;
+  metadata?: Record<string, unknown>;
+  invitedBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AppUser {
+  id: string;
+  email: string | null;
+  role: UserRole;
+  companyId: string;
+  name?: string | null;
+  fullName?: string | null;
+}
+
+export interface Department {
+  id: string;
+  companyId: string;
+  name: string;
+  accessCode?: string | null;
+  address?: string | null;
+  status: TaskStatus;
+  assignedTo?: string | null;
+  lastCleanedAt?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmployeeProfile {
+  id: string;
+  companyId: string;
+  name: string;
+  fullName?: string | null;
+  email?: string | null;
+  role: UserRole;
+  phone?: string | null;
+  avatarUrl?: string | null;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CleaningTask {
+  id: string;
+  companyId: string;
+  departmentId: string;
+  employeeId?: string | null;
+  assignedBy?: string | null;
+  status: TaskStatus;
+  assignedAt: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface MediaReport {
   id: string;
+  companyId: string;
   departmentId: string;
-  employeeProfileId: string; 
-  uploadedByAuthUid: string; 
-  storagePath: string; 
-  downloadURL: string;
-  fileName: string;
-  contentType: string; 
+  employeeId?: string | null;
+  uploadedBy: string;
+  storagePath: string;
+  downloadUrl?: string | null;
+  fileName?: string | null;
+  contentType?: string | null;
   reportType: MediaReportType;
-  description?: string;
-  uploadedAt: Date; 
+  description?: string | null;
+  uploadedAt: string;
+  metadata?: Record<string, unknown>;
 }
+
+export type Employee = EmployeeProfile;

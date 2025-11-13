@@ -71,8 +71,8 @@ export function DepartmentCard({ department, onEdit, employees }: DepartmentCard
     <>
       <Card className="flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-200">
         <CardHeader>
-          <div className="flex items-start justify-between">
-            <CardTitle className="font-headline text-xl flex items-center">
+          <div className="">
+            <CardTitle className="font-headline text-xl mb-2 items-center">
               <Building2 className="mr-2 h-6 w-6 text-primary" />
               {department.name}
             </CardTitle>

@@ -7,13 +7,9 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   // `...props` will contain other attributes.
   ({ className, type, value, ...props }, ref) => {
     if (type === "file") {
-      // For file inputs, we should not pass the 'value' prop to the native <input> element.
-      // The browser handles the value of file inputs, and form libraries like React Hook Form
-      // get the selected file(s) via the 'onChange' event.
-      // We explicitly exclude 'value' from being passed down.
-      // The `value` variable destructured from the component's signature is effectively ignored here.
-      // We also need to ensure that if `value` is present in the `...props` spread, it's also not passed.
-      const { value: _, ...restWithoutValueFromProps } = props;
+      // For file inputs, remove any value prop before passing it to the native element.
+      const { value: _ignored, ...restWithoutValue } =
+        props as React.ComponentProps<"input">;
 
       return (
         <input
@@ -23,22 +19,32 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
             className
           )}
           ref={ref}
-          {...restWithoutValueFromProps} // Pass all other props, ensuring 'value' from a spread is excluded.
+          {...restWithoutValue}
         />
       );
     }
 
-    // For all other input types:
+    const coercedValue =
+      value === undefined
+        ? undefined
+        : value === null
+        ? ""
+        : typeof value === "string"
+        ? value
+        : Array.isArray(value)
+        ? value.join(", ")
+        : String(value);
+
     return (
       <input
         type={type}
-        value={value ?? ''} // Ensure the input is controlled and has at least an empty string value.
+        {...(coercedValue !== undefined ? { value: coercedValue } : {})}
         className={cn(
           "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
           className
         )}
         ref={ref}
-        {...props} // Pass all props, including 'value' which is now guaranteed to be a string.
+        {...props}
       />
     );
   }

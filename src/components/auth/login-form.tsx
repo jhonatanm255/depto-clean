@@ -11,8 +11,7 @@ import { Building, TriangleAlert, KeyRound } from 'lucide-react';
 // import { toast } from '@/hooks/use-toast'; // Errors handled in AuthContext
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
-const ADMIN_EMAIL_CHECK = "admin@cleansweep.com"; // For display in alert
+import Link from 'next/link';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -46,17 +45,15 @@ export function LoginForm() {
       <CardContent>
         <Alert variant="destructive" className="mb-6 bg-red-50 border-red-300 text-red-800">
             <TriangleAlert className="h-5 w-5 text-red-600" />
-            <AlertTitle className="font-bold text-red-900">¡ACCIÓN REQUERIDA PARA ADMIN!</AlertTitle>
+            <AlertTitle className="font-bold text-red-900">Importante para administradores</AlertTitle>
             <AlertDescription className="text-red-700 text-xs space-y-1">
-              <p><strong>Para acceder como Administrador:</strong><br />
-              Asegúrate de que el usuario <code className="font-mono text-xs p-0.5 bg-red-100 rounded">{ADMIN_EMAIL_CHECK}</code> con la contraseña (por ejemplo: <code className="font-mono text-xs p-0.5 bg-red-100 rounded">admin123</code>)
-              <strong className="text-red-900"> EXISTA en tu panel de Firebase Authentication y esté HABILITADO.</strong>
-              <br />
-              Ve a tu consola de Firebase -> Authentication -> Users y crea este usuario si no está allí, o restablece su contraseña.
-              <strong className="text-red-900"> La aplicación NO creará este usuario administrador por ti.</strong>
+              <p>
+                Inicia sesión con el correo y contraseña configurados en Supabase Auth para tu empresa.
+                Si eres propietario y aún no tienes cuenta, crea la empresa y tu usuario desde el panel de administración (o solicita a un propietario existente que te invite).
               </p>
-              <p className="mt-2"><strong>Empleadas:</strong><br />
-              Usa el email y contraseña que el administrador te asignó al crear tu perfil desde el panel de esta aplicación.
+              <p className="mt-2">
+                <strong>Empleadas:</strong><br />
+                Usa el email y contraseña que tu administrador registró para ti. Si no recuerdas la contraseña, pídele que te envíe una invitación nueva o que la restablezca.
               </p>
             </AlertDescription>
         </Alert>
@@ -92,6 +89,12 @@ export function LoginForm() {
           </Button>
         </form>
       </CardContent>
+      <CardFooter className="flex justify-center text-sm text-muted-foreground">
+        ¿Aún no tienes cuenta?{" "}
+        <Link href="/register" className="ml-1 text-primary underline">
+          Regístrate aquí
+        </Link>
+      </CardFooter>
     </Card>
   );
 }

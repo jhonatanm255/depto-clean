@@ -50,7 +50,7 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
   });
 
   const onSubmit: SubmitHandler<MediaReportFormData> = async (data) => {
-    if (!currentUser?.employeeProfileId || !data.file || data.file.length === 0) {
+    if (!currentUser || !data.file || data.file.length === 0) {
       form.setError("file", { type: "manual", message: "Error de usuario o archivo." });
       return;
     }
@@ -61,7 +61,7 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
     try {
       await addMediaReport(
         departmentId,
-        currentUser.employeeProfileId,
+        currentUser.role === 'employee' ? currentUser.id : null,
         fileToUpload,
         data.reportType as MediaReportType,
         data.description

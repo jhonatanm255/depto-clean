@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
+import { useData } from '@/contexts/data-context';
 import { 
   Sidebar, 
   SidebarMenu, 
@@ -24,26 +25,28 @@ import {
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile'; 
 import Image from 'next/image';
+import type { UserRole } from '@/lib/types';
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
-  roles: ('admin' | 'employee')[];
+  roles: UserRole[];
 }
 
 const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, roles: ['admin', 'employee'] },
-  { href: '/admin/departments', label: 'Departamentos', icon: Building2, roles: ['admin'] },
-  { href: '/admin/employees', label: 'Gestionar Empleados', icon: Users, roles: ['admin'] },
-  { href: '/admin/assignments', label: 'Asignar Tareas', icon: ClipboardEdit, roles: ['admin'] },
-  { href: '/employee/tasks', label: 'Mis Tareas', icon: Briefcase, roles: ['employee'] },
-  { href: '/employee/tasks?tab=completed_history', label: 'Historial Tareas', icon: History, roles: ['employee'] },
+  { href: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, roles: ['owner', 'admin', 'manager', 'employee'] },
+  { href: '/admin/departments', label: 'Departamentos', icon: Building2, roles: ['owner', 'admin', 'manager'] },
+  { href: '/admin/employees', label: 'Gestionar Empleados', icon: Users, roles: ['owner', 'admin'] },
+  { href: '/admin/assignments', label: 'Asignar Tareas', icon: ClipboardEdit, roles: ['owner', 'admin', 'manager'] },
+  { href: '/employee/tasks', label: 'Mis Tareas', icon: Briefcase, roles: ['employee', 'manager'] },
+  { href: '/employee/tasks?tab=completed_history', label: 'Historial Tareas', icon: History, roles: ['employee', 'manager'] },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { currentUser, logout } = useAuth();
+  const { company } = useData();
   const isMobile = useIsMobile(); 
 
   
@@ -56,7 +59,9 @@ export function AppSidebar() {
       <SidebarHeader className="p-4 flex items-center justify-between">
         <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
            <Image src="/logo.png" alt="CleanSweep Logo" width={32} height={32} className="h-8 w-8 object-contain" data-ai-hint="company logo"/>
-          <span className="font-headline text-lg font-semibold text-primary">CleanSweep</span>
+          <span className="font-headline text-lg font-semibold text-primary">
+            {company?.displayName ?? 'CleanSweep'}
+          </span>
         </Link>
         <Link href="/dashboard" className="hidden items-center gap-2 group-data-[collapsible=icon]:flex">
            <Image src="/logo.png" alt="CleanSweep Logo" width={28} height={28} className="h-7 w-7 object-contain" data-ai-hint="company logo"/>

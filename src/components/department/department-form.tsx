@@ -33,14 +33,14 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
   const form = useForm<DepartmentFormData>({
     resolver: zodResolver(departmentSchema),
     defaultValues: department 
-      ? { name: department.name, accessCode: department.accessCode, address: department.address || '' } 
+      ? { name: department.name, accessCode: department.accessCode ?? '', address: department.address ?? '' } 
       : { name: '', accessCode: '', address: '' },
   });
 
   React.useEffect(() => {
     if (isOpen) { 
       if (department) {
-        form.reset({ name: department.name, accessCode: department.accessCode, address: department.address || '' });
+        form.reset({ name: department.name, accessCode: department.accessCode ?? '', address: department.address ?? '' });
       } else {
         form.reset({ name: '', accessCode: '', address: '' });
       }
@@ -51,13 +51,17 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
     try {
       if (department) {
         await updateDepartment({ 
-            ...department, 
-            ...data,
-            address: data.address || undefined, 
-            lastCleanedAt: department.lastCleanedAt ? new Date(department.lastCleanedAt) : undefined,
+          ...department, 
+          name: data.name,
+          accessCode: data.accessCode,
+          address: data.address?.trim() ? data.address : null,
         });
       } else {
-        await addDepartment(data);
+        await addDepartment({
+          name: data.name,
+          accessCode: data.accessCode,
+          address: data.address?.trim() ? data.address : null,
+        });
       }
       onClose(); 
     } catch (error) {

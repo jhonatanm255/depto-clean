@@ -12,21 +12,22 @@ import {
   History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { UserRole } from '@/lib/types';
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
-  roles: ('admin' | 'employee')[];
+  roles: UserRole[];
 }
 
 const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Panel', icon: LayoutDashboard, roles: ['admin', 'employee'] },
-  { href: '/admin/departments', label: 'Deptos', icon: Building2, roles: ['admin'] },
-  { href: '/admin/employees', label: 'Empleadas', icon: Users, roles: ['admin'] },
-  { href: '/admin/assignments', label: 'Asignar', icon: ClipboardEdit, roles: ['admin'] },
-  { href: '/employee/tasks', label: 'Tareas', icon: Briefcase, roles: ['employee'] },
-  { href: '/employee/tasks?tab=completed_history', label: 'Historial', icon: History, roles: ['employee'] },
+  { href: '/dashboard', label: 'Panel', icon: LayoutDashboard, roles: ['owner', 'admin', 'manager', 'employee'] },
+  { href: '/admin/departments', label: 'Deptos', icon: Building2, roles: ['owner', 'admin', 'manager'] },
+  { href: '/admin/employees', label: 'Empleadas', icon: Users, roles: ['owner', 'admin'] },
+  { href: '/admin/assignments', label: 'Asignar', icon: ClipboardEdit, roles: ['owner', 'admin', 'manager'] },
+  { href: '/employee/tasks', label: 'Tareas', icon: Briefcase, roles: ['employee', 'manager'] },
+  { href: '/employee/tasks?tab=completed_history', label: 'Historial', icon: History, roles: ['employee', 'manager'] },
 ];
 
 export function BottomNavigationBar() {

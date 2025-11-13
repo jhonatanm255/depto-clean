@@ -18,7 +18,7 @@ import { EmployeeNextTaskCard } from '@/components/dashboard/employee/EmployeeNe
 
 
 function AdminDashboard() {
-  const { departments, employees, tasks, dataLoading, getEmployeeProfileById } = useData(); 
+  const { company, departments, employees, tasks, dataLoading, getEmployeeProfileById } = useData(); 
 
   const initialDataLoaded = !dataLoading && departments.length > 0 && employees.length > 0 && tasks.length > 0;
 
@@ -64,7 +64,14 @@ function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold font-headline text-foreground">Panel de Administrador</h2>
+      <div>
+        <h2 className="text-3xl font-bold font-headline text-foreground">
+          Panel de {company?.displayName ?? 'tu empresa'}
+        </h2>
+        <p className="text-muted-foreground">
+          Gestiona departamentos, personal y tareas de limpieza.
+        </p>
+      </div>
       
       <AdminStatsGrid
         pendingCount={pendingCount}
@@ -105,12 +112,12 @@ function AdminDashboard() {
 }
 
 function EmployeeDashboard({user}: {user: AppUser}) { 
-  const { getTasksForEmployee, getDepartmentById, dataLoading, departments } = useData(); 
+  const { company, getTasksForEmployee, getDepartmentById, dataLoading, departments } = useData(); 
 
   const allUserTasks = useMemo(() => {
-    if (!user.employeeProfileId) return [];
-    return getTasksForEmployee(user.employeeProfileId);
-  }, [user.employeeProfileId, getTasksForEmployee]);
+    if (user.role !== 'employee' && user.role !== 'manager') return [];
+    return getTasksForEmployee(user.id);
+  }, [user.id, user.role, getTasksForEmployee]);
   
   const pendingTasks = useMemo(() => {
     return allUserTasks.filter(t => t.status === 'pending' || t.status === 'in_progress');
@@ -136,10 +143,10 @@ function EmployeeDashboard({user}: {user: AppUser}) {
     return undefined;
   }, [pendingTasks, getDepartmentById]);
   
-  const initialDataLoaded = !dataLoading && departments.length > 0 && allUserTasks.length > 0;
+  const initialDataLoaded = !dataLoading;
 
 
-  if (dataLoading && allUserTasks.length === 0 && !user.employeeProfileId) {
+  if (dataLoading && allUserTasks.length === 0) {
      return (
       <div className="flex flex-col items-center justify-center p-8 min-h-[calc(100vh-200px)]">
         <LoadingSpinner size={32} />
@@ -150,8 +157,10 @@ function EmployeeDashboard({user}: {user: AppUser}) {
   
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold font-headline text-foreground">¡Bienvenida, {user?.name}!</h2>
-      <p className="text-muted-foreground">Aquí están tus tareas para hoy y tu historial.</p>
+      <h2 className="text-3xl font-bold font-headline text-foreground">
+        ¡Bienvenida, {company?.displayName ?? 'tu empresa'}!
+      </h2>
+      <p className="text-muted-foreground">Aquí están las tareas asignadas a tu equipo.</p>
       
       <EmployeeStatsGrid
         activeTasksCount={pendingTasks.length}
@@ -164,7 +173,7 @@ function EmployeeDashboard({user}: {user: AppUser}) {
       <EmployeeNextTaskCard 
         nextTask={nextTaskWithDepartment}
         dataLoading={dataLoading}
-        initialTasksLoaded={!dataLoading && (pendingTasks.length > 0 || allUserTasks.length > 0) && !!user.employeeProfileId}
+        initialTasksLoaded={!dataLoading && (pendingTasks.length > 0 || allUserTasks.length > 0)}
       />
     </div>
   );
@@ -181,12 +190,10 @@ export default function DashboardPage() {
     if (!currentUser) return appDataLoading; // If no user, only app data matters for redirect/login form
     
     // For logged-in user, check if their specific essential data is still loading
-    if (currentUser.role === 'admin') {
+    if (currentUser.role === 'admin' || currentUser.role === 'owner' || currentUser.role === 'manager') {
       return appDataLoading && (departments.length === 0 || employees.length === 0 || tasks.length === 0);
     } else if (currentUser.role === 'employee') {
-      // For employee, tasks and departments are key.
-      // We also need to ensure employeeProfileId is present to fetch tasks.
-      return appDataLoading && (!currentUser.employeeProfileId || departments.length === 0 );
+      return appDataLoading && (departments.length === 0 && tasks.length === 0);
     }
     return appDataLoading; // Fallback
   }, [authLoading, currentUser, appDataLoading, departments, employees, tasks]);

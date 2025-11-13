@@ -34,14 +34,14 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
   const form = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeSchema),
     defaultValues: employee 
-      ? { name: employee.name, email: employee.email, password: '' } 
+      ? { name: employee.name, email: employee.email ?? '', password: '' } 
       : { name: '', email: '', password: '' },
   });
 
   React.useEffect(() => {
     if (isOpen) {
         form.reset(employee 
-          ? { name: employee.name, email: employee.email, password: '' } 
+          ? { name: employee.name, email: employee.email ?? '', password: '' } 
           : { name: '', email: '', password: '' }
         );
     }
@@ -76,9 +76,9 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
           <DialogTitle>{employee ? 'Editar Perfil de Empleada (Básico)' : 'Agregar Nueva Empleada'}</DialogTitle>
           {!employee && (
             <DialogDescription className="text-xs pt-1">
-              Al crear una empleada, se generará una cuenta en Firebase Authentication.
-              <br/><strong>Importante:</strong> Comunicar la contraseña inicial a la empleada, ya que <strong>no se podrá ver después</strong> por motivos de seguridad.
-              <br/>Crear una empleada te desconectará temporalmente. Deberás volver a iniciar sesión como administrador.
+              Se creará un usuario en Supabase Auth vinculado a tu empresa.
+              <br/><strong>Importante:</strong> Comunica la contraseña inicial a la empleada, ya que <strong>no podrás verla nuevamente</strong> por motivos de seguridad.
+              <br/>Puedes volver a generar invitaciones o restablecer contraseñas desde el panel de Supabase cuando esté habilitado en la aplicación.
             </DialogDescription>
           )}
         </DialogHeader>

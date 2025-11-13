@@ -70,16 +70,11 @@ export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeC
         <CardDescription className="flex items-center pt-1 text-xs text-muted-foreground">
           ID Perfil: {employee.id}
         </CardDescription>
-         {employee.authUid && (
-          <CardDescription className="flex items-center pt-1 text-xs text-muted-foreground">
-            ID Auth: {employee.authUid}
-          </CardDescription>
-        )}
       </CardHeader>
       <CardContent className="flex-grow space-y-2">
         <div className="flex items-center text-sm text-muted-foreground">
           <Mail className="mr-2 h-4 w-4" />
-          {employee.email}
+          {employee.email ?? 'Sin correo'}
         </div>
         {assignedTasksDetails.length > 0 && (
           <div className="mt-4 pt-3 border-t">

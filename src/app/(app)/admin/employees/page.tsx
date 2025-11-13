@@ -30,7 +30,7 @@ export default function EmployeesPage() {
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => 
       emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      emp.email.toLowerCase().includes(searchTerm.toLowerCase())
+      (emp.email?.toLowerCase() ?? '').includes(searchTerm.toLowerCase())
     ).sort((a,b) => a.name.localeCompare(b.name));
   }, [employees, searchTerm]);
 
@@ -55,25 +55,21 @@ export default function EmployeesPage() {
             <PlusCircle className="mr-2 h-5 w-5" /> Agregar Nueva Empleada
           </Button>
         </div>
-         <Alert className="mt-4 text-sm bg-yellow-50 border-yellow-300 text-yellow-800">
-            <ShieldAlert className="h-5 w-5 text-yellow-600" />
-            <AlertTitle className="font-semibold">¡Importante Sobre Cuentas y Contraseñas de Empleadas!</AlertTitle>
-            <AlertDescription className="space-y-1">
-              <p>
-                Al agregar una nueva empleada, se creará una cuenta de usuario en Firebase Authentication con el <strong>email y contraseña que especifiques</strong>.
-                La empleada podrá usar estas credenciales para iniciar sesión en la aplicación.
-              </p>
-              <p>
-                <strong>Comunicación de la Contraseña:</strong> Como administrador, eres responsable de <strong>comunicar de forma segura la contraseña inicial</strong> a la empleada. Esta contraseña <strong>no se almacena para ser vista posteriormente</strong> por motivos de seguridad.
-              </p>
-              <p>
-                <strong>Impacto en tu Sesión:</strong> Después de crear una cuenta de empleada, como administrador, <strong>deberás volver a iniciar sesión</strong> en tu propia cuenta. Esto se debe a que Firebase Authentication inicia sesión automáticamente con la nueva cuenta creada.
-              </p>
-               <p>
-                La edición de perfiles de empleadas (incluyendo el reseteo de contraseñas por parte del admin) es una funcionalidad planificada para el futuro.
-              </p>
-            </AlertDescription>
-          </Alert>
+        <Alert className="mt-4 text-sm bg-yellow-50 border-yellow-300 text-yellow-800">
+          <ShieldAlert className="h-5 w-5 text-yellow-600" />
+          <AlertTitle className="font-semibold">Gestión de cuentas en Supabase</AlertTitle>
+          <AlertDescription className="space-y-1">
+            <p>
+              Al agregar una empleada, se crea un usuario en Supabase Auth con el <strong>correo y contraseña</strong> que indiques. La persona recibirá un correo de activación si tu proyecto lo requiere.
+            </p>
+            <p>
+              <strong>Contraseña inicial:</strong> Comunícala de forma segura; no podrás verla nuevamente después de crear la cuenta.
+            </p>
+            <p>
+              La edición avanzada (roles adicionales, restablecer contraseñas, desactivar usuarios) se habilitará en próximas versiones. Mientras tanto, puedes administrar detalles sensibles desde la consola de Supabase.
+            </p>
+          </AlertDescription>
+        </Alert>
       </header>
 
       <div className="mb-6 p-4 border rounded-lg bg-card shadow">

@@ -17,9 +17,9 @@ interface MediaReportsDialogProps {
   departmentName: string;
 }
 
-const getFileIcon = (contentType: string) => {
-  if (contentType.startsWith('image/')) return <ImageIcon className="h-5 w-5 text-blue-500" />;
-  if (contentType.startsWith('video/')) return <VideoIcon className="h-5 w-5 text-purple-500" />;
+const getFileIcon = (contentType?: string | null) => {
+  if (contentType && contentType.startsWith('image/')) return <ImageIcon className="h-5 w-5 text-blue-500" />;
+  if (contentType && contentType.startsWith('video/')) return <VideoIcon className="h-5 w-5 text-purple-500" />;
   return <FileText className="h-5 w-5 text-gray-500" />;
 };
 
@@ -83,21 +83,30 @@ export function MediaReportsDialog({ isOpen, onClose, departmentId, departmentNa
           ) : (
             <ul className="space-y-3">
               {reports.map((report) => {
-                const employee = report.employeeProfileId ? getEmployeeProfileById(report.employeeProfileId) : null;
+                const employee = report.employeeId ? getEmployeeProfileById(report.employeeId) : null;
+                const fileName = report.fileName ?? 'Archivo sin nombre';
+                const downloadUrl = report.downloadUrl ?? undefined;
+                const contentType = report.contentType ?? 'application/octet-stream';
                 return (
                   <li key={report.id} className="p-3 border rounded-md bg-card hover:shadow-sm">
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
-                        {getFileIcon(report.contentType)}
-                        <a 
-                          href={report.downloadURL} 
+                        {getFileIcon(contentType)}
+                        {downloadUrl ? (
+                          <a 
+                          href={downloadUrl} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="font-medium text-primary hover:underline truncate"
-                          title={report.fileName}
+                          title={fileName}
                         >
-                          {report.fileName.length > 30 ? `${report.fileName.substring(0,27)}...` : report.fileName}
+                          {fileName.length > 30 ? `${fileName.substring(0,27)}...` : fileName}
                         </a>
+                        ) : (
+                          <span className="font-medium text-muted-foreground truncate" title={fileName}>
+                            {fileName}
+                          </span>
+                        )}
                       </div>
                       <Badge variant={report.reportType === 'incident' ? 'destructive' : 'secondary'}>
                         {translateReportType(report.reportType)}
@@ -108,14 +117,16 @@ export function MediaReportsDialog({ isOpen, onClose, departmentId, departmentNa
                       <span className="flex items-center"><User className="mr-1 h-3 w-3" /> Subido por: {employee?.name || 'Desconocido'}</span>
                       <span className="flex items-center"><CalendarDays className="mr-1 h-3 w-3" /> Fecha: {new Date(report.uploadedAt).toLocaleDateString('es-CL')} {new Date(report.uploadedAt).toLocaleTimeString('es-CL')}</span>
                     </div>
-                     <a 
-                        href={report.downloadURL} 
+                    {downloadUrl && (
+                      <a 
+                        href={downloadUrl} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="text-xs text-primary hover:underline flex items-center mt-1"
                       >
                         <ExternalLink className="mr-1 h-3 w-3" /> Ver archivo
                       </a>
+                    )}
                   </li>
                 );
               })}

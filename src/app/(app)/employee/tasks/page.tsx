@@ -21,8 +21,9 @@ export default function EmployeeTasksPage() {
 
 
   const tasks = useMemo(() => {
-    if (!currentUser || !currentUser.employeeProfileId) return [];
-    return getTasksForEmployee(currentUser.employeeProfileId)
+    if (!currentUser) return [];
+    if (currentUser.role !== 'employee' && currentUser.role !== 'manager') return [];
+    return getTasksForEmployee(currentUser.id);
   }, [currentUser, getTasksForEmployee]); 
   
   const pendingTasks = useMemo(() => {
@@ -63,11 +64,11 @@ export default function EmployeeTasksPage() {
         </div>
      );
   }
-  if (!currentUser.employeeProfileId) {
+  if (currentUser.role !== 'employee' && currentUser.role !== 'manager') {
      return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
              <Info className="h-10 w-10 text-destructive mb-2" />
-            <p className="text-center text-muted-foreground text-lg">No se pudo identificar tu perfil de empleada.</p>
+            <p className="text-center text-muted-foreground text-lg">Tu rol actual no tiene tareas asignables.</p>
             <p className="text-sm text-muted-foreground">Por favor, contacta al administrador.</p>
         </div>
      );
