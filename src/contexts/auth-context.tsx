@@ -4,7 +4,7 @@ import type { AppUser, UserRole } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
-import React, { createContext, useContext, useEffect, useMemo, useCallback, useState }from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useCallback, useState, useRef }from 'react';
 import { toast } from '@/hooks/use-toast';
 import type { User } from '@supabase/supabase-js';
 
@@ -29,6 +29,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const currentUserRef = useRef<AppUser | null>(null);
+  const hasValidSessionRef = useRef<boolean>(false); // Track si hay sesión válida en Supabase
+  
+  // Mantener ref sincronizado con state
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
 
   const hydrateUser = useCallback(async (user: User | null): Promise<boolean> => {
     if (!user) {
@@ -37,64 +44,167 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      console.log('[AuthContext] Intentando cargar perfil para usuario:', user.id);
+      console.log('[AuthContext] Cargando perfil para usuario:', user.id);
       const startTime = Date.now();
       
-      // Realizar la consulta con timeout usando Promise.race
+      // Estrategia 1: Intentar consulta directa primero (más rápida si funciona)
+      console.log('[AuthContext] Intentando consulta directa a profiles...');
+      
       const profileQuery = supabase
         .from('profiles')
         .select('company_id, role, full_name, email')
         .eq('id', user.id)
         .maybeSingle<ProfileRow>();
       
-      // Crear una promesa de timeout que rechaza después de 5 segundos
-      const timeoutPromise = new Promise<{ data: null; error: { message: string; code: string } }>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('TIMEOUT: La consulta tardó más de 5 segundos'));
+      // Timeout de 5 segundos para la consulta directa
+      let timeoutId: NodeJS.Timeout;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('TIMEOUT: La consulta directa tardó más de 5 segundos'));
         }, 5000);
       });
 
       let result;
+      let useRpcFallback = false;
+      
       try {
         result = await Promise.race([profileQuery, timeoutPromise]);
+        // Si llegamos aquí, la consulta completó antes del timeout
+        if (timeoutId) clearTimeout(timeoutId);
       } catch (raceError) {
-        if (raceError instanceof Error && raceError.message === 'TIMEOUT: La consulta tardó más de 5 segundos') {
-          console.error('[AuthContext] ⚠️ Timeout en consulta a profiles (5s)');
-          console.error('[AuthContext] Posibles causas:');
-          console.error('  - Problema de red/conectividad');
-          console.error('  - Problema con políticas RLS');
-          console.error('  - Problema con la base de datos de Supabase');
+        // Limpiar timeout si aún está activo
+        if (timeoutId) clearTimeout(timeoutId);
+        
+        if (raceError instanceof Error && raceError.message.includes('TIMEOUT')) {
+          console.warn('[AuthContext] ⚠️ Consulta directa muy lenta, intentando con función RPC...');
+          useRpcFallback = true;
+        } else {
+          // Si es otro error, intentar RPC también
+          console.warn('[AuthContext] ⚠️ Error en consulta directa, intentando con función RPC...');
+          useRpcFallback = true;
+        }
+      }
+
+      // Estrategia 2: Si la consulta directa falló o fue lenta, usar función RPC
+      if (useRpcFallback) {
+        console.log('[AuthContext] Usando función RPC get_my_profile() como alternativa...');
+        const rpcStartTime = Date.now();
+        
+        try {
+          const { data: rpcData, error: rpcError } = await supabase.rpc('get_my_profile');
+          
+          if (rpcError) {
+            console.error('[AuthContext] Error en función RPC:', rpcError);
+            // Si la función RPC no existe, intentar con la consulta directa de nuevo
+            if (rpcError.message?.includes('function') || rpcError.code === '42883') {
+              console.warn('[AuthContext] Función RPC no existe, usando consulta directa con timeout más largo...');
+              const { data: directData, error: directError } = await supabase
+                .from('profiles')
+                .select('company_id, role, full_name, email')
+                .eq('id', user.id)
+                .maybeSingle<ProfileRow>();
+              
+              if (directError) {
+                throw directError;
+              }
+              
+              result = { data: directData, error: null };
+            } else {
+              throw rpcError;
+            }
+          } else if (rpcData) {
+            // La función RPC retorna un JSON, necesitamos convertirlo
+            const profile = rpcData as unknown as ProfileRow;
+            if (profile && profile.company_id) {
+              result = { data: profile, error: null };
+              const rpcElapsed = Date.now() - rpcStartTime;
+              console.log(`[AuthContext] ✓ Función RPC completada en ${rpcElapsed}ms`);
+            } else {
+              // El perfil no existe
+              result = { data: null, error: { code: 'PGRST116', message: 'No rows returned' } };
+            }
+          } else {
+            // No hay datos, el perfil no existe
+            result = { data: null, error: { code: 'PGRST116', message: 'No rows returned' } };
+          }
+        } catch (rpcError) {
+          console.error('[AuthContext] Error en función RPC:', rpcError);
+          // Si RPC también falla, mostrar error detallado
+          const elapsed = Date.now() - startTime;
+          console.error(`[AuthContext] ⚠️ TIMEOUT CRÍTICO: Todas las consultas fallaron después de ${elapsed}ms`);
+          console.error(`[AuthContext] Usuario ID: ${user.id}`);
+          console.error(`[AuthContext] Email: ${user.email || 'N/A'}`);
+          console.error('[AuthContext] ═══════════════════════════════════════════════════════');
+          console.error('[AuthContext] PROBLEMA SERIO: No se pudo cargar el perfil');
+          console.error('[AuthContext] ═══════════════════════════════════════════════════════');
+          console.error('[AuthContext] POSIBLES CAUSAS:');
+          console.error('  1. ⚠️ Tu perfil NO existe en la tabla profiles');
+          console.error('  2. ⚠️ Políticas RLS bloqueando la consulta (muy lentas)');
+          console.error('  3. ⚠️ La función RPC get_my_profile() no existe o tiene errores');
+          console.error('  4. ⚠️ Supabase muy lento o caído');
+          console.error('  5. ⚠️ Problema de conectividad de red');
+          console.error('[AuthContext] ═══════════════════════════════════════════════════════');
+          console.error('[AuthContext] SOLUCIÓN INMEDIATA:');
+          console.error('[AuthContext] 1. Ve a Supabase Dashboard → SQL Editor');
+          console.error('[AuthContext] 2. Ejecuta: SELECT * FROM profiles WHERE id = \'' + user.id + '\';');
+          console.error('[AuthContext] 3. Si NO hay resultado, tu perfil NO existe. Crea uno manualmente.');
+          console.error('[AuthContext] 4. Si hay resultado pero es lento, ejecuta el script SOLUCION_LOGIN_TIMEOUT.sql');
+          console.error('[AuthContext] 5. Verifica que la función get_my_profile() existe: SELECT * FROM pg_proc WHERE proname = \'get_my_profile\';');
+          console.error('[AuthContext] ═══════════════════════════════════════════════════════');
+          
+          toast({
+            variant: "destructive",
+            title: "Error crítico: No se pudo cargar tu perfil",
+            description: `No se pudo cargar tu perfil después de múltiples intentos. Ve a Supabase Dashboard y ejecuta: SELECT * FROM profiles WHERE id = '${user.id}'; Si no hay resultado, tu perfil no existe y debes crearlo manualmente. Revisa SOLUCION_LOGIN_TIMEOUT.sql para más ayuda.`,
+          });
           setCurrentUser(null);
           return false;
         }
-        throw raceError;
       }
 
       const { data, error } = result;
       const elapsed = Date.now() - startTime;
-      console.log(`[AuthContext] Consulta completada en ${elapsed}ms`);
+      
+      if (elapsed > 3000) {
+        console.warn(`[AuthContext] ⚠️ Consulta lenta: ${elapsed}ms`);
+      } else {
+        console.log(`[AuthContext] Consulta completada en ${elapsed}ms`);
+      }
 
       if (error) {
         console.error('[AuthContext] Error obteniendo perfil:', error);
+        
         // PGRST116 es "no rows returned", que es esperado si no hay perfil aún
-        if (error.code !== 'PGRST116') {
-          toast({
-            variant: "destructive",
-            title: "Error de perfil",
-            description: "No se pudo cargar tu información. Intenta iniciar sesión nuevamente.",
-          });
+        if (error.code === 'PGRST116') {
+          console.warn('[AuthContext] Usuario sin perfil en la tabla profiles');
+          setCurrentUser(null);
+          return false;
         }
+        
+        // Otros errores
+        console.error('[AuthContext] Detalles del error:', {
+          code: error.code,
+          message: error.message,
+        });
+        
+        toast({
+          variant: "destructive",
+          title: "Error al cargar perfil",
+          description: "No se pudo cargar tu información. Intenta iniciar sesión nuevamente.",
+        });
         setCurrentUser(null);
         return false;
       }
 
       if (!data || !data.company_id) {
         console.warn('[AuthContext] Perfil sin company_id para usuario:', user.id);
-        setCurrentUser(null);
+        console.warn('[AuthContext] ⚠️ IMPORTANTE: La sesión de Supabase sigue válida, solo el perfil tiene problemas');
+        // NO establecer currentUser a null aquí - la sesión sigue activa
+        // Esto permite que el usuario siga autenticado aunque el perfil tenga problemas
         return false;
       }
 
-      console.log('[AuthContext] ✓ Perfil cargado exitosamente:', {
+      console.log('[AuthContext] ✓ Perfil cargado:', {
         userId: user.id,
         companyId: data.company_id,
         role: data.role,
@@ -119,152 +229,286 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    let timeoutId: NodeJS.Timeout | null = null;
+    let isInitializing = true;
 
-    const initSession = async () => {
-      setLoading(true);
-      console.log('[AuthContext] Iniciando carga de sesión...');
-      
-      // Timeout de seguridad: si después de 8 segundos no se ha resuelto, forzar loading = false
-      timeoutId = setTimeout(() => {
-        if (mounted) {
-          console.warn('[AuthContext] ⚠️ Timeout en carga inicial de sesión (8s). Forzando loading = false');
-          setLoading(false);
-        }
-      }, 8000);
+    // Función simple para cargar sesión
+    const loadSession = async () => {
+      if (!mounted) return;
 
       try {
-        const sessionStartTime = Date.now();
-        const { data: sessionData, error } = await supabase.auth.getSession();
-        const sessionElapsed = Date.now() - sessionStartTime;
-        console.log(`[AuthContext] getSession completado en ${sessionElapsed}ms`);
+        setLoading(true);
+        const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('[AuthContext] Error obteniendo sesión inicial:', error);
+          console.error('[AuthContext] Error obteniendo sesión:', error);
           if (mounted) {
+            setCurrentUser(null);
             setLoading(false);
           }
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
-          return;
-        }
-        
-        if (!mounted) {
-          if (timeoutId) clearTimeout(timeoutId);
           return;
         }
 
-        if (sessionData?.session?.user) {
-          console.log('[AuthContext] Sesión encontrada, hidratando usuario...');
-          const hydrateStartTime = Date.now();
-          await hydrateUser(sessionData.session.user);
-          const hydrateElapsed = Date.now() - hydrateStartTime;
-          console.log(`[AuthContext] hydrateUser completado en ${hydrateElapsed}ms`);
+        if (session?.user) {
+          hasValidSessionRef.current = true;
+          console.log('[AuthContext] Sesión encontrada, cargando perfil...');
+          
+          const success = await hydrateUser(session.user);
+          
+          if (!success && mounted) {
+            // Si falla el perfil pero hay sesión, crear usuario mínimo
+            setCurrentUser({
+              id: session.user.id,
+              email: session.user.email,
+              role: 'employee' as UserRole,
+              companyId: '',
+              name: session.user.email || 'Usuario',
+            });
+          }
         } else {
-          console.log('[AuthContext] No hay sesión activa');
-          setCurrentUser(null);
+          hasValidSessionRef.current = false;
+          if (mounted) {
+            setCurrentUser(null);
+          }
         }
       } catch (err) {
-        console.error('[AuthContext] Error inesperado en initSession:', err);
-      } finally {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
+        console.error('[AuthContext] Error cargando sesión:', err);
         if (mounted) {
-          console.log('[AuthContext] Finalizando carga de sesión, estableciendo loading = false');
+          setCurrentUser(null);
+        }
+      } finally {
+        if (mounted) {
           setLoading(false);
+          isInitializing = false;
         }
       }
     };
 
-    initSession();
+    // Cargar sesión inicial
+    loadSession();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // No actualizar loading durante cambios de autenticación para evitar bloqueos
-      // Solo hidratar el usuario silenciosamente
-      if (mounted) {
-        try {
-          await hydrateUser(session?.user ?? null);
-        } catch (err) {
-          console.error('Error en onAuthStateChange:', err);
+    // Listener para cambios de autenticación
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+
+      console.log(`[AuthContext] Auth state: ${event}`, session ? 'con sesión' : 'sin sesión');
+
+      if (event === 'SIGNED_OUT') {
+        hasValidSessionRef.current = false;
+        setCurrentUser(null);
+        setLoading(false);
+        return;
+      }
+
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (session?.user) {
+          hasValidSessionRef.current = true;
+          // Solo hidratar si no hay usuario actual
+          if (!currentUserRef.current) {
+            const success = await hydrateUser(session.user);
+            if (!success && mounted) {
+              setCurrentUser({
+                id: session.user.id,
+                email: session.user.email,
+                role: 'employee' as UserRole,
+                companyId: '',
+                name: session.user.email || 'Usuario',
+              });
+            }
+          }
+        }
+      }
+
+      // INITIAL_SESSION se maneja automáticamente por getSession
+      if (event === 'INITIAL_SESSION' && session?.user && !isInitializing) {
+        hasValidSessionRef.current = true;
+        if (!currentUserRef.current) {
+          const success = await hydrateUser(session.user);
+          if (!success && mounted) {
+            setCurrentUser({
+              id: session.user.id,
+              email: session.user.email,
+              role: 'employee' as UserRole,
+              companyId: '',
+              name: session.user.email || 'Usuario',
+            });
+          }
         }
       }
     });
 
     return () => {
       mounted = false;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      authListener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, [hydrateUser]);
 
   const login = useCallback(async (email: string, password?: string) => {
-    setLoading(true);
-    const providedEmail = email.trim().toLowerCase();
-
     if (!password) {
       toast({
         variant: "destructive",
-        title: "Error de inicio de sesión",
+        title: "Error",
         description: "Se requiere contraseña.",
       });
-      setLoading(false);
       return;
     }
 
+    setLoading(true);
+    const providedEmail = email.trim().toLowerCase();
+
+    // Timeout más largo para signInWithPassword (15 segundos) debido a problemas de red
+    let signInTimeoutId: NodeJS.Timeout;
+    const signInTimeoutPromise = new Promise<never>((_, reject) => {
+      signInTimeoutId = setTimeout(() => {
+        reject(new Error('TIMEOUT: signInWithPassword tardó más de 15 segundos'));
+      }, 15000);
+    });
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      console.log('[AuthContext] Intentando iniciar sesión para:', providedEmail);
+      const loginStartTime = Date.now();
+      
+      // Primero autenticar (con timeout corto de 5s)
+      const signInPromise = supabase.auth.signInWithPassword({
         email: providedEmail,
         password,
       });
 
+      const { data, error } = await Promise.race([signInPromise, signInTimeoutPromise]);
+
+      if (signInTimeoutId) clearTimeout(signInTimeoutId);
+
+      const signInElapsed = Date.now() - loginStartTime;
+      console.log(`[AuthContext] signInWithPassword completado en ${signInElapsed}ms`);
+
       if (error) {
-        console.error('Error de inicio de sesión:', error);
+        console.error('[AuthContext] Error de inicio de sesión:', error);
+        
+        let errorMessage = "Credenciales inválidas o error de conexión.";
+        
+        // Mensajes de error más específicos
+        if (error.message?.includes('Invalid login credentials') || error.message?.includes('Invalid credentials')) {
+          errorMessage = "Correo electrónico o contraseña incorrectos.";
+        } else if (error.message?.includes('Email not confirmed')) {
+          errorMessage = "Por favor, confirma tu correo electrónico antes de iniciar sesión.";
+        } else if (error.message?.includes('fetch') || error.message?.includes('network')) {
+          errorMessage = "Error de conexión. Verifica tu conexión a internet.";
+        }
+        
         toast({
           variant: "destructive",
           title: "Error de inicio de sesión",
-          description: error.message ?? "Credenciales inválidas o error de red.",
+          description: errorMessage,
         });
         setCurrentUser(null);
         setLoading(false);
         return;
       }
 
-      const success = await hydrateUser(data.session?.user ?? null);
-      if (success) {
+      if (!data.session?.user) {
+        console.error('[AuthContext] No se recibió usuario en la sesión');
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo iniciar sesión. Intenta nuevamente.",
+        });
+        setCurrentUser(null);
+        setLoading(false);
+        return;
+      }
+
+      // Ahora hidratar (hydrateUser tiene su propio timeout de 15s)
+      console.log('[AuthContext] Sesión iniciada, hidratando usuario...');
+      const hydrateStartTime = Date.now();
+      const success = await hydrateUser(data.session.user);
+      const hydrateElapsed = Date.now() - hydrateStartTime;
+      console.log(`[AuthContext] hydrateUser completado en ${hydrateElapsed}ms`);
+      
+      const totalElapsed = Date.now() - loginStartTime;
+      console.log(`[AuthContext] Login completo en ${totalElapsed}ms total`);
+      
+      // SIEMPRE mantener la sesión si existe, incluso si hydrateUser falla
+      if (data.session?.user) {
+        hasValidSessionRef.current = true;
+        
+        if (success) {
+          console.log('[AuthContext] Login exitoso, redirigiendo a dashboard');
+        } else {
+          // Si hydrateUser falla, crear usuario mínimo para mantener sesión
+          console.warn('[AuthContext] Perfil no cargado, pero manteniendo sesión activa');
+          setCurrentUser({
+            id: data.session.user.id,
+            email: data.session.user.email,
+            role: 'employee' as UserRole,
+            companyId: '',
+            name: data.session.user.email || 'Usuario',
+          });
+        }
+        
+        // Verificar que la sesión se guardó
+        if (typeof window !== 'undefined') {
+          setTimeout(() => {
+            const stored = localStorage.getItem('sb-auth-token');
+            console.log('[AuthContext] Sesión en localStorage:', stored ? 'SÍ ✓' : 'NO ✗');
+            if (!stored) {
+              console.error('[AuthContext] ⚠️ CRÍTICO: Sesión NO guardada. Forzando guardado...');
+              // Forzar guardado manualmente
+              const sessionStr = JSON.stringify(data.session);
+              localStorage.setItem('sb-auth-token', sessionStr);
+            }
+          }, 200);
+        }
+        
         router.push('/dashboard');
+      } else {
+        console.log('[AuthContext] Login falló: no hay sesión');
       }
     } catch (err) {
-      console.error('Error inesperado en login:', err);
+      if (signInTimeoutId) clearTimeout(signInTimeoutId);
+      
+      if (err instanceof Error && err.message.includes('TIMEOUT')) {
+        if (err.message.includes('signInWithPassword')) {
+          console.error('[AuthContext] ⚠️ Timeout en signInWithPassword (15s)');
+          toast({
+            variant: "destructive",
+            title: "Timeout",
+            description: "La autenticación está tardando demasiado. Verifica tu conexión e intenta nuevamente.",
+          });
+        } else {
+          // El timeout de hydrateUser ya mostró su mensaje
+          console.error('[AuthContext] ⚠️ Timeout en hydrateUser');
+        }
+      } else {
+        console.error('[AuthContext] Error inesperado en login:', err);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Ocurrió un error inesperado. Intenta nuevamente.",
+        });
+      }
       setCurrentUser(null);
     } finally {
+      // Asegurar que loading siempre se resetee, incluso si hay errores
       setLoading(false);
     }
   }, [hydrateUser, router]);
 
   const logout = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        throw error;
-      }
-      setCurrentUser(null);
-      router.push('/login');
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "No se pudo cerrar la sesión. Intenta nuevamente.",
-      });
-    } finally {
-      setLoading(false);
-    }
+    console.log('[AuthContext] Iniciando logout...');
+    
+    // Limpiar inmediatamente para respuesta rápida
+    setCurrentUser(null);
+    setLoading(false);
+    
+    // Redirigir inmediatamente sin esperar signOut
+    router.push('/login');
+    
+    // Hacer signOut en segundo plano (no bloqueante)
+    supabase.auth.signOut().catch((error) => {
+      console.error('[AuthContext] Error al cerrar sesión en segundo plano:', error);
+      // No mostrar error al usuario ya que ya lo redirigimos
+    });
+    
+    console.log('[AuthContext] Logout iniciado (redirigiendo inmediatamente)');
   }, [router]);
   
   const value = useMemo(() => ({ currentUser, loading, login, logout }), 

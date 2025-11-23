@@ -17,16 +17,27 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/**',
+      },
     ],
   },
+  // No especificar 'output: standalone' para Vercel
+  // Vercel maneja automáticamente el build de Next.js
 };
 
-export default withPWA({
+// Configuración de PWA optimizada para Vercel
+const pwaConfig = withPWA({
   dest: 'public',
   register: true,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development', // Deshabilitar en desarrollo para facilitar debugging
-  // Puedes cambiar a 'false' si quieres probar PWA en desarrollo también
+  disable: process.env.NODE_ENV === 'development', // Deshabilitar solo en desarrollo
+  disableDevLogs: true,
+  // Configuración específica para evitar conflictos con el build
+  publicExcludes: ['!robots.txt', '!sitemap.xml'],
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,
@@ -40,10 +51,10 @@ export default withPWA({
       },
     },
     {
-      urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,
+      urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i,
       handler: 'CacheFirst',
       options: {
-        cacheName: 'firebase-storage',
+        cacheName: 'supabase-storage',
         expiration: {
           maxEntries: 50,
           maxAgeSeconds: 30 * 24 * 60 * 60, // 30 días
@@ -85,4 +96,6 @@ export default withPWA({
       },
     },
   ],
-})(nextConfig);
+});
+
+export default pwaConfig(nextConfig);

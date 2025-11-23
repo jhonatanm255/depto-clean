@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Building, TriangleAlert, KeyRound } from 'lucide-react';
 // import { toast } from '@/hooks/use-toast'; // Errors handled in AuthContext
 import { LoadingSpinner } from '@/components/core/loading-spinner';
@@ -16,15 +16,54 @@ import Link from 'next/link';
 export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, loading } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login, loading: authLoading } = useAuth();
+
+  // Resetear isSubmitting cuando authLoading cambie a false
+  useEffect(() => {
+    if (!authLoading && isSubmitting) {
+      // Pequeño delay para asegurar que el estado se actualice correctamente
+      const timer = setTimeout(() => {
+        setIsSubmitting(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [authLoading, isSubmitting]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    // Call the simplified login function from AuthContext
-    await login(email, password); 
+    
+    if (isSubmitting || authLoading) return; // Prevenir múltiples envíos
+    
+    setIsSubmitting(true);
+    
+    // Timeout de seguridad: 30 segundos para dar tiempo a la hidratación
+    const timeoutId = setTimeout(() => {
+      console.warn('[LoginForm] ⚠️ Timeout en handleSubmit (30s), reseteando estado');
+      setIsSubmitting(false);
+    }, 30000);
+    
+    // Timeout de seguridad adicional: si authLoading no cambia en 5 segundos, forzar reset
+    const safetyTimeout = setTimeout(() => {
+      if (isSubmitting) {
+        console.warn('[LoginForm] ⚠️ Reseteo de seguridad: isSubmitting aún en true después de 5s');
+        setIsSubmitting(false);
+      }
+    }, 5000);
+    
+    try {
+      await login(email, password);
+      // No resetear aquí, el useEffect se encargará cuando authLoading cambie
+    } catch (error) {
+      console.error('[LoginForm] Error en handleSubmit:', error);
+      setIsSubmitting(false);
+    } finally {
+      clearTimeout(timeoutId);
+      clearTimeout(safetyTimeout);
+    }
   };
 
-  if (loading && !email) { 
+  if (authLoading && !email) { 
     return (
       <div className="flex flex-col items-center justify-center p-8">
         <LoadingSpinner size={32}/>
@@ -83,9 +122,19 @@ export function LoginForm() {
               aria-label="Contraseña"
             />
           </div>
-          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={loading}>
-            {loading ? <LoadingSpinner className="mr-2" size={16} /> : null}
-            Iniciar Sesión
+          <Button 
+            type="submit" 
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" 
+            disabled={isSubmitting || authLoading}
+          >
+            {isSubmitting || authLoading ? (
+              <>
+                <LoadingSpinner className="mr-2" size={16} />
+                Iniciando sesión...
+              </>
+            ) : (
+              'Iniciar Sesión'
+            )}
           </Button>
         </form>
       </CardContent>

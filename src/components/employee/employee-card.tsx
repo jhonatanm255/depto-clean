@@ -7,7 +7,18 @@ import { UserCircle, Mail, Edit3, Trash2, Briefcase, Building2, CheckCircle2, Al
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-// import { useData } from '@/contexts/data-context'; // Para delete en futuro
+import { useData } from '@/contexts/data-context';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface EmployeeCardProps {
   employee: EmployeeProfile; // Usar EmployeeProfile
@@ -45,11 +56,15 @@ const getStatusIcon = (status: Department['status'] | CleaningTask['status']) =>
 
 
 export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeCardProps) {
-  // const { deleteEmployeeProfile } = useData(); // Para delete en futuro
+  const { deleteEmployee } = useData();
 
-  // const handleDelete = () => {
-  //   // deleteEmployeeProfile(employee.id); // employee.id es el ID del documento de Firestore
-  // };
+  const handleDelete = async () => {
+    try {
+      await deleteEmployee(employee.id);
+    } catch (error) {
+      console.error("Error eliminando empleada en EmployeeCard:", error);
+    }
+  };
   
   const assignedTasksDetails = tasks
     .filter(task => task.employeeId === employee.id) 
@@ -120,14 +135,28 @@ export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeC
         <Button variant="outline" size="sm" onClick={() => onEdit(employee)} aria-label={`Editar ${employee.name}`} disabled>
           <Edit3 className="mr-1 h-4 w-4" /> Editar (Próx.)
         </Button>
-        {/* <AlertDialog>
+        <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm" aria-label={`Eliminar ${employee.name}`} disabled>
-              <Trash2 className="mr-1 h-4 w-4" /> Eliminar (Próx.)
+            <Button variant="destructive" size="sm" aria-label={`Eliminar ${employee.name}`}>
+              <Trash2 className="mr-1 h-4 w-4" /> Eliminar
             </Button>
           </AlertDialogTrigger>
-          // ... AlertDialogContent ...
-        </AlertDialog> */}
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción no se puede deshacer. Esto eliminará permanentemente la cuenta de
+                "{employee.name}" y todas las tareas asociadas. La persona no podrá acceder a la aplicación.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardFooter>
     </Card>
   );

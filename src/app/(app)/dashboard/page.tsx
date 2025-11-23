@@ -16,8 +16,19 @@ import { CompletedTasksListCard } from '@/components/dashboard/admin/CompletedTa
 import { EmployeeStatsGrid } from '@/components/dashboard/employee/EmployeeStatsGrid';
 import { EmployeeNextTaskCard } from '@/components/dashboard/employee/EmployeeNextTaskCard';
 
+// Función helper para obtener el nombre del rol en español
+function getRoleName(role: string): string {
+  const roleNames: Record<string, string> = {
+    'owner': 'Administrador/ra',
+    'admin': 'Administrador/ra',
+    'manager': 'Gerente',
+    'employee': 'Empleado/a'
+  };
+  return roleNames[role] || role;
+}
 
 function AdminDashboard() {
+  const { currentUser } = useAuth();
   const { company, departments, employees, tasks, dataLoading, getEmployeeProfileById } = useData(); 
 
   const initialDataLoaded = !dataLoading && departments.length > 0 && employees.length > 0 && tasks.length > 0;
@@ -53,6 +64,9 @@ function AdminDashboard() {
       .slice(0,5);
   }, [departments]);
 
+  const userName = currentUser?.fullName || currentUser?.name || currentUser?.email || 'Usuario';
+  const roleName = currentUser ? getRoleName(currentUser.role) : '';
+
   if (dataLoading && departments.length === 0 && employees.length === 0 && tasks.length === 0) { 
     return (
       <div className="flex flex-col items-center justify-center p-8 min-h-[calc(100vh-200px)]">
@@ -68,6 +82,11 @@ function AdminDashboard() {
         <h2 className="text-3xl font-bold font-headline text-foreground">
           Panel de {company?.displayName ?? 'tu empresa'}
         </h2>
+        {currentUser && (
+          <p className="text-muted-foreground mt-2">
+            {roleName} • {userName}
+          </p>
+        )}
         <p className="text-muted-foreground">
           Gestiona departamentos, personal y tareas de limpieza.
         </p>
@@ -145,6 +164,8 @@ function EmployeeDashboard({user}: {user: AppUser}) {
   
   const initialDataLoaded = !dataLoading;
 
+  const userName = user.fullName || user.name || user.email || 'Usuario';
+  const roleName = getRoleName(user.role);
 
   if (dataLoading && allUserTasks.length === 0) {
      return (
@@ -157,9 +178,14 @@ function EmployeeDashboard({user}: {user: AppUser}) {
   
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold font-headline text-foreground">
-        ¡Bienvenida, {company?.displayName ?? 'tu empresa'}!
-      </h2>
+      <div>
+        <h2 className="text-3xl font-bold font-headline text-foreground">
+          ¡Bienvenido/a, {company?.displayName ?? 'tu empresa'}!
+        </h2>
+        <p className="text-muted-foreground mt-2">
+          {roleName} • {userName}
+        </p>
+      </div>
       <p className="text-muted-foreground">Aquí están las tareas asignadas a tu equipo.</p>
       
       <EmployeeStatsGrid

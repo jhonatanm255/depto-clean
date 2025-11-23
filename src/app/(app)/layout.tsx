@@ -1,7 +1,7 @@
 
 "use client";
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { AppSidebar } from '@/components/core/app-sidebar';
@@ -18,18 +18,50 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const isMobile = useIsMobile();
+  const [forceRedirect, setForceRedirect] = useState(false);
 
   useEffect(() => {
+    // Timeout de seguridad: 35 segundos (más que el timeout de auth-context de 30s)
+    // para dar tiempo a que auth-context complete su carga
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    if (authLoading) {
+      const timeoutDuration = 35000; // 35 segundos, más que el timeout de auth-context
+      timeoutId = setTimeout(() => {
+        console.warn(`[AppLayout] ⚠️ Timeout de seguridad: authLoading lleva más de 35s`);
+        if (!currentUser && pathname !== '/login') {
+          setForceRedirect(true);
+          router.replace('/login');
+        }
+      }, timeoutDuration);
+    }
+
+    // Solo redirigir cuando la autenticación haya terminado de cargar
+    // No forzar redirección durante la carga inicial
     if (!authLoading) {
-      if (!currentUser && pathname !== '/login') { 
-        router.replace('/login');
-      } else if (currentUser && pathname === '/login') { 
+      if (!currentUser) {
+        // Si no hay usuario y no estamos en login, redirigir a login
+        if (pathname !== '/login' && pathname !== '/register') {
+          console.log('[AppLayout] No hay usuario, redirigiendo a /login');
+          router.replace('/login');
+        }
+      } else if (currentUser && (pathname === '/login' || pathname === '/register')) {
+        // Si hay usuario y estamos en login/register, redirigir a dashboard
+        console.log('[AppLayout] Usuario autenticado, redirigiendo a /dashboard');
         router.replace('/dashboard');
       }
     }
-  }, [currentUser, authLoading, router, pathname]);
 
-  if (authLoading) {
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    };
+  }, [currentUser, authLoading, router, pathname, isMobile]);
+
+  // Mostrar loading solo si realmente está cargando y no hay que forzar redirección
+  if (authLoading && !forceRedirect) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <LoadingSpinner size={48} />
@@ -38,7 +70,23 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!currentUser && pathname !== '/login') { 
+  // Si no hay usuario después de cargar, redirigir o mostrar mensaje
+  if (!currentUser) {
+    // Si estamos en login, mostrar el contenido con navbar
+    if (pathname === '/login' || pathname === '/register') {
+      return (
+        <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
+          <div className="flex min-h-screen w-full flex-col">
+            <HeaderMain />
+            <main className="flex-1 flex items-center justify-center bg-gradient-to-br from-background to-secondary p-4">
+              {children}
+            </main>
+          </div>
+        </NextThemesProvider>
+      );
+    }
+    
+    // Si no estamos en login y no hay usuario, mostrar loading mientras redirige
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <LoadingSpinner size={48} />

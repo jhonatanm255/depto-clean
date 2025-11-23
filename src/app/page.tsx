@@ -9,28 +9,27 @@ export default function RootRedirectPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // Esperar a que la autenticación termine de cargar
     if (!authLoading) { 
-      if (currentUser) {
-        router.replace('/dashboard'); 
-      } else {
-        router.replace('/login');
-      }
+      // Pequeño delay para evitar race conditions con AppLayout
+      const timer = setTimeout(() => {
+        if (currentUser) {
+          router.replace('/dashboard'); 
+        } else {
+          router.replace('/login');
+        }
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [authLoading, currentUser, router]);
 
-  if (authLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <LoadingSpinner size={48} />
-        <p className="ml-2 text-muted-foreground">Inicializando estado de autenticación (Root)...</p>
-      </div>
-    );
-  }
-
+  // Mostrar loading mientras se determina la redirección
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
-        <LoadingSpinner size={48} />
-        <p className="ml-2 text-muted-foreground">Procesando redirección (Root)...</p>
-      </div>
+      <LoadingSpinner size={48} />
+      <p className="ml-2 text-muted-foreground">
+        {authLoading ? 'Inicializando...' : 'Redirigiendo...'}
+      </p>
+    </div>
   );
 }

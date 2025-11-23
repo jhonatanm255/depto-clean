@@ -15,6 +15,7 @@ interface DataContextType {
 
   employees: EmployeeProfile[];
   addEmployeeWithAuth: (name: string, email: string, password: string) => Promise<void>;
+  deleteEmployee: (id: string) => Promise<void>;
 
   tasks: CleaningTask[];
   assignTask: (departmentId: string, employeeProfileId: string) => Promise<void>;
@@ -602,60 +603,139 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const normalizedEmail = email.trim().toLowerCase();
 
     try {
-      const signUpResult = await supabase.auth.signUp({
-        email: normalizedEmail,
-        password,
-        options: {
-          data: {
-            company_id: currentUser.companyId,
-            role: 'employee',
-            full_name: name,
-          },
+      // Obtener el token de sesión actual
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !sessionData?.session?.access_token) {
+        throw new Error('No se pudo obtener la sesión actual. Por favor, inicia sesión nuevamente.');
+      }
+
+      // Llamar al endpoint API para crear el empleado
+      const response = await fetch('/api/employees', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionData.session.access_token}`,
         },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: normalizedEmail,
+          password,
+        }),
       });
 
-      if (signUpResult.error) {
-        throw signUpResult.error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Error ${response.status}: ${response.statusText}`;
+        const errorDetails = errorData.details ? ` ${errorData.details}` : '';
+        
+        // Mensajes de error más amigables con detalles
+        if (response.status === 409) {
+          throw new Error(errorMessage + (errorDetails ? `\n${errorDetails}` : ''));
+        } else if (response.status === 403) {
+          throw new Error('No tienes permisos para crear empleadas. Contacta a un administrador.');
+        } else if (response.status === 400) {
+          throw new Error(errorMessage + (errorDetails ? `\n${errorDetails}` : ''));
+        } else {
+          throw new Error((errorMessage + (errorDetails ? `\n${errorDetails}` : '')) || 'No se pudo crear la cuenta de la empleada.');
+        }
       }
 
-      const newUserId = signUpResult.data.user?.id;
-      if (!newUserId) {
-        throw new Error('No se obtuvo el identificador del nuevo usuario.');
+      const result = await response.json();
+      
+      if (!result.employee) {
+        throw new Error('No se recibió la información de la empleada creada.');
       }
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert({
-          id: newUserId,
-          company_id: currentUser.companyId,
-          role: 'employee',
-          full_name: name,
-          email: normalizedEmail,
-        })
-        .select('*')
-        .single<ProfileRow>();
-
-      if (error) {
-        throw error;
-      }
-
-      const mapped = mapEmployee(data);
+      const mapped = mapEmployee(result.employee as ProfileRow);
       setEmployees((prev) => [...prev, mapped].sort((a, b) => a.name.localeCompare(b.name)));
 
       toast({
         title: 'Empleada agregada',
-        description: `Se creó la cuenta para "${name}". La persona recibirá un correo para activar su acceso.`,
+        description: `Se creó la cuenta para "${name}". La persona ya puede iniciar sesión con su correo y contraseña.`,
       });
     } catch (error) {
       console.error('Error creando empleada:', error);
+      const errorMessage = error instanceof Error ? error.message : 'No se pudo crear la cuenta.';
       toast({
         variant: 'destructive',
         title: 'Error al crear cuenta',
-        description: error instanceof Error ? error.message : 'No se pudo crear la cuenta.',
+        description: errorMessage,
       });
       throw error;
     }
   }, [currentUser]);
+
+  const deleteEmployee = useCallback<DataContextType['deleteEmployee']>(async (id) => {
+    if (!currentUser) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    // No permitir eliminar a uno mismo
+    if (id === currentUser.id) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al eliminar',
+        description: 'No puedes eliminar tu propia cuenta.',
+      });
+      throw new Error('No puedes eliminar tu propia cuenta');
+    }
+
+    try {
+      // Verificar que la empleada pertenece a la misma compañía
+      const employee = employees.find((emp) => emp.id === id);
+      if (!employee) {
+        throw new Error('Empleada no encontrada');
+      }
+
+      if (employee.companyId !== currentUser.companyId) {
+        throw new Error('No tienes permiso para eliminar esta empleada');
+      }
+
+      // Obtener el token de acceso actual
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No se pudo obtener el token de acceso');
+      }
+
+      // Llamar a la API para eliminar el usuario (esto elimina tanto auth.users como profiles)
+      const response = await fetch(`/api/employees/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || errorData.details || 'No se pudo eliminar la empleada';
+        console.error('[DataContext] Error de la API:', {
+          status: response.status,
+          error: errorData,
+        });
+        throw new Error(errorMessage);
+      }
+
+      // Actualizar el estado local
+      setEmployees((prev) => prev.filter((emp) => emp.id !== id));
+      // También eliminar tareas asignadas a esta empleada
+      setTasks((prev) => prev.filter((task) => task.employeeId !== id));
+
+      toast({
+        title: 'Empleada eliminada',
+        description: `La cuenta de "${employee.name}" fue eliminada correctamente.`,
+      });
+    } catch (error) {
+      console.error('Error eliminando empleada:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error al eliminar',
+        description: error instanceof Error ? error.message : 'No se pudo eliminar la empleada.',
+      });
+      throw error;
+    }
+  }, [currentUser, employees]);
 
   const assignTask = useCallback<DataContextType['assignTask']>(async (departmentId, employeeProfileId) => {
     if (!currentUser) {
@@ -956,6 +1036,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     deleteDepartment,
     employees,
     addEmployeeWithAuth,
+    deleteEmployee,
     tasks,
     assignTask,
     updateTaskStatus,
@@ -973,6 +1054,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     deleteDepartment,
     employees,
     addEmployeeWithAuth,
+    deleteEmployee,
     tasks,
     assignTask,
     updateTaskStatus,

@@ -4,19 +4,31 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+// Validar variables de entorno al iniciar el módulo
+// Esto causará un error claro durante el build si faltan las variables
 if (!supabaseUrl) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_URL no está definido');
+  const error = 'NEXT_PUBLIC_SUPABASE_URL no está definido. Configúrala en Vercel (Settings → Environment Variables)';
+  console.error('❌', error);
+  // No lanzar error aquí para permitir que el build continúe
+  // El error se manejará en la función POST
 }
 
 if (!serviceKey) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY no está definido. Debe configurarse en el entorno del servidor.');
+  const error = 'SUPABASE_SERVICE_ROLE_KEY no está definido. Configúrala en Vercel (Settings → Environment Variables)';
+  console.error('❌', error);
+  // No lanzar error aquí para permitir que el build continúe
+  // El error se manejará en la función POST
 }
 
-const adminClient = createClient(supabaseUrl, serviceKey, {
-  auth: {
-    persistSession: false,
-  },
-});
+// Crear cliente solo si tenemos las variables
+// Si no, se manejará el error en la función POST
+const adminClient = supabaseUrl && serviceKey
+  ? createClient(supabaseUrl, serviceKey, {
+      auth: {
+        persistSession: false,
+      },
+    })
+  : null;
 
 interface RegisterPayload {
   companyName: string;
@@ -28,6 +40,29 @@ interface RegisterPayload {
 
 export async function POST(request: Request) {
   try {
+    // Validar variables de entorno al inicio de la función
+    if (!supabaseUrl) {
+      console.error('❌ NEXT_PUBLIC_SUPABASE_URL no está configurada');
+      return NextResponse.json(
+        { 
+          error: 'Error de configuración del servidor. Por favor, contacta al administrador.',
+          details: 'NEXT_PUBLIC_SUPABASE_URL no está configurada en Vercel'
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!serviceKey || !adminClient) {
+      console.error('❌ SUPABASE_SERVICE_ROLE_KEY no está configurada');
+      return NextResponse.json(
+        { 
+          error: 'Error de configuración del servidor. Por favor, contacta al administrador.',
+          details: 'SUPABASE_SERVICE_ROLE_KEY no está configurada en Vercel'
+        },
+        { status: 500 }
+      );
+    }
+
     const body: RegisterPayload = await request.json();
     const { companyName, companySlug, fullName, email, password } = body;
 
