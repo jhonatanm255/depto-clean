@@ -44,19 +44,25 @@ export function BottomNavigationBar() {
       {filteredNavItems.map((item) => {
         const itemPathname = item.href.split('?')[0];
         const itemQueryParam = item.href.split('?')[1]?.split('=')[1];
+        const currentTab = searchParams.get('tab');
         
-        let isActive = pathname === itemPathname;
-        if (itemQueryParam && isActive) {
-            isActive = searchParams.get('tab') === itemQueryParam;
-        } else if (itemPathname !== '/dashboard' && pathname.startsWith(itemPathname) && !itemQueryParam && !searchParams.get('tab')){
-            if (item.href === '/employee/tasks' && pathname === '/employee/tasks' && !searchParams.get('tab')){
-                isActive = true;
-             } else if (item.href.includes('?')) {
-                // If item.href has query params but current path doesn't match query params, it's not active
-                isActive = false;
-             } else if (!item.href.includes('?') && pathname.startsWith(itemPathname) && itemPathname !== '/dashboard') {
-                isActive = true;
-             }
+        let isActive = false;
+        
+        // Primero verificar que el pathname coincida
+        if (pathname === itemPathname) {
+          // Si el item tiene query params, verificar que coincidan exactamente
+          if (itemQueryParam) {
+            isActive = currentTab === itemQueryParam;
+          } else {
+            // Si el item NO tiene query params, solo debe estar activo si tampoco hay query params en la URL
+            isActive = !currentTab;
+          }
+        } else if (itemPathname !== '/dashboard' && pathname.startsWith(itemPathname)) {
+          // Para otros paths que empiecen con el itemPathname (pero no sean exactos)
+          // Solo activar si el item NO tiene query params y la URL tampoco tiene query params
+          if (!itemQueryParam && !currentTab) {
+            isActive = true;
+          }
         }
 
 
