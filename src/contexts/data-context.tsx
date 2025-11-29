@@ -35,6 +35,13 @@ interface DataContextType {
   getDepartmentById: (departmentId: string) => Department | undefined;
   getEmployeeProfileById: (employeeProfileId: string) => EmployeeProfile | undefined;
   dataLoading: boolean;
+  
+  // Funciones para superadmin
+  allCompanies: Company[];
+  getAllCompanies: () => Promise<Company[]>;
+  getAllEmployees: () => Promise<EmployeeProfile[]>;
+  getAllTasks: () => Promise<CleaningTask[]>;
+  getAllDepartments: () => Promise<Department[]>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -189,8 +196,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [employees, setEmployees] = useState<EmployeeProfile[]>([]);
   const [tasks, setTasks] = useState<CleaningTask[]>([]);
+  const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [dataLoading, setDataLoading] = useState<boolean>(true);
   const { currentUser } = useAuth();
+  
+  const isSuperadmin = currentUser?.role === 'superadmin';
 
   const loadData = useCallback(async () => {
     if (!currentUser) {
@@ -198,6 +208,88 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return;
     }
     
+    if (isSuperadmin) {
+      // Para superadmin, cargar todas las empresas y datos globales
+      console.log('[DataContext] Cargando datos globales para superadmin', {
+        userId: currentUser.id,
+        role: currentUser.role,
+      });
+      setDataLoading(true);
+      const startTime = Date.now();
+      
+      try {
+        const [companiesResp, departmentsResp, employeesResp, tasksResp] = await Promise.all([
+          supabase
+            .from('companies')
+            .select('id, name, slug, legal_name, tax_id, timezone, plan_code, metadata, display_name, created_at, updated_at')
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('departments')
+            .select('*')
+            .order('name', { ascending: true }),
+          supabase
+            .from('profiles')
+            .select('*')
+            .order('full_name', { ascending: true }),
+          supabase
+            .from('tasks')
+            .select('*')
+            .order('assigned_at', { ascending: false }),
+        ]);
+
+        const elapsed = Date.now() - startTime;
+        console.log(`[DataContext] Consultas globales completadas en ${elapsed}ms`);
+
+        // Log de errores detallado
+        if (companiesResp.error) {
+          console.error('[DataContext] Error en companies:', companiesResp.error);
+          throw companiesResp.error;
+        }
+        if (departmentsResp.error) {
+          console.error('[DataContext] Error en departments:', departmentsResp.error);
+          throw departmentsResp.error;
+        }
+        if (employeesResp.error) {
+          console.error('[DataContext] Error en employees:', employeesResp.error);
+          throw employeesResp.error;
+        }
+        if (tasksResp.error) {
+          console.error('[DataContext] Error en tasks:', tasksResp.error);
+          throw tasksResp.error;
+        }
+
+        const companiesData = (companiesResp.data as CompanyRow[]) || [];
+        const departmentsData = (departmentsResp.data as DepartmentRow[]) || [];
+        const employeesData = (employeesResp.data as ProfileRow[]) || [];
+        const tasksData = (tasksResp.data as TaskRow[]) || [];
+
+        setAllCompanies(companiesData.map(mapCompany));
+        setDepartments(departmentsData.map(mapDepartment));
+        setEmployees(employeesData.map(mapEmployee));
+        setTasks(tasksData.map(mapTask));
+        setCompany(null); // Superadmin no tiene una compañía específica
+        
+        console.log('[DataContext] ✓ Datos globales cargados:', {
+          companies: companiesData.length,
+          departments: departmentsData.length,
+          employees: employeesData.length,
+          tasks: tasksData.length,
+        });
+        console.log('[DataContext] Primeras empresas:', companiesData.slice(0, 3).map(c => ({ id: c.id, name: c.name })));
+      } catch (error) {
+        console.error('[DataContext] Error cargando datos globales:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error de datos',
+          description: 'No se pudo cargar la información global.',
+        });
+      } finally {
+        setDataLoading(false);
+      }
+      return;
+    }
+    
+    // Carga normal para usuarios regulares
     console.log('[DataContext] Iniciando carga de datos para companyId:', currentUser.companyId);
     setDataLoading(true);
     const startTime = Date.now();
@@ -206,7 +298,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const [companyResp, departmentsResp, employeesResp, tasksResp] = await Promise.all([
         supabase
           .from('companies')
-          .select('id, name, slug, legal_name, tax_id, timezone, plan_code, metadata, created_at, updated_at')
+          .select('id, name, slug, legal_name, tax_id, timezone, plan_code, metadata, display_name, created_at, updated_at')
           .eq('id', currentUser.companyId)
           .maybeSingle<CompanyRow>(),
         supabase
@@ -303,12 +395,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setDepartments([]);
       setEmployees([]);
       setTasks([]);
+      setAllCompanies([]);
       setDataLoading(false);
       return;
     }
     console.log('[DataContext] Usuario autenticado detectado, cargando datos...');
     void loadData();
-  }, [currentUser, loadData]);
+  }, [currentUser, isSuperadmin, loadData]);
 
   const addDepartment = useCallback<DataContextType['addDepartment']>(async (input) => {
     if (!currentUser) {
@@ -1028,6 +1121,59 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return employees.find((emp) => emp.id === employeeProfileId);
   }, [employees]);
 
+  // Funciones para superadmin
+  const getAllCompanies = useCallback<DataContextType['getAllCompanies']>(async () => {
+    if (!isSuperadmin) {
+      throw new Error('Solo superadmin puede acceder a todas las empresas');
+    }
+    const { data, error } = await supabase
+      .from('companies')
+      .select('id, name, slug, legal_name, tax_id, timezone, plan_code, metadata, display_name, created_at, updated_at')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data as CompanyRow[]).map(mapCompany);
+  }, [isSuperadmin]);
+
+  const getAllEmployees = useCallback<DataContextType['getAllEmployees']>(async () => {
+    if (!isSuperadmin) {
+      throw new Error('Solo superadmin puede acceder a todos los empleados');
+    }
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('full_name', { ascending: true });
+    
+    if (error) throw error;
+    return (data as ProfileRow[]).map(mapEmployee);
+  }, [isSuperadmin]);
+
+  const getAllTasks = useCallback<DataContextType['getAllTasks']>(async () => {
+    if (!isSuperadmin) {
+      throw new Error('Solo superadmin puede acceder a todas las tareas');
+    }
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .order('assigned_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data as TaskRow[]).map(mapTask);
+  }, [isSuperadmin]);
+
+  const getAllDepartments = useCallback<DataContextType['getAllDepartments']>(async () => {
+    if (!isSuperadmin) {
+      throw new Error('Solo superadmin puede acceder a todos los departamentos');
+    }
+    const { data, error } = await supabase
+      .from('departments')
+      .select('*')
+      .order('name', { ascending: true });
+    
+    if (error) throw error;
+    return (data as DepartmentRow[]).map(mapDepartment);
+  }, [isSuperadmin]);
+
   const value = useMemo<DataContextType>(() => ({
     company,
     departments,
@@ -1046,6 +1192,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     getDepartmentById,
     getEmployeeProfileById,
     dataLoading,
+    allCompanies,
+    getAllCompanies,
+    getAllEmployees,
+    getAllTasks,
+    getAllDepartments,
   }), [
     company,
     departments,
@@ -1064,6 +1215,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     getDepartmentById,
     getEmployeeProfileById,
     dataLoading,
+    allCompanies,
+    getAllCompanies,
+    getAllEmployees,
+    getAllTasks,
+    getAllDepartments,
   ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

@@ -19,7 +19,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 type ProfileRow = {
   id: string;
-  company_id: string;
+  company_id: string | null; // Nullable para superadmin
   role: UserRole;
   full_name: string | null;
   email: string | null;
@@ -196,17 +196,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
-      if (!data || !data.company_id) {
-        console.warn('[AuthContext] Perfil sin company_id para usuario:', user.id);
+      // Superadmin puede no tener company_id
+      if (!data) {
+        console.warn('[AuthContext] Perfil sin datos para usuario:', user.id);
+        return false;
+      }
+
+      // Si no es superadmin y no tiene company_id, hay un problema
+      if (data.role !== 'superadmin' && !data.company_id) {
+        console.warn('[AuthContext] Perfil sin company_id para usuario no-superadmin:', user.id);
         console.warn('[AuthContext] ⚠️ IMPORTANTE: La sesión de Supabase sigue válida, solo el perfil tiene problemas');
-        // NO establecer currentUser a null aquí - la sesión sigue activa
-        // Esto permite que el usuario siga autenticado aunque el perfil tenga problemas
         return false;
       }
 
       console.log('[AuthContext] ✓ Perfil cargado:', {
         userId: user.id,
-        companyId: data.company_id,
+        companyId: data.company_id || '(superadmin)',
         role: data.role,
         elapsed: `${elapsed}ms`
       });
@@ -215,7 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: user.id,
         email: user.email ?? null,
         role: data.role,
-        companyId: data.company_id,
+        companyId: data.company_id || '', // Superadmin tiene companyId vacío
         name: data.full_name ?? data.email ?? user.email,
         fullName: data.full_name ?? undefined,
       });

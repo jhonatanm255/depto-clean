@@ -84,7 +84,7 @@ export default function RootLayout({
         {/* PWA Meta Tags */}
         <meta name="format-detection" content="telephone=no" />
       </head>
-      <body className="font-body antialiased">
+      <body className="font-body antialiased" suppressHydrationWarning>
         <AuthProvider>
           <DataProvider>
             {children}

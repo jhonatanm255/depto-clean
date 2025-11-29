@@ -1,5 +1,5 @@
 
-export type UserRole = 'owner' | 'admin' | 'manager' | 'employee';
+export type UserRole = 'superadmin' | 'owner' | 'admin' | 'manager' | 'employee';
 
 export type TaskStatus = 'pending' | 'in_progress' | 'completed';
 
@@ -37,7 +37,7 @@ export interface AppUser {
   id: string;
   email: string | null;
   role: UserRole;
-  companyId: string;
+  companyId: string; // Puede estar vacío para superadmin
   name?: string | null;
   fullName?: string | null;
 }

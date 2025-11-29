@@ -46,9 +46,18 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           router.replace('/login');
         }
       } else if (currentUser && (pathname === '/login' || pathname === '/register')) {
-        // Si hay usuario y estamos en login/register, redirigir a dashboard
-        console.log('[AppLayout] Usuario autenticado, redirigiendo a /dashboard');
-        router.replace('/dashboard');
+        // Si hay usuario y estamos en login/register, redirigir según su rol
+        if (currentUser.role === 'superadmin') {
+          console.log('[AppLayout] Superadmin autenticado, redirigiendo a /superadmin/dashboard');
+          router.replace('/superadmin/dashboard');
+        } else {
+          console.log('[AppLayout] Usuario autenticado, redirigiendo a /dashboard');
+          router.replace('/dashboard');
+        }
+      } else if (currentUser?.role === 'superadmin' && pathname === '/dashboard') {
+        // Si es superadmin y está en dashboard normal, redirigir a superadmin dashboard
+        console.log('[AppLayout] Superadmin en dashboard normal, redirigiendo a /superadmin/dashboard');
+        router.replace('/superadmin/dashboard');
       }
     }
 

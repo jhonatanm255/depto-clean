@@ -10,6 +10,7 @@ import {
   Briefcase,
   Users,
   History,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/lib/types';
@@ -22,6 +23,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { href: '/superadmin/dashboard', label: 'Superadmin', icon: Shield, roles: ['superadmin'] },
   { href: '/dashboard', label: 'Panel', icon: LayoutDashboard, roles: ['owner', 'admin', 'manager', 'employee'] },
   { href: '/admin/departments', label: 'Deptos', icon: Building2, roles: ['owner', 'admin', 'manager'] },
   { href: '/admin/employees', label: 'Empleadas', icon: Users, roles: ['owner', 'admin'] },

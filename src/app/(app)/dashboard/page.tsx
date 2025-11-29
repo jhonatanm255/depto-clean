@@ -1,10 +1,11 @@
 
 "use client";
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Info, History, Clock } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/core/loading-spinner'; 
 import type { AppUser, Department, CleaningTask, EmployeeProfile } from '@/lib/types'; 
@@ -207,8 +208,16 @@ function EmployeeDashboard({user}: {user: AppUser}) {
 
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { currentUser, loading: authLoading } = useAuth(); 
-  const { dataLoading: appDataLoading, departments, tasks, employees } = useData(); 
+  const { dataLoading: appDataLoading, departments, tasks, employees } = useData();
+
+  // Redirigir superadmin al dashboard de superadmin
+  useEffect(() => {
+    if (currentUser?.role === 'superadmin') {
+      router.replace('/superadmin/dashboard');
+    }
+  }, [currentUser, router]); 
 
   // Combined loading state that considers auth and initial data for relevant dashboard
   const isLoading = useMemo(() => {
@@ -248,7 +257,16 @@ export default function DashboardPage() {
     );
   }
   
-  return currentUser?.role === 'admin' 
+  if (currentUser?.role === 'superadmin') {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 min-h-[calc(100vh-100px)]">
+        <LoadingSpinner size={32} />
+        <p className="mt-4 text-muted-foreground">Redirigiendo al panel de superadmin...</p>
+      </div>
+    );
+  }
+  
+  return currentUser?.role === 'admin' || currentUser?.role === 'owner'
     ? <AdminDashboard /> 
     : <EmployeeDashboard user={currentUser} />; 
 }

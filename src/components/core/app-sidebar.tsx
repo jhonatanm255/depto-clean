@@ -21,6 +21,7 @@ import {
   LogOut,
   Users,
   History,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile'; 
@@ -35,6 +36,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { href: '/superadmin/dashboard', label: 'Panel Superadmin', icon: Shield, roles: ['superadmin'] },
   { href: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, roles: ['owner', 'admin', 'manager', 'employee'] },
   { href: '/admin/departments', label: 'Departamentos', icon: Building2, roles: ['owner', 'admin', 'manager'] },
   { href: '/admin/employees', label: 'Gestionar Empleados', icon: Users, roles: ['owner', 'admin'] },
@@ -60,7 +62,7 @@ export function AppSidebar() {
         <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
            <Image src="/logo.png" alt="CleanSweep Logo" width={32} height={32} className="h-8 w-8 object-contain" data-ai-hint="company logo"/>
           <span className="font-headline text-lg font-semibold text-primary">
-            {company?.displayName ?? 'CleanSweep'}
+            {currentUser?.role === 'superadmin' ? 'Superadmin' : (company?.displayName ?? 'CleanSweep')}
           </span>
         </Link>
         <Link href="/dashboard" className="hidden items-center gap-2 group-data-[collapsible=icon]:flex">
