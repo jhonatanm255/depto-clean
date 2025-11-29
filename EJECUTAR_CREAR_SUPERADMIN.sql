@@ -40,3 +40,4 @@ WHERE email = 'admin@cleansweep.com';
 -- - company_id = NULL
 -- - full_name = 'Super Admin'
 -- - email = 'admin@cleansweep.com'
+
