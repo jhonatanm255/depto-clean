@@ -99,7 +99,7 @@ La aplicación está lista para PWA en cualquier hosting que soporte HTTPS.
 
 ## 🎨 Diseño
 
-- **Color primario:** `#73A5C6` (Azul suave)
+- **Color primario:** `#1D3658` (Azul oscuro)
 - **Fondo:** `#F0F4F7` (Azul muy claro)
 - **Acento:** `#E08E49` (Naranja cálido)
 - **Tipografía:** PT Sans

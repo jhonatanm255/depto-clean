@@ -18,7 +18,7 @@ interface MediaReportsDialogProps {
 }
 
 const getFileIcon = (contentType?: string | null) => {
-  if (contentType && contentType.startsWith('image/')) return <ImageIcon className="h-5 w-5 text-blue-500" />;
+  if (contentType && contentType.startsWith('image/')) return <ImageIcon className="h-5 w-5 text-primary" />;
   if (contentType && contentType.startsWith('video/')) return <VideoIcon className="h-5 w-5 text-purple-500" />;
   return <FileText className="h-5 w-5 text-gray-500" />;
 };

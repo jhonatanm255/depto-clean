@@ -10,7 +10,7 @@
 
 ## Style Guidelines:
 
-- Primary color: Soft blue (#73A5C6) to evoke cleanliness and reliability.
+- Primary color: Dark blue (#1D3658) to evoke cleanliness and reliability.
 - Background color: Very light blue (#F0F4F7), almost white.
 - Accent color: Warm orange (#E08E49) to draw attention to important actions.
 - Body and headline font: 'PT Sans' (sans-serif), suitable for both headlines and body text, offering a modern yet approachable feel.

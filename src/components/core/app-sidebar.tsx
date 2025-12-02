@@ -58,11 +58,11 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r hidden md:flex"> 
-      <SidebarHeader className="p-4 flex items-center justify-between">
+      <SidebarHeader className="p-4 flex items-center justify-start">
         <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
            <Image src="/logo.png" alt="CleanSweep Logo" width={32} height={32} className="h-8 w-8 object-contain" data-ai-hint="company logo"/>
-          <span className="font-headline text-lg font-semibold text-primary">
-            {currentUser?.role === 'superadmin' ? 'Superadmin' : (company?.displayName ?? 'CleanSweep')}
+          <span className="font-headline text-lg font-semibold text-sidebar-foreground whitespace-nowrap">
+            CleanSweep Manager
           </span>
         </Link>
         <Link href="/dashboard" className="hidden items-center gap-2 group-data-[collapsible=icon]:flex">

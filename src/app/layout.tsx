@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#73A5C6',
+  themeColor: '#1D3658',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -78,7 +78,7 @@ export default function RootLayout({
         <meta name="application-name" content="CleanSweep" />
         
         {/* Microsoft Meta Tags */}
-        <meta name="msapplication-TileColor" content="#73A5C6" />
+        <meta name="msapplication-TileColor" content="#1D3658" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
         
         {/* PWA Meta Tags */}

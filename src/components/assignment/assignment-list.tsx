@@ -56,7 +56,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
   const getStatusBadgeVariant = (status: CleaningTask['status']) => {
     switch (status) {
       case 'completed': return 'bg-green-500 hover:bg-green-600';
-      case 'in_progress': return 'bg-blue-500 hover:bg-blue-600';
+      case 'in_progress': return 'bg-primary hover:bg-primary/90';
       case 'pending': return 'bg-yellow-500 hover:bg-yellow-600';
       default: return 'bg-gray-500 hover:bg-gray-600';
     }

@@ -44,7 +44,7 @@ export function DepartmentCard({ department, onEdit, employees }: DepartmentCard
   const getStatusBadgeVariant = (status: Department['status']) => {
     switch (status) {
       case 'completed': return 'bg-green-500 hover:bg-green-600'; // Limpio
-      case 'in_progress': return 'bg-blue-500 hover:bg-blue-600'; // En progreso
+      case 'in_progress': return 'bg-primary hover:bg-primary/90'; // En progreso
       case 'pending': return 'bg-yellow-500 hover:bg-yellow-600'; // Necesita limpieza
       default: return 'bg-gray-500 hover:bg-gray-600';
     }

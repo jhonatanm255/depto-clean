@@ -52,7 +52,7 @@ export function AdminStatsGrid({
           title="Tareas en Progreso (Depto)" 
           value={inProgressCount} 
           icon={Activity} 
-          iconColor="text-blue-500"
+          iconColor="text-primary"
           isLoading={dataLoading && !initialDataLoaded}
         />
         <StatCard 
