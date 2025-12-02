@@ -139,3 +139,5 @@ CREATE POLICY "tasks_select_superadmin"
 -- 7. Comentarios para documentación
 COMMENT ON FUNCTION public.create_superadmin_profile IS 'Crea el perfil de superadmin después de crear el usuario en auth.users usando Admin API';
 
+
+
