@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
+import { DataProvider } from '@/contexts/data-context';
+import { NotificationsProvider } from '@/contexts/notifications-context';
 import { AppSidebar } from '@/components/core/app-sidebar';
 import { HeaderMain } from '@/components/core/header-main';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -106,21 +108,25 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   
   return (
     <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
-      <SidebarProvider> {/* SidebarProvider todavía puede ser útil para el estado del sidebar de escritorio si se usa useSidebar() allí */}
-        <div className="flex min-h-screen w-full">
-          {!isMobile && <AppSidebar />} {/* AppSidebar solo para escritorio */}
-          <div className="flex flex-1 flex-col">
-            <HeaderMain />
-            <main className={cn(
-              "flex-1 overflow-y-auto bg-background p-4 sm:p-6 lg:p-8",
-              isMobile && "pb-20" // Padding para la barra de navegación inferior (h-16 + p-4 usual)
-            )}>
-              {children}
-            </main>
-            {isMobile && <BottomNavigationBar />} {/* BottomNavigationBar solo para móvil */}
-          </div>
-        </div>
-      </SidebarProvider>
+      <DataProvider>
+        <NotificationsProvider>
+          <SidebarProvider> {/* SidebarProvider todavía puede ser útil para el estado del sidebar de escritorio si se usa useSidebar() allí */}
+            <div className="flex min-h-screen w-full">
+              {!isMobile && <AppSidebar />} {/* AppSidebar solo para escritorio */}
+              <div className="flex flex-1 flex-col">
+                <HeaderMain />
+                <main className={cn(
+                  "flex-1 overflow-y-auto bg-background p-4 sm:p-6 lg:p-8",
+                  isMobile && "pb-20" // Padding para la barra de navegación inferior (h-16 + p-4 usual)
+                )}>
+                  {children}
+                </main>
+                {isMobile && <BottomNavigationBar />} {/* BottomNavigationBar solo para móvil */}
+              </div>
+            </div>
+          </SidebarProvider>
+        </NotificationsProvider>
+      </DataProvider>
     </NextThemesProvider>
   );
 }

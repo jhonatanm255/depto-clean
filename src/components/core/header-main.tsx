@@ -17,6 +17,7 @@ import { LogOut, Moon, Sun, PanelLeft } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar"; // Todavía puede ser usado por AppSidebar desktop
 import { useTheme } from "next-themes";
 import { useIsMobile } from '@/hooks/use-mobile'; // Para ocultar el botón del panel
+import { NotificationsBell } from '@/components/core/notifications-bell';
 
 function ThemeToggle() {
   const { setTheme, theme } = useTheme();
@@ -73,6 +74,7 @@ export function HeaderMain() {
       </div>
       
       <div className="flex items-center gap-3">
+        {currentUser && <NotificationsBell />}
         <ThemeToggle />
         {currentUser && (
           <DropdownMenu>

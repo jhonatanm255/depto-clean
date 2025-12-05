@@ -291,6 +291,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
     
     // Carga normal para usuarios regulares
     console.log('[DataContext] Iniciando carga de datos para companyId:', currentUser.companyId);
+
+    // Si por alguna razón no hay companyId (por ejemplo, superadmin o perfil incompleto),
+    // evitar hacer consultas con company_id = '' que generan errores 400/22P02.
+    if (!currentUser.companyId) {
+      console.warn('[DataContext] ⚠️ currentUser.companyId está vacío, saltando carga de datos por compañía');
+      setCompany(null);
+      setDepartments([]);
+      setEmployees([]);
+      setTasks([]);
+      setDataLoading(false);
+      return;
+    }
     setDataLoading(true);
     const startTime = Date.now();
     

@@ -199,3 +199,8 @@ Después de configurar el bucket y las políticas:
 - [ ] Prueba de subida de archivo exitosa
 - [ ] Prueba de visualización de archivo exitosa
 
+
+
+
+
+

@@ -216,6 +216,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         elapsed: `${elapsed}ms`
       });
 
+      // Actualizar el usuario con la información completa de perfil (sobrescribiendo el provisional)
       setCurrentUser({
         id: user.id,
         email: user.email ?? null,
@@ -236,15 +237,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
     let isInitializing = true;
 
-    // Función simple para cargar sesión
+    // Función simple para cargar sesión (rápida: primero usuario mínimo, luego perfil en segundo plano)
     const loadSession = async () => {
       if (!mounted) return;
 
       try {
         setLoading(true);
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Timeout de seguridad para evitar que getSession se quede colgado indefinidamente
+        let sessionTimeoutId: NodeJS.Timeout;
+        const sessionTimeoutPromise = new Promise<never>((_, reject) => {
+          sessionTimeoutId = setTimeout(() => {
+            reject(new Error('TIMEOUT: getSession tardó más de 15 segundos'));
+          }, 15000);
+        });
+
+        const getSessionPromise = supabase.auth.getSession();
+
+        const { data: { session }, error } = await Promise.race([
+          getSessionPromise,
+          sessionTimeoutPromise,
+        ] as const).catch((err) => {
+          if (err instanceof Error && err.message.includes('TIMEOUT')) {
+            console.error('[AuthContext] ⚠️ Timeout en getSession (15s)');
+          } else {
+            console.error('[AuthContext] Error inesperado en getSession:', err);
+          }
+          return { data: { session: null }, error: err } as any;
+        });
+
+        if (sessionTimeoutId) {
+          clearTimeout(sessionTimeoutId);
+        }
         
-        if (error) {
+        if (error instanceof Error) {
           console.error('[AuthContext] Error obteniendo sesión:', error);
           if (mounted) {
             setCurrentUser(null);
@@ -255,20 +280,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (session?.user) {
           hasValidSessionRef.current = true;
-          console.log('[AuthContext] Sesión encontrada, cargando perfil...');
-          
-          const success = await hydrateUser(session.user);
-          
-          if (!success && mounted) {
-            // Si falla el perfil pero hay sesión, crear usuario mínimo
+          console.log('[AuthContext] Sesión encontrada, creando usuario mínimo y cargando perfil en segundo plano...');
+
+          // 1) Usuario mínimo inmediato para que la app pueda seguir
+          if (mounted) {
             setCurrentUser({
               id: session.user.id,
               email: session.user.email,
-              role: 'employee' as UserRole,
+              role: 'employee' as UserRole, // rol provisional hasta cargar perfil real
               companyId: '',
               name: session.user.email || 'Usuario',
             });
           }
+
+          // 2) Cargar perfil completo en segundo plano (sin bloquear la UI)
+          hydrateUser(session.user).then((success) => {
+            if (!success) {
+              console.warn('[AuthContext] Perfil no cargado, se mantiene usuario mínimo');
+            }
+          }).catch((err) => {
+            console.error('[AuthContext] Error hidratando perfil en segundo plano:', err);
+          });
         } else {
           hasValidSessionRef.current = false;
           if (mounted) {
@@ -307,28 +339,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (session?.user) {
           hasValidSessionRef.current = true;
-          // Solo hidratar si no hay usuario actual
-          if (!currentUserRef.current) {
-            const success = await hydrateUser(session.user);
-            if (!success && mounted) {
-              setCurrentUser({
-                id: session.user.id,
-                email: session.user.email,
-                role: 'employee' as UserRole,
-                companyId: '',
-                name: session.user.email || 'Usuario',
-              });
-            }
-          }
-        }
-      }
-
-      // INITIAL_SESSION se maneja automáticamente por getSession
-      if (event === 'INITIAL_SESSION' && session?.user && !isInitializing) {
-        hasValidSessionRef.current = true;
-        if (!currentUserRef.current) {
-          const success = await hydrateUser(session.user);
-          if (!success && mounted) {
+          // Crear usuario mínimo inmediatamente si no existe
+          if (!currentUserRef.current && mounted) {
             setCurrentUser({
               id: session.user.id,
               email: session.user.email,
@@ -337,7 +349,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               name: session.user.email || 'Usuario',
             });
           }
+
+          // Hidratar perfil en segundo plano
+          hydrateUser(session.user).then((success) => {
+            if (!success) {
+              console.warn('[AuthContext] Perfil no cargado tras SIGNED_IN/TOKEN_REFRESHED, se mantiene usuario mínimo');
+            }
+          }).catch((err) => {
+            console.error('[AuthContext] Error hidratando perfil tras SIGNED_IN/TOKEN_REFRESHED:', err);
+          });
         }
+      }
+
+      // INITIAL_SESSION se maneja automáticamente por getSession
+      if (event === 'INITIAL_SESSION' && session?.user && !isInitializing) {
+        hasValidSessionRef.current = true;
+        if (!currentUserRef.current && mounted) {
+          setCurrentUser({
+            id: session.user.id,
+            email: session.user.email,
+            role: 'employee' as UserRole,
+            companyId: '',
+            name: session.user.email || 'Usuario',
+          });
+        }
+
+        // Hidratar perfil en segundo plano también en este caso
+        hydrateUser(session.user).then((success) => {
+          if (!success) {
+            console.warn('[AuthContext] Perfil no cargado en INITIAL_SESSION, se mantiene usuario mínimo');
+          }
+        }).catch((err) => {
+          console.error('[AuthContext] Error hidratando perfil en INITIAL_SESSION:', err);
+        });
       }
     });
 
@@ -421,33 +465,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Ahora hidratar (hydrateUser tiene su propio timeout de 15s)
-      console.log('[AuthContext] Sesión iniciada, hidratando usuario...');
-      const hydrateStartTime = Date.now();
-      const success = await hydrateUser(data.session.user);
-      const hydrateElapsed = Date.now() - hydrateStartTime;
-      console.log(`[AuthContext] hydrateUser completado en ${hydrateElapsed}ms`);
-      
+      // Sesión iniciada: crear usuario mínimo inmediato para que la UX sea rápida
+      console.log('[AuthContext] Sesión iniciada, creando usuario mínimo y cargando perfil en segundo plano...');
       const totalElapsed = Date.now() - loginStartTime;
-      console.log(`[AuthContext] Login completo en ${totalElapsed}ms total`);
+      console.log(`[AuthContext] Login (auth) completado en ${totalElapsed}ms`);
       
-      // SIEMPRE mantener la sesión si existe, incluso si hydrateUser falla
       if (data.session?.user) {
         hasValidSessionRef.current = true;
-        
-        if (success) {
-          console.log('[AuthContext] Login exitoso, redirigiendo a dashboard');
-        } else {
-          // Si hydrateUser falla, crear usuario mínimo para mantener sesión
-          console.warn('[AuthContext] Perfil no cargado, pero manteniendo sesión activa');
-          setCurrentUser({
-            id: data.session.user.id,
-            email: data.session.user.email,
-            role: 'employee' as UserRole,
-            companyId: '',
-            name: data.session.user.email || 'Usuario',
-          });
-        }
+
+        // Usuario mínimo inmediato
+        setCurrentUser({
+          id: data.session.user.id,
+          email: data.session.user.email,
+          role: 'employee' as UserRole,
+          companyId: '',
+          name: data.session.user.email || 'Usuario',
+        });
+
+        // Hidratar perfil en segundo plano (no bloquea la redirección)
+        hydrateUser(data.session.user).then((success) => {
+          if (success) {
+            console.log('[AuthContext] Perfil cargado correctamente tras login');
+          } else {
+            console.warn('[AuthContext] Perfil no cargado tras login, se mantiene usuario mínimo');
+          }
+        }).catch((err) => {
+          console.error('[AuthContext] Error hidratando perfil tras login:', err);
+        });
         
         // Verificar que la sesión se guardó
         if (typeof window !== 'undefined') {
@@ -463,6 +507,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }, 200);
         }
         
+        // Redirigir inmediatamente sin esperar a hydrateUser
         router.push('/dashboard');
       } else {
         console.log('[AuthContext] Login falló: no hay sesión');

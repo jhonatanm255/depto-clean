@@ -38,6 +38,11 @@ const pwaConfig = withPWA({
   disableDevLogs: true,
   // Configuración específica para evitar conflictos con el build
   publicExcludes: ['!robots.txt', '!sitemap.xml'],
+  // Evitar precachear ficheros internos de Next que pueden no existir en producción
+  // y causan errores "bad-precaching-response" en Workbox.
+  buildExcludes: [
+    /app-build-manifest\.json$/ // evita intentar cachear /_next/app-build-manifest.json
+  ],
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,
