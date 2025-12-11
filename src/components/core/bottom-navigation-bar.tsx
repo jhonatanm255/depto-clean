@@ -71,7 +71,7 @@ export function BottomNavigationBar() {
             key={item.href}
             href={item.href}
             className={cn(
-              "flex flex-col items-center justify-center p-2 rounded-md transition-colors w-full h-full",
+              "flex flex-col items-center justify-center p-2 transition-colors w-full h-full",
               isActive 
                 ? "bg-sidebar-primary text-sidebar-primary-foreground" 
                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"

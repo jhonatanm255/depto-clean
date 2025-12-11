@@ -204,3 +204,7 @@ Después de configurar el bucket y las políticas:
 
 
 
+
+
+
+
