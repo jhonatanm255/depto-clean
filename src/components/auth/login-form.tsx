@@ -7,11 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useState, useEffect, type FormEvent } from 'react';
-import { Building, TriangleAlert, KeyRound } from 'lucide-react';
+import { TriangleAlert, KeyRound } from 'lucide-react';
 // import { toast } from '@/hooks/use-toast'; // Errors handled in AuthContext
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from 'next/link';
+import Image from 'next/image';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -75,14 +76,20 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md shadow-xl">
       <CardHeader className="text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Building size={32} />
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center bg-primary p-4 rounded-md">
+          <Image 
+            src="/logo.png" 
+            alt="Logo de la aplicación" 
+            width={64} 
+            height={64}
+            className="object-contain"
+          />
         </div>
         <CardTitle className="font-headline text-3xl">¡Bienvenido/a!</CardTitle>
         <CardDescription>Inicia sesión para gestionar tus tareas de limpieza.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Alert variant="destructive" className="mb-6 bg-red-50 border-red-300 text-red-800">
+        {/* <Alert variant="destructive" className="mb-6 bg-red-50 border-red-300 text-red-800">
             <TriangleAlert className="h-5 w-5 text-red-600" />
             <AlertTitle className="font-bold text-red-900">Importante para administradores</AlertTitle>
             <AlertDescription className="text-red-700 text-xs space-y-1">
@@ -95,7 +102,7 @@ export function LoginForm() {
                 Usa el email y contraseña que tu administrador registró para ti. Si no recuerdas la contraseña, pídele que te envíe una invitación nueva o que la restablezca.
               </p>
             </AlertDescription>
-        </Alert>
+        </Alert> */}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
@@ -139,9 +146,9 @@ export function LoginForm() {
         </form>
       </CardContent>
       <CardFooter className="flex justify-center text-sm text-muted-foreground">
-        ¿Aún no tienes cuenta?{" "}
+        ¿Aún no tienes cuenta? Regístra tu Empresa{" "}
         <Link href="/register" className="ml-1 text-primary underline">
-          Regístrate aquí
+          Aquí
         </Link>
       </CardFooter>
     </Card>

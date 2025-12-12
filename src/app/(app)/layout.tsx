@@ -90,7 +90,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <div className="flex min-h-screen w-full flex-col">
             <HeaderMain />
             <main className="flex-1 flex items-center justify-center bg-gradient-to-br from-background to-secondary p-4">
-              {children}
+              <div className="w-full h-full flex items-center justify-center">
+                {children}
+              </div>
             </main>
           </div>
         </NextThemesProvider>

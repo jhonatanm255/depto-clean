@@ -12,7 +12,8 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 import Link from 'next/link';
-import { Building2, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
+import Image from 'next/image';
 
 const registerSchema = z.object({
   fullName: z.string().min(3, 'Ingresa tu nombre completo.'),
@@ -115,8 +116,14 @@ export function RegisterForm() {
   return (
     <Card className="w-full max-w-xl shadow-xl">
       <CardHeader className="text-center space-y-2">
-        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Building2 size={32} />
+        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center bg-primary p-4 rounded-md">
+          <Image 
+            src="/logo.png" 
+            alt="Logo de la aplicación" 
+            width={64} 
+            height={64}
+            className="object-contain"
+          />
         </div>
         <CardTitle className="font-headline text-3xl">
           Registra tu empresa
