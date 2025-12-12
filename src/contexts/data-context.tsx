@@ -199,6 +199,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [dataLoading, setDataLoading] = useState<boolean>(true);
   const { currentUser } = useAuth();
+  const lastLoadedUserIdRef = React.useRef<string | null>(null);
   
   const isSuperadmin = currentUser?.role === 'superadmin';
 
@@ -409,10 +410,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setTasks([]);
       setAllCompanies([]);
       setDataLoading(false);
+      lastLoadedUserIdRef.current = null;
       return;
     }
-    console.log('[DataContext] Usuario autenticado detectado, cargando datos...');
-    void loadData();
+    
+    // Optimización: Solo recargar datos si el usuario cambió (diferente ID)
+    // o si es la primera carga (lastLoadedUserIdRef es null)
+    const userIdChanged = lastLoadedUserIdRef.current !== currentUser.id;
+    const isFirstLoad = lastLoadedUserIdRef.current === null;
+    
+    if (userIdChanged || isFirstLoad) {
+      console.log('[DataContext] Usuario autenticado detectado, cargando datos...', {
+        userId: currentUser.id,
+        previousUserId: lastLoadedUserIdRef.current,
+        isFirstLoad,
+        userIdChanged
+      });
+      lastLoadedUserIdRef.current = currentUser.id;
+      void loadData();
+    } else {
+      console.log('[DataContext] Usuario no cambió, omitiendo recarga de datos para optimizar rendimiento');
+    }
   }, [currentUser, isSuperadmin, loadData]);
 
   const addDepartment = useCallback<DataContextType['addDepartment']>(async (input) => {

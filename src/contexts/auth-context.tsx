@@ -350,14 +350,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
           }
 
-          // Hidratar perfil en segundo plano
-          hydrateUser(session.user).then((success) => {
-            if (!success) {
-              console.warn('[AuthContext] Perfil no cargado tras SIGNED_IN/TOKEN_REFRESHED, se mantiene usuario mínimo');
-            }
-          }).catch((err) => {
-            console.error('[AuthContext] Error hidratando perfil tras SIGNED_IN/TOKEN_REFRESHED:', err);
-          });
+          // Solo hidratar perfil si:
+          // 1. Es SIGNED_IN (nuevo login) - siempre hidratar
+          // 2. Es TOKEN_REFRESHED pero el usuario no está completamente cargado (sin companyId)
+          // Esto evita recargas innecesarias cuando solo se refresca el token
+          const shouldHydrate = event === 'SIGNED_IN' || 
+            (event === 'TOKEN_REFRESHED' && (!currentUserRef.current || !currentUserRef.current.companyId));
+          
+          if (shouldHydrate) {
+            // Hidratar perfil en segundo plano
+            hydrateUser(session.user).then((success) => {
+              if (!success) {
+                console.warn('[AuthContext] Perfil no cargado tras SIGNED_IN/TOKEN_REFRESHED, se mantiene usuario mínimo');
+              }
+            }).catch((err) => {
+              console.error('[AuthContext] Error hidratando perfil tras SIGNED_IN/TOKEN_REFRESHED:', err);
+            });
+          } else {
+            console.log('[AuthContext] TOKEN_REFRESHED: Usuario ya está completamente cargado, omitiendo re-hidratación');
+          }
         }
       }
 
