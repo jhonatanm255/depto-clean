@@ -62,11 +62,45 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const mountedRef = useRef(true);
   const lastNotificationTimeRef = useRef<string | null>(null);
+  const serviceWorkerRegistrationRef = useRef<ServiceWorkerRegistration | null>(null);
 
-  // Cargar permisos de notificación al montar
+  // Registrar service worker y cargar permisos al montar
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
+    if (typeof window === 'undefined') return;
+
+    // Cargar permisos de notificación
+    if ('Notification' in window) {
       setNotificationPermission(Notification.permission);
+    }
+
+    // Registrar service worker para notificaciones push nativas
+    if ('serviceWorker' in navigator) {
+      // Esperar a que el service worker principal (next-pwa) esté listo
+      navigator.serviceWorker.ready.then(() => {
+        // Registrar nuestro service worker de notificaciones
+        return navigator.serviceWorker.register('/notification-sw.js');
+      })
+      .then((registration) => {
+        console.log('[Notifications] ✅ Service Worker de notificaciones registrado:', registration);
+        serviceWorkerRegistrationRef.current = registration;
+        
+        // Verificar si hay actualizaciones
+        registration.update();
+      })
+      .catch((error) => {
+        console.error('[Notifications] ❌ Error registrando Service Worker de notificaciones:', error);
+        // Si falla, intentar registrar directamente
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/notification-sw.js')
+            .then((reg) => {
+              serviceWorkerRegistrationRef.current = reg;
+              console.log('[Notifications] ✅ Service Worker registrado en segundo intento');
+            })
+            .catch((err) => {
+              console.error('[Notifications] ❌ Error en segundo intento:', err);
+            });
+        }
+      });
     }
   }, []);
 
@@ -116,8 +150,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Mostrar notificación push
-  const showPushNotification = useCallback((notification: Notification) => {
+  // Mostrar notificación push nativa (en la barra del sistema)
+  const showPushNotification = useCallback(async (notification: Notification) => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
       return;
     }
@@ -126,18 +160,63 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Solo mostrar si la página no está visible o si el usuario está en otra pestaña
-    if (document.visibilityState === 'visible' && document.hasFocus()) {
-      // Si la página está visible, solo mostrar toast
-      return;
-    }
-
     try {
+      // Intentar usar Service Worker primero (notificaciones nativas en móvil)
+      // Esto hace que aparezcan en la barra de notificaciones del sistema
+      if ('serviceWorker' in navigator) {
+        let registration = serviceWorkerRegistrationRef.current;
+        
+        // Si no tenemos el registration guardado, intentar obtenerlo
+        if (!registration) {
+          try {
+            registration = await navigator.serviceWorker.ready;
+            serviceWorkerRegistrationRef.current = registration;
+          } catch (e) {
+            console.warn('[Notifications] Service Worker no está listo, usando fallback');
+          }
+        }
+        
+        if (registration) {
+          // Mostrar notificación desde el Service Worker (aparece en la barra del sistema móvil)
+          const notificationOptions: any = {
+            body: notification.message,
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/icon-72x72.png',
+            tag: notification.id, // Evitar duplicados
+            data: {
+              notificationId: notification.id,
+              relatedTaskId: notification.relatedTaskId,
+              relatedDepartmentId: notification.relatedDepartmentId,
+              url: notification.relatedTaskId 
+                ? '/employee/tasks' 
+                : notification.relatedDepartmentId 
+                ? '/admin/departments' 
+                : '/dashboard'
+            },
+            requireInteraction: false,
+            silent: false,
+            vibrate: [200, 100, 200], // Vibración en dispositivos móviles (no está en el tipo estándar pero es soportado)
+            actions: [
+              {
+                action: 'open',
+                title: 'Abrir',
+              }
+            ]
+          };
+
+          await registration.showNotification(notification.title, notificationOptions);
+          
+          console.log('[Notifications] ✅ Notificación push nativa mostrada desde Service Worker');
+          return;
+        }
+      }
+
+      // Fallback: usar Notification API directamente (funciona pero no es tan nativa)
       const notificationOptions: NotificationOptions = {
         body: notification.message,
         icon: '/icons/icon-192x192.png',
         badge: '/icons/icon-72x72.png',
-        tag: notification.id, // Evitar duplicados
+        tag: notification.id,
         data: {
           notificationId: notification.id,
           relatedTaskId: notification.relatedTaskId,
@@ -152,7 +231,6 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         window.focus();
         pushNotification.close();
         
-        // Navegar a la página relevante si hay un ID relacionado
         if (notification.relatedTaskId) {
           window.location.href = '/employee/tasks';
         } else if (notification.relatedDepartmentId) {
@@ -162,7 +240,6 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         }
       };
 
-      // Cerrar automáticamente después de 5 segundos
       setTimeout(() => {
         pushNotification.close();
       }, 5000);
@@ -274,7 +351,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     }
   }, [currentUser]);
 
-  // Polling para nuevas notificaciones (funciona sin Realtime - Plan Gratuito)
+  // Sistema de notificaciones en tiempo real con Realtime (fallback a polling)
   useEffect(() => {
     if (!currentUser || !mountedRef.current) {
       return;
@@ -285,97 +362,174 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     // Cargar notificaciones iniciales
     loadNotifications();
 
-    // Función para verificar nuevas notificaciones
-    const checkForNewNotifications = async () => {
-      if (!currentUser || !mountedRef.current) {
-        return;
-      }
+    // Función para procesar una nueva notificación
+    const processNewNotification = (notification: Notification) => {
+      setNotifications((prev) => {
+        const existingIds = new Set(prev.map(n => n.id));
+        if (existingIds.has(notification.id)) {
+          return prev; // Ya existe, no agregar duplicado
+        }
+        
+        // Mostrar toast en la aplicación
+        toast({
+          title: notification.title,
+          description: notification.message,
+        });
 
-      try {
-        // Obtener el timestamp de referencia (última notificación conocida o últimos 30 segundos)
-        const timeFilter = lastNotificationTimeRef.current 
-          ? lastNotificationTimeRef.current 
-          : new Date(Date.now() - 30000).toISOString(); // Últimos 30 segundos si no hay referencia
+        // Siempre mostrar notificación push nativa en la barra del sistema si hay permiso
+        // Esto funciona incluso cuando la app está en primer plano
+        if (notificationPermission === 'granted') {
+          showPushNotification(notification);
+        }
+        
+        // Agregar al inicio (más recientes primero)
+        return [notification, ...prev];
+      });
+    };
 
-        const { data, error } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', currentUser.id)
-          .gt('created_at', timeFilter)
-          .order('created_at', { ascending: false })
-          .limit(20);
+    // Función de polling como respaldo
+    let pollingInterval: NodeJS.Timeout | null = null;
+    
+    const startPolling = () => {
+      if (pollingInterval) return; // Ya está corriendo
 
-        if (error) {
-          console.error('[Notifications] ❌ Error verificando nuevas notificaciones:', error);
-          console.error('[Notifications] Detalles del error:', JSON.stringify(error, null, 2));
+      const checkForNewNotifications = async () => {
+        if (!currentUser || !mountedRef.current) {
           return;
         }
 
-        const newNotifications = (data as NotificationRow[] || []).map(mapNotification);
+        try {
+          const timeFilter = lastNotificationTimeRef.current 
+            ? lastNotificationTimeRef.current 
+            : new Date(Date.now() - 30000).toISOString();
 
-        if (newNotifications.length > 0) {
-          console.log('[Notifications] ✅ Se encontraron', newNotifications.length, 'notificaciones nuevas');
-          
-          // Actualizar el timestamp de referencia con la más reciente
-          lastNotificationTimeRef.current = newNotifications[0].createdAt;
-          
-          // Agregar nuevas notificaciones al inicio
-          setNotifications((prev) => {
-            const existingIds = new Set(prev.map(n => n.id));
-            const trulyNew = newNotifications.filter(n => !existingIds.has(n.id));
-            
-            if (trulyNew.length === 0) {
-              return prev;
-            }
-            
-            // Mostrar cada notificación nueva (de más antigua a más reciente)
-            [...trulyNew].reverse().forEach((newNotification) => {
-              toast({
-                title: newNotification.title,
-                description: newNotification.message,
-              });
+          const { data, error } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .gt('created_at', timeFilter)
+            .order('created_at', { ascending: false })
+            .limit(20);
 
-              if (notificationPermission === 'granted') {
-                showPushNotification(newNotification);
-              }
+          if (error) {
+            console.error('[Notifications] ❌ Error verificando nuevas notificaciones:', error);
+            return;
+          }
+
+          const newNotifications = (data as NotificationRow[] || []).map(mapNotification);
+
+          if (newNotifications.length > 0) {
+            console.log('[Notifications] ✅ Se encontraron', newNotifications.length, 'notificaciones nuevas (polling)');
+            
+            lastNotificationTimeRef.current = newNotifications[0].createdAt;
+            
+            newNotifications.forEach((notification) => {
+              processNewNotification(notification);
             });
+          }
+        } catch (error) {
+          console.error('[Notifications] ❌ Error en checkForNewNotifications:', error);
+        }
+      };
+
+      // Verificar cada 10 segundos (menos frecuente que antes, ya que Realtime es primario)
+      pollingInterval = setInterval(checkForNewNotifications, 10000);
+      console.log('[Notifications] 🔄 Polling iniciado como respaldo - verificando cada 10 segundos');
+    };
+
+    // Intentar usar Realtime primero
+    try {
+      // Crear canal de Realtime para escuchar nuevas notificaciones
+      const channel = supabase
+        .channel(`notifications:${currentUser.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${currentUser.id}`,
+          },
+          (payload) => {
+            if (!mountedRef.current) return;
             
-            // Agregar al inicio (más recientes primero)
-            return [...trulyNew.reverse(), ...prev];
-          });
+            console.log('[Notifications] 🔔 Nueva notificación recibida en tiempo real:', payload.new);
+            const newNotification = mapNotification(payload.new as NotificationRow);
+            processNewNotification(newNotification);
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('[Notifications] ✅ Suscrito a Realtime - notificaciones en tiempo real activas');
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('[Notifications] ⚠️ Error en Realtime, usando polling como respaldo');
+            startPolling();
+          }
+        });
+
+      channelRef.current = channel;
+
+      // Si después de 3 segundos no se suscribió, usar polling
+      const realtimeTimeout = setTimeout(() => {
+        if (channelRef.current && channelRef.current.state !== 'joined') {
+          console.warn('[Notifications] ⚠️ Realtime no disponible, usando polling');
+          startPolling();
         }
-      } catch (error) {
-        console.error('[Notifications] ❌ Error en checkForNewNotifications:', error);
-      }
-    };
+      }, 3000);
 
-    // Inicializar el timestamp de referencia después de cargar notificaciones iniciales
-    const initRef = () => {
-      setNotifications((prev) => {
-        if (prev.length > 0) {
-          lastNotificationTimeRef.current = prev[0].createdAt;
+      // Inicializar timestamp de referencia
+      const initRef = () => {
+        setNotifications((prev) => {
+          if (prev.length > 0) {
+            lastNotificationTimeRef.current = prev[0].createdAt;
+          }
+          return prev;
+        });
+      };
+      
+      const initTimeout = setTimeout(initRef, 1000);
+
+      // Limpiar al desmontar
+      return () => {
+        clearTimeout(realtimeTimeout);
+        clearTimeout(initTimeout);
+        if (pollingInterval) {
+          clearInterval(pollingInterval);
         }
-        return prev;
-      });
-    };
-    
-    // Esperar un poco para que se carguen las notificaciones iniciales
-    const initTimeout = setTimeout(initRef, 1000);
+        if (channelRef.current) {
+          console.log('[Notifications] 🛑 Desconectando canal Realtime');
+          supabase.removeChannel(channelRef.current);
+          channelRef.current = null;
+        }
+      };
+    } catch (error) {
+      console.error('[Notifications] ❌ Error configurando Realtime, usando polling:', error);
+      // Fallback a polling si hay error
+      startPolling();
 
-    // Verificar cada 5 segundos
-    const pollingInterval = setInterval(checkForNewNotifications, 5000);
-    console.log('[Notifications] 🔄 Polling iniciado - verificando cada 5 segundos');
+      // Inicializar timestamp de referencia
+      const initRef = () => {
+        setNotifications((prev) => {
+          if (prev.length > 0) {
+            lastNotificationTimeRef.current = prev[0].createdAt;
+          }
+          return prev;
+        });
+      };
+      
+      const initTimeout = setTimeout(initRef, 1000);
 
-    // Limpiar al desmontar
-    return () => {
-      console.log('[Notifications] 🛑 Limpiando polling');
-      clearTimeout(initTimeout);
-      clearInterval(pollingInterval);
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
-    };
+      return () => {
+        clearTimeout(initTimeout);
+        if (pollingInterval) {
+          clearInterval(pollingInterval);
+        }
+        if (channelRef.current) {
+          supabase.removeChannel(channelRef.current);
+          channelRef.current = null;
+        }
+      };
+    }
   }, [currentUser, loadNotifications, notificationPermission, showPushNotification]);
 
   // Limpiar al desmontar

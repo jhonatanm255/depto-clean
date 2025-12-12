@@ -200,6 +200,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [dataLoading, setDataLoading] = useState<boolean>(true);
   const { currentUser } = useAuth();
   const lastLoadedUserIdRef = React.useRef<string | null>(null);
+  const lastLoadedCompanyIdRef = React.useRef<string | null>(null);
   
   const isSuperadmin = currentUser?.role === 'superadmin';
 
@@ -411,25 +412,33 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setAllCompanies([]);
       setDataLoading(false);
       lastLoadedUserIdRef.current = null;
+      lastLoadedCompanyIdRef.current = null;
       return;
     }
     
-    // Optimización: Solo recargar datos si el usuario cambió (diferente ID)
-    // o si es la primera carga (lastLoadedUserIdRef es null)
+    // Optimización: Solo recargar datos si:
+    // 1. El usuario cambió (diferente ID)
+    // 2. Es la primera carga
+    // 3. El companyId cambió (importante: usuario mínimo → usuario completo)
     const userIdChanged = lastLoadedUserIdRef.current !== currentUser.id;
+    const companyIdChanged = lastLoadedCompanyIdRef.current !== currentUser.companyId;
     const isFirstLoad = lastLoadedUserIdRef.current === null;
     
-    if (userIdChanged || isFirstLoad) {
+    if (userIdChanged || isFirstLoad || companyIdChanged) {
       console.log('[DataContext] Usuario autenticado detectado, cargando datos...', {
         userId: currentUser.id,
+        companyId: currentUser.companyId,
         previousUserId: lastLoadedUserIdRef.current,
+        previousCompanyId: lastLoadedCompanyIdRef.current,
         isFirstLoad,
-        userIdChanged
+        userIdChanged,
+        companyIdChanged
       });
       lastLoadedUserIdRef.current = currentUser.id;
+      lastLoadedCompanyIdRef.current = currentUser.companyId || null;
       void loadData();
     } else {
-      console.log('[DataContext] Usuario no cambió, omitiendo recarga de datos para optimizar rendimiento');
+      console.log('[DataContext] Usuario y companyId no cambiaron, omitiendo recarga de datos para optimizar rendimiento');
     }
   }, [currentUser, isSuperadmin, loadData]);
 

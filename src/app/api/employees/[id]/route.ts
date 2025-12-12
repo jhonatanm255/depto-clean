@@ -25,7 +25,7 @@ const adminClient = supabaseUrl && serviceKey
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Validar variables de entorno
@@ -40,7 +40,7 @@ export async function DELETE(
       );
     }
 
-    const employeeId = params.id;
+    const { id: employeeId } = await params;
 
     if (!employeeId) {
       return NextResponse.json(

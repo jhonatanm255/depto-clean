@@ -57,14 +57,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle<ProfileRow>();
       
       // Timeout de 5 segundos para la consulta directa
-      let timeoutId: NodeJS.Timeout;
+      let timeoutId: NodeJS.Timeout | undefined;
       const timeoutPromise = new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => {
           reject(new Error('TIMEOUT: La consulta directa tardó más de 5 segundos'));
         }, 5000);
       });
 
-      let result;
+      let result: { data: ProfileRow | null; error: any } | undefined;
       let useRpcFallback = false;
       
       try {
@@ -162,6 +162,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      if (!result) {
+        console.error('[AuthContext] No se obtuvo resultado de la consulta');
+        setCurrentUser(null);
+        return false;
+      }
+
       const { data, error } = result;
       const elapsed = Date.now() - startTime;
       
@@ -222,7 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: user.email ?? null,
         role: data.role,
         companyId: data.company_id || '', // Superadmin tiene companyId vacío
-        name: data.full_name ?? data.email ?? user.email,
+        name: data.full_name ?? data.email ?? user.email ?? 'Usuario',
         fullName: data.full_name ?? undefined,
       });
       return true;
@@ -244,7 +250,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         setLoading(true);
         // Timeout de seguridad para evitar que getSession se quede colgado indefinidamente
-        let sessionTimeoutId: NodeJS.Timeout;
+        let sessionTimeoutId: NodeJS.Timeout | undefined;
         const sessionTimeoutPromise = new Promise<never>((_, reject) => {
           sessionTimeoutId = setTimeout(() => {
             reject(new Error('TIMEOUT: getSession tardó más de 15 segundos'));
@@ -286,7 +292,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (mounted) {
             setCurrentUser({
               id: session.user.id,
-              email: session.user.email,
+              email: session.user.email ?? null,
               role: 'employee' as UserRole, // rol provisional hasta cargar perfil real
               companyId: '',
               name: session.user.email || 'Usuario',
@@ -343,7 +349,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!currentUserRef.current && mounted) {
             setCurrentUser({
               id: session.user.id,
-              email: session.user.email,
+              email: session.user.email ?? null,
               role: 'employee' as UserRole,
               companyId: '',
               name: session.user.email || 'Usuario',
@@ -378,7 +384,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!currentUserRef.current && mounted) {
           setCurrentUser({
             id: session.user.id,
-            email: session.user.email,
+            email: session.user.email ?? null,
             role: 'employee' as UserRole,
             companyId: '',
             name: session.user.email || 'Usuario',
@@ -416,7 +422,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const providedEmail = email.trim().toLowerCase();
 
     // Timeout más largo para signInWithPassword (15 segundos) debido a problemas de red
-    let signInTimeoutId: NodeJS.Timeout;
+    let signInTimeoutId: NodeJS.Timeout | undefined;
     const signInTimeoutPromise = new Promise<never>((_, reject) => {
       signInTimeoutId = setTimeout(() => {
         reject(new Error('TIMEOUT: signInWithPassword tardó más de 15 segundos'));
@@ -426,7 +432,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('[AuthContext] Intentando iniciar sesión para:', providedEmail);
       const loginStartTime = Date.now();
-      
+
       // Primero autenticar (con timeout corto de 5s)
       const signInPromise = supabase.auth.signInWithPassword({
         email: providedEmail,
@@ -487,7 +493,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Usuario mínimo inmediato
         setCurrentUser({
           id: data.session.user.id,
-          email: data.session.user.email,
+          email: data.session.user.email ?? null,
           role: 'employee' as UserRole,
           companyId: '',
           name: data.session.user.email || 'Usuario',

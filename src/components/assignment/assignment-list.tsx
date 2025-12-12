@@ -231,7 +231,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                       {employeeTasks.length > 0 ? (
                         <ScrollArea className="h-[250px] pr-3"> 
                           <ul className="space-y-3">
-                            {employeeTasks.map((task) => {
+                            {employeeTasks.map((task: CleaningTask) => {
                               const department = departments.find(d => d.id === task.departmentId);
                               if (!department) return null;
                               return (
