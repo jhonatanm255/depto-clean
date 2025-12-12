@@ -84,8 +84,12 @@ function AdminDashboard() {
           Panel de {company?.displayName ?? 'tu empresa'}
         </h2>
         {currentUser && (
-          <p className="text-muted-foreground mt-2">
-            {roleName} • {userName}
+          <p className="text-muted-foreground mt-2 flex items-center gap-2">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
+              {roleName}
+            </span>
+            <span>•</span>
+            <span>{userName}</span>
           </p>
         )}
         <p className="text-muted-foreground">
@@ -183,8 +187,12 @@ function EmployeeDashboard({user}: {user: AppUser}) {
         <h2 className="text-3xl font-bold font-headline text-foreground">
           ¡Bienvenido/a, {company?.displayName ?? 'tu empresa'}!
         </h2>
-        <p className="text-muted-foreground mt-2">
-          {roleName} • {userName}
+        <p className="text-muted-foreground mt-2 flex items-center gap-2">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
+            {roleName}
+          </span>
+          <span>•</span>
+          <span>{userName}</span>
         </p>
       </div>
       <p className="text-muted-foreground">Aquí están las tareas asignadas a tu equipo.</p>
