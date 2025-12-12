@@ -145,11 +145,22 @@ export function LoginForm() {
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="flex justify-center text-sm text-muted-foreground">
-        ¿Aún no tienes cuenta? Regístra tu Empresa{" "}
-        <Link href="/register" className="ml-1 text-primary underline">
-          Aquí
-        </Link>
+      <CardFooter className="flex flex-col gap-3">
+        <div className="flex justify-center text-sm text-muted-foreground">
+          ¿Aún no tienes cuenta? Regístra tu Empresa{" "}
+          <Link href="/register" className="ml-1 text-primary underline">
+            Aquí
+          </Link>
+        </div>
+        <div className="flex items-center justify-center text-xs text-muted-foreground gap-1 flex-wrap">
+          <Link href="/terms" className="text-primary underline hover:text-primary/80">
+            Términos y condiciones
+          </Link>
+          <span>•</span>
+          <Link href="/privacy" className="text-primary underline hover:text-primary/80">
+            Política de privacidad
+          </Link>
+        </div>
       </CardFooter>
     </Card>
   );

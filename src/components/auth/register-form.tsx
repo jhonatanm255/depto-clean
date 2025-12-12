@@ -129,7 +129,7 @@ export function RegisterForm() {
           Registra tu empresa
         </CardTitle>
         <CardDescription>
-          Crea una cuenta para gestionar tus departamentos y equipos de limpieza.
+          Crea una cuenta para gestionar tus departamentos y equipos de limpieza de tu empresa.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -238,9 +238,16 @@ export function RegisterForm() {
             Inicia sesión
           </Link>
         </div>
-        <div className="flex items-center justify-center text-xs text-muted-foreground gap-1">
+        <div className="flex items-center justify-center text-xs text-muted-foreground gap-1 flex-wrap">
           <Sparkles className="h-3 w-3" />
-          Al registrarte aceptas nuestros términos y políticas de uso.
+          <span>Al registrarte aceptas nuestros</span>
+          <Link href="/terms" className="text-primary underline hover:text-primary/80">
+            términos y condiciones
+          </Link>
+          <span>y</span>
+          <Link href="/privacy" className="text-primary underline hover:text-primary/80">
+            política de privacidad
+          </Link>
         </div>
       </CardFooter>
     </Card>
