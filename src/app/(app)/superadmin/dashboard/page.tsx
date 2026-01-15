@@ -1,5 +1,6 @@
 "use client";
 import React, { useMemo, useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Building2, Users, Briefcase, CheckSquare, TrendingUp, Calendar } from 'lucide-react';
@@ -7,31 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { isToday } from '@/lib/utils';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import { Bar, Line, Doughnut } from 'react-chartjs-2';
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend
-);
+import { ChartComponents } from '@/components/charts/chart-wrapper';
 
 export default function SuperadminDashboardPage() {
   const { currentUser } = useAuth();
@@ -399,30 +376,29 @@ export default function SuperadminDashboardPage() {
           </CardHeader>
           <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
             {stats.employeesByCompany.length > 0 ? (
-              <div className="h-[250px] md:h-[300px]">
-                <Bar 
-                  data={employeesChartData} 
-                  options={{ 
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    plugins: { 
-                      legend: { display: false },
-                      tooltip: {
-                        titleFont: { size: 12 },
-                        bodyFont: { size: 11 }
-                      }
-                    },
-                    scales: {
-                      x: {
-                        ticks: { font: { size: isMobile ? 10 : 12 } }
-                      },
-                      y: {
-                        ticks: { font: { size: isMobile ? 10 : 12 } }
-                      }
+              <ChartComponents
+                type="bar"
+                data={employeesChartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      titleFont: { size: 12 },
+                      bodyFont: { size: 11 }
                     }
-                  }} 
-                />
-              </div>
+                  },
+                  scales: {
+                    x: {
+                      ticks: { font: { size: isMobile ? 10 : 12 } }
+                    },
+                    y: {
+                      ticks: { font: { size: isMobile ? 10 : 12 } }
+                    }
+                  }
+                }}
+              />
             ) : (
               <p className="text-muted-foreground text-center py-8 text-sm">No hay datos disponibles</p>
             )}
@@ -436,32 +412,31 @@ export default function SuperadminDashboardPage() {
           </CardHeader>
           <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
             {stats.tasksByCompany.length > 0 ? (
-              <div className="h-[250px] md:h-[300px]">
-                <Bar 
-                  data={tasksChartData} 
-                  options={{ 
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        labels: { font: { size: isMobile ? 10 : 12 } }
-                      },
-                      tooltip: {
-                        titleFont: { size: 12 },
-                        bodyFont: { size: 11 }
-                      }
+              <ChartComponents
+                type="bar"
+                data={tasksChartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      labels: { font: { size: isMobile ? 10 : 12 } }
                     },
-                    scales: {
-                      x: {
-                        ticks: { font: { size: isMobile ? 10 : 12 } }
-                      },
-                      y: {
-                        ticks: { font: { size: isMobile ? 10 : 12 } }
-                      }
+                    tooltip: {
+                      titleFont: { size: 12 },
+                      bodyFont: { size: 11 }
                     }
-                  }} 
-                />
-              </div>
+                  },
+                  scales: {
+                    x: {
+                      ticks: { font: { size: isMobile ? 10 : 12 } }
+                    },
+                    y: {
+                      ticks: { font: { size: isMobile ? 10 : 12 } }
+                    }
+                  }
+                }}
+              />
             ) : (
               <p className="text-muted-foreground text-center py-8 text-sm">No hay datos disponibles</p>
             )}
@@ -475,30 +450,29 @@ export default function SuperadminDashboardPage() {
           </CardHeader>
           <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
             {stats.companiesByMonth.length > 0 ? (
-              <div className="h-[250px] md:h-[300px]">
-                <Line 
-                  data={growthChartData} 
-                  options={{ 
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { 
-                      legend: { display: false },
-                      tooltip: {
-                        titleFont: { size: 12 },
-                        bodyFont: { size: 11 }
-                      }
-                    },
-                    scales: {
-                      x: {
-                        ticks: { font: { size: isMobile ? 10 : 12 } }
-                      },
-                      y: {
-                        ticks: { font: { size: isMobile ? 10 : 12 } }
-                      }
+              <ChartComponents
+                type="line"
+                data={growthChartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      titleFont: { size: 12 },
+                      bodyFont: { size: 11 }
                     }
-                  }} 
-                />
-              </div>
+                  },
+                  scales: {
+                    x: {
+                      ticks: { font: { size: isMobile ? 10 : 12 } }
+                    },
+                    y: {
+                      ticks: { font: { size: isMobile ? 10 : 12 } }
+                    }
+                  }
+                }}
+              />
             ) : (
               <p className="text-muted-foreground text-center py-8 text-sm">No hay datos disponibles</p>
             )}
@@ -512,25 +486,24 @@ export default function SuperadminDashboardPage() {
           </CardHeader>
           <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
             {stats.totalTasks > 0 ? (
-              <div className="h-[250px] md:h-[300px] flex justify-center items-center">
-                <Doughnut 
-                  data={tasksStatusChartData} 
-                  options={{ 
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        position: isMobile ? 'bottom' as const : 'right' as const,
-                        labels: { font: { size: isMobile ? 10 : 12 }, padding: isMobile ? 8 : 12 }
-                      },
-                      tooltip: {
-                        titleFont: { size: 12 },
-                        bodyFont: { size: 11 }
-                      }
+              <ChartComponents
+                type="doughnut"
+                data={tasksStatusChartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: isMobile ? 'bottom' as const : 'right' as const,
+                      labels: { font: { size: isMobile ? 10 : 12 }, padding: isMobile ? 8 : 12 }
+                    },
+                    tooltip: {
+                      titleFont: { size: 12 },
+                      bodyFont: { size: 11 }
                     }
-                  }} 
-                />
-              </div>
+                  }
+                }}
+              />
             ) : (
               <p className="text-muted-foreground text-center py-8 text-sm">No hay tareas disponibles</p>
             )}

@@ -9,7 +9,19 @@ import { useAuth } from './auth-context';
 interface DataContextType {
   company: Company | null;
   departments: Department[];
-  addDepartment: (input: { name: string; accessCode?: string | null; address?: string | null; notes?: string | null }) => Promise<void>;
+  addDepartment: (input: {
+    name: string;
+    accessCode?: string | null;
+    address?: string | null;
+    notes?: string | null;
+    bedrooms?: number | null;
+    bathrooms?: number | null;
+    bedsCount?: number | null;
+    beds?: Department['beds'];
+    handTowels?: number | null;
+    bodyTowels?: number | null;
+    customFields?: Department['customFields'];
+  }) => Promise<void>;
   updateDepartment: (dept: Department) => Promise<void>;
   deleteDepartment: (id: string) => Promise<void>;
 
@@ -35,7 +47,7 @@ interface DataContextType {
   getDepartmentById: (departmentId: string) => Department | undefined;
   getEmployeeProfileById: (employeeProfileId: string) => EmployeeProfile | undefined;
   dataLoading: boolean;
-  
+
   // Funciones para superadmin
   allCompanies: Company[];
   getAllCompanies: () => Promise<Company[]>;
@@ -56,6 +68,13 @@ type DepartmentRow = {
   assigned_to: string | null;
   last_cleaned_at: string | null;
   notes: string | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  beds_count: number | null;
+  beds: Department['beds'];
+  hand_towels: number | null;
+  body_towels: number | null;
+  custom_fields: Department['customFields'];
   created_at: string;
   updated_at: string;
 };
@@ -128,6 +147,13 @@ const mapDepartment = (row: DepartmentRow): Department => ({
   assignedTo: row.assigned_to,
   lastCleanedAt: row.last_cleaned_at,
   notes: row.notes,
+  bedrooms: row.bedrooms,
+  bathrooms: row.bathrooms,
+  bedsCount: row.beds_count,
+  beds: Array.isArray(row.beds) ? row.beds : [],
+  handTowels: row.hand_towels,
+  bodyTowels: row.body_towels,
+  customFields: Array.isArray(row.custom_fields) ? row.custom_fields : [],
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -201,7 +227,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const { currentUser } = useAuth();
   const lastLoadedUserIdRef = React.useRef<string | null>(null);
   const lastLoadedCompanyIdRef = React.useRef<string | null>(null);
-  
+
   const isSuperadmin = currentUser?.role === 'superadmin';
 
   const loadData = useCallback(async () => {
@@ -209,7 +235,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       console.log('[DataContext] No hay usuario actual, saltando carga de datos');
       return;
     }
-    
+
     if (isSuperadmin) {
       // Para superadmin, cargar todas las empresas y datos globales
       console.log('[DataContext] Cargando datos globales para superadmin', {
@@ -218,7 +244,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       });
       setDataLoading(true);
       const startTime = Date.now();
-      
+
       try {
         const [companiesResp, departmentsResp, employeesResp, tasksResp] = await Promise.all([
           supabase
@@ -270,7 +296,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setEmployees(employeesData.map(mapEmployee));
         setTasks(tasksData.map(mapTask));
         setCompany(null); // Superadmin no tiene una compañía específica
-        
+
         console.log('[DataContext] ✓ Datos globales cargados:', {
           companies: companiesData.length,
           departments: departmentsData.length,
@@ -290,7 +316,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       }
       return;
     }
-    
+
     // Carga normal para usuarios regulares
     console.log('[DataContext] Iniciando carga de datos para companyId:', currentUser.companyId);
 
@@ -307,7 +333,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
     setDataLoading(true);
     const startTime = Date.now();
-    
+
     try {
       const [companyResp, departmentsResp, employeesResp, tasksResp] = await Promise.all([
         supabase
@@ -387,7 +413,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setDepartments(departmentsData.map(mapDepartment));
       setEmployees(employeesData.map(mapEmployee));
       setTasks(tasksData.map(mapTask));
-      
+
       console.log('[DataContext] ✓ Datos actualizados en estado');
     } catch (error) {
       console.error('[DataContext] Error cargando datos:', error);
@@ -415,7 +441,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       lastLoadedCompanyIdRef.current = null;
       return;
     }
-    
+
     // Optimización: Solo recargar datos si:
     // 1. El usuario cambió (diferente ID)
     // 2. Es la primera carga
@@ -423,7 +449,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const userIdChanged = lastLoadedUserIdRef.current !== currentUser.id;
     const companyIdChanged = lastLoadedCompanyIdRef.current !== currentUser.companyId;
     const isFirstLoad = lastLoadedUserIdRef.current === null;
-    
+
     if (userIdChanged || isFirstLoad || companyIdChanged) {
       console.log('[DataContext] Usuario autenticado detectado, cargando datos...', {
         userId: currentUser.id,
@@ -508,10 +534,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
         access_code: input.accessCode?.trim() || null,
         address: input.address?.trim() || null,
         notes: input.notes?.trim() || null,
+        bedrooms: input.bedrooms ?? null,
+        bathrooms: input.bathrooms ?? null,
+        beds_count: input.bedsCount ?? null,
+        beds: input.beds || [],
+        hand_towels: input.handTowels ?? null,
+        body_towels: input.bodyTowels ?? null,
+        custom_fields: input.customFields || [],
       };
-      
+
       console.log('[DataContext] 🔄 Insertando en Supabase:', insertData);
-      
+
       const { data, error } = await supabase
         .from('departments')
         .insert(insertData)
@@ -606,9 +639,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return updated;
       });
 
-      toast({ 
-        title: 'Departamento agregado', 
-        description: `"${input.name}" fue creado correctamente.` 
+      toast({
+        title: 'Departamento agregado',
+        description: `"${input.name}" fue creado correctamente.`
       });
 
       // Recargar los datos después de un breve delay para asegurar consistencia
@@ -619,10 +652,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     } catch (error) {
       console.error('[DataContext] ❌ Error completo al agregar departamento:', error);
-      const errorMessage = error instanceof Error 
-        ? error.message 
+      const errorMessage = error instanceof Error
+        ? error.message
         : 'No se pudo agregar el departamento. Verifica tu conexión e intenta nuevamente.';
-      
+
       toast({
         variant: 'destructive',
         title: 'Error al guardar',
@@ -648,6 +681,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
           assigned_to: dept.assignedTo ?? null,
           last_cleaned_at: dept.lastCleanedAt ?? null,
           notes: dept.notes ?? null,
+          bedrooms: dept.bedrooms ?? null,
+          bathrooms: dept.bathrooms ?? null,
+          beds_count: dept.bedsCount ?? null,
+          beds: dept.beds || [],
+          hand_towels: dept.handTowels ?? null,
+          body_towels: dept.bodyTowels ?? null,
+          custom_fields: dept.customFields || [],
         })
         .eq('id', dept.id)
         .eq('company_id', currentUser.companyId)
@@ -737,7 +777,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       // Obtener el token de sesión actual
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      
+
       if (sessionError || !sessionData?.session?.access_token) {
         throw new Error('No se pudo obtener la sesión actual. Por favor, inicia sesión nuevamente.');
       }
@@ -760,7 +800,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.error || `Error ${response.status}: ${response.statusText}`;
         const errorDetails = errorData.details ? ` ${errorData.details}` : '';
-        
+
         // Mensajes de error más amigables con detalles
         if (response.status === 409) {
           throw new Error(errorMessage + (errorDetails ? `\n${errorDetails}` : ''));
@@ -774,7 +814,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       }
 
       const result = await response.json();
-      
+
       if (!result.employee) {
         throw new Error('No se recibió la información de la empleada creada.');
       }
@@ -1169,7 +1209,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       .from('companies')
       .select('id, name, slug, legal_name, tax_id, timezone, plan_code, metadata, display_name, created_at, updated_at')
       .order('created_at', { ascending: false });
-    
+
     if (error) throw error;
     return (data as CompanyRow[]).map(mapCompany);
   }, [isSuperadmin]);
@@ -1182,7 +1222,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       .from('profiles')
       .select('*')
       .order('full_name', { ascending: true });
-    
+
     if (error) throw error;
     return (data as ProfileRow[]).map(mapEmployee);
   }, [isSuperadmin]);
@@ -1195,7 +1235,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       .from('tasks')
       .select('*')
       .order('assigned_at', { ascending: false });
-    
+
     if (error) throw error;
     return (data as TaskRow[]).map(mapTask);
   }, [isSuperadmin]);
@@ -1208,7 +1248,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       .from('departments')
       .select('*')
       .order('name', { ascending: true });
-    
+
     if (error) throw error;
     return (data as DepartmentRow[]).map(mapDepartment);
   }, [isSuperadmin]);
