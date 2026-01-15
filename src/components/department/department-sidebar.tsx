@@ -36,6 +36,7 @@ import { useData } from '@/contexts/data-context';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { MediaReportsDialog } from '@/components/media/media-reports-dialog';
+import { useAuth } from '@/contexts/auth-context';
 
 interface DepartmentSidebarProps {
     department: Department | null;
@@ -60,7 +61,10 @@ export function DepartmentSidebar({
     employees
 }: DepartmentSidebarProps) {
     const { deleteDepartment } = useData();
+    const { currentUser } = useAuth();
     const [isMediaReportsOpen, setIsMediaReportsOpen] = React.useState(false);
+
+    const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'owner';
 
     if (!department) return null;
 
@@ -116,7 +120,7 @@ export function DepartmentSidebar({
                         <div className="flex items-start justify-between gap-4 mb-3">
                             <h1 className="text-3xl font-bold font-headline leading-tight">{department.name}</h1>
                             <div className="flex flex-col items-end gap-2 shrink-0">
-                                <Badge variant="default" className={cn("text-primary-foreground capitalize py-1 px-3 whitespace-nowrap", getStatusBadgeVariant(department.status))}>
+                                <Badge variant="default" className={cn("text-primary-foreground capitalize py-1 px-2.5 whitespace-nowrap flex items-center justify-center gap-1", getStatusBadgeVariant(department.status))}>
                                     {getStatusIcon(department.status)}
                                     {translateStatus(department.status)}
                                 </Badge>
@@ -128,9 +132,9 @@ export function DepartmentSidebar({
                             </div>
                         </div>
                         {department.address && (
-                            <p className="flex items-start text-sm text-muted-foreground bg-muted/20 p-3 rounded-lg border border-dashed">
-                                <MapPin className="mr-2 h-4 w-4 shrink-0 mt-0.5" />
-                                {department.address}
+                            <p className="flex items-center text-sm text-muted-foreground bg-muted/20 p-3 rounded-lg border border-dashed">
+                                <MapPin className="mr-2 h-4 w-4 shrink-0" />
+                                <span>{department.address}</span>
                             </p>
                         )}
                     </div>
@@ -245,34 +249,41 @@ export function DepartmentSidebar({
             </ScrollArea>
 
             {/* Footer Actions */}
-            <div className="p-6 border-t bg-muted/30 grid grid-cols-2 gap-3">
-                <Button variant="outline" className="w-full" onClick={() => setIsMediaReportsOpen(true)}>
-                    <Camera className="mr-2 h-4 w-4" /> Evidencias
-                </Button>
-                <Button variant="outline" className="w-full" onClick={() => onEdit(department)}>
-                    <Edit3 className="mr-2 h-4 w-4" /> Editar
-                </Button>
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive" className="w-full col-span-2">
-                            <Trash2 className="mr-2 h-4 w-4" /> Eliminar Departamento
+            <div className="p-6 border-t bg-muted/30 flex flex-col gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                    <Button variant="outline" className="w-full" onClick={() => setIsMediaReportsOpen(true)}>
+                        <Camera className="mr-2 h-4 w-4" /> Evidencias
+                    </Button>
+                    {isAdmin && (
+                        <Button variant="outline" className="w-full" onClick={() => onEdit(department)}>
+                            <Edit3 className="mr-2 h-4 w-4" /> Editar
                         </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Esta acción eliminará el departamento "{department.name}" y todo su historial.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-                                Eliminar
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+                    )}
+                </div>
+
+                {isAdmin && (
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" className="w-full">
+                                <Trash2 className="mr-2 h-4 w-4" /> Eliminar Departamento
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Esta acción eliminará el departamento "{department.name}" y todo su historial.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                                    Eliminar
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                )}
             </div>
 
             <MediaReportsDialog

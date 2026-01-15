@@ -106,9 +106,9 @@ export function DepartmentCard({
 
   const getStatusIcon = (status: Department['status']) => {
     switch (status) {
-      case 'completed': return <CheckCircle2 className="h-4 w-4 mr-1" />;
-      case 'in_progress': return <Loader2 className="h-4 w-4 mr-1 animate-spin" />;
-      case 'pending': return <AlertTriangle className="h-4 w-4 mr-1" />;
+      case 'completed': return <CheckCircle2 className="h-4 w-4" />;
+      case 'in_progress': return <Loader2 className="h-4 w-4 animate-spin" />;
+      case 'pending': return <AlertTriangle className="h-4 w-4" />;
       default: return null;
     }
   };
@@ -151,28 +151,30 @@ export function DepartmentCard({
                     {department.name}
                   </h3>
                 </div>
-                <div className="flex items-center gap-2.5 mt-2 flex-wrap">
-                  <Badge variant="default" className={cn("text-primary-foreground capitalize text-xs", getStatusBadgeVariant(department.status))}>
-                    {getStatusIcon(department.status)}
-                    {translateStatus(department.status)}
-                  </Badge>
-                  <span className="flex items-center text-sm text-muted-foreground mr-3">
-                    <KeyRound className="mr-1 h-4 w-4 shrink-0" />
-                    {department.accessCode}
-                  </span>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground border-l pl-4 ml-1">
-                    <div className="flex items-center">
-                      <Bed className="mr-2 h-5 w-5 text-primary/60" />
-                      <span>{department.bedrooms ?? 0} Hab.</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Bath className="mr-2 h-5 w-5 text-primary/60" />
-                      <span>{department.bathrooms ?? 0} Baños</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Bed className="mr-2 h-5 w-5 text-primary/60" />
-                      <span>{totalBeds} Camas</span>
-                    </div>
+                <div className="flex items-center justify-between gap-3 mt-1">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default" className={cn("text-primary-foreground capitalize text-[10px] sm:text-xs shrink-0 flex items-center gap-1 px-2.5 py-0.5", getStatusBadgeVariant(department.status))}>
+                      {getStatusIcon(department.status)}
+                      {translateStatus(department.status)}
+                    </Badge>
+                    <span className="flex items-center text-sm text-muted-foreground ml-2">
+                      <KeyRound className="mr-1 h-3.5 w-3.5 shrink-0" />
+                      {department.accessCode}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2 border-t pt-2">
+                  <div className="flex items-center">
+                    <Bed className="mr-2 h-5 w-5 text-primary/60" />
+                    <span>{department.bedrooms ?? 0}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Bath className="mr-2 h-5 w-5 text-primary/60" />
+                    <span>{department.bathrooms ?? 0}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Bed className="mr-2 h-5 w-5 text-primary/60" />
+                    <span>{totalBeds}</span>
                   </div>
                 </div>
               </div>
@@ -216,7 +218,7 @@ export function DepartmentCard({
                       <Building2 className="mr-2 h-5 w-5 text-primary shrink-0" />
                       <span className="truncate">{department.name}</span>
                     </CardTitle>
-                    <Badge variant="default" className={cn("text-primary-foreground capitalize shrink-0", getStatusBadgeVariant(department.status))}>
+                    <Badge variant="default" className={cn("text-primary-foreground capitalize shrink-0 flex items-center justify-center gap-1 px-2.5 h-6", getStatusBadgeVariant(department.status))}>
                       {getStatusIcon(department.status)}
                       {translateStatus(department.status)}
                     </Badge>
@@ -246,9 +248,9 @@ export function DepartmentCard({
                 Código de Acceso: {department.accessCode}
               </CardDescription>
               {department.address && (
-                <CardDescription className="flex items-start pt-1 text-xs text-muted-foreground">
+                <CardDescription className="flex items-center pt-1 text-xs text-muted-foreground">
                   <MapPin className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
-                  {department.address}
+                  <span className="truncate">{department.address}</span>
                 </CardDescription>
               )}
             </CardHeader>
