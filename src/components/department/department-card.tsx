@@ -97,9 +97,9 @@ export function DepartmentCard({
 
   const getStatusBadgeVariant = (status: Department['status']) => {
     switch (status) {
-      case 'completed': return 'bg-green-500 hover:bg-green-600'; // Limpio
-      case 'in_progress': return 'bg-primary hover:bg-primary/90'; // En progreso
-      case 'pending': return 'bg-yellow-500 hover:bg-yellow-600'; // Necesita limpieza
+      case 'completed': return 'bg-green-100 text-green-700'; // Limpio
+      case 'in_progress': return 'bg-blue-100 text-blue-700'; // En progreso
+      case 'pending': return 'bg-yellow-100 text-yellow-700'; // Necesita limpieza
       default: return 'bg-gray-500 hover:bg-gray-600';
     }
   };
@@ -130,7 +130,7 @@ export function DepartmentCard({
         onClick={handleCardClick}
         className={cn(
           "flex flex-col shadow-lg hover:shadow-xl overflow-hidden cursor-pointer transition-all duration-200",
-          isSelected ? "ring-2 ring-primary border-primary shadow-primary/20" : ""
+          isSelected ? "ring-.5 ring-primary border-primary shadow-primary/20" : ""
         )}
       >
         {/* Vista compacta (colapsada) */}
