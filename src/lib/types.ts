@@ -8,7 +8,7 @@ export type TaskStatus = 'pending' | 'in_progress' | 'completed';
 export type MediaReportType = 'before' | 'after' | 'incident';
 
 // Tipo de notificación
-export type NotificationType = 
+export type NotificationType =
   | 'task_assigned'
   | 'task_reassigned'
   | 'task_status_changed'
@@ -52,6 +52,13 @@ export interface Department {
   assignedTo?: string | null;
   lastCleanedAt?: string | null;
   notes?: string | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  bedsCount?: number | null;
+  beds?: Array<{ type: 'individual' | 'matrimonial' | 'king' | 'sofa_cama' | 'cuna', quantity: number }> | null;
+  handTowels?: number | null;
+  bodyTowels?: number | null;
+  customFields?: Array<{ name: string, value: string }> | null;
   createdAt: string;
   updatedAt: string;
 }

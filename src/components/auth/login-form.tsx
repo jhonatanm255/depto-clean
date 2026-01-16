@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useState, useEffect, type FormEvent } from 'react';
-import { TriangleAlert, KeyRound } from 'lucide-react';
+import { TriangleAlert, KeyRound, Eye, EyeOff } from 'lucide-react';
 // import { toast } from '@/hooks/use-toast'; // Errors handled in AuthContext
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -17,6 +17,7 @@ import Image from 'next/image';
 export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, loading: authLoading } = useAuth();
 
@@ -33,17 +34,17 @@ export function LoginForm() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    
+
     if (isSubmitting || authLoading) return; // Prevenir múltiples envíos
-    
+
     setIsSubmitting(true);
-    
+
     // Timeout de seguridad: 30 segundos para dar tiempo a la hidratación
     const timeoutId = setTimeout(() => {
       console.warn('[LoginForm] ⚠️ Timeout en handleSubmit (30s), reseteando estado');
       setIsSubmitting(false);
     }, 30000);
-    
+
     // Timeout de seguridad adicional: si authLoading no cambia en 5 segundos, forzar reset
     const safetyTimeout = setTimeout(() => {
       if (isSubmitting) {
@@ -51,7 +52,7 @@ export function LoginForm() {
         setIsSubmitting(false);
       }
     }, 5000);
-    
+
     try {
       await login(email, password);
       // No resetear aquí, el useEffect se encargará cuando authLoading cambie
@@ -64,10 +65,10 @@ export function LoginForm() {
     }
   };
 
-  if (authLoading && !email) { 
+  if (authLoading && !email) {
     return (
       <div className="flex flex-col items-center justify-center p-8">
-        <LoadingSpinner size={32}/>
+        <LoadingSpinner size={32} />
         <p className="mt-4 text-muted-foreground">Verificando...</p>
       </div>
     );
@@ -77,11 +78,12 @@ export function LoginForm() {
     <Card className="w-full max-w-md shadow-xl">
       <CardHeader className="text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center bg-primary p-4 rounded-md">
-          <Image 
-            src="/logo.png" 
-            alt="Logo de la aplicación" 
-            width={64} 
+          <Image
+            src="/logo.png"
+            alt="Logo de la aplicación"
+            width={64}
             height={64}
+            priority
             className="object-contain"
           />
         </div>
@@ -119,19 +121,30 @@ export function LoginForm() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Contraseña</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              aria-label="Contraseña"
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                aria-label="Contraseña"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
-          <Button 
-            type="submit" 
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" 
+          <Button
+            type="submit"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
             disabled={isSubmitting || authLoading}
           >
             {isSubmitting || authLoading ? (

@@ -1,0 +1,49 @@
+# Excluir carpeta mobile-app completa (no necesaria para el despliegue de Next.js)
+mobile-app/
+
+# Excluir node_modules (Vercel los instala automáticamente)
+node_modules/
+
+# Excluir archivos de build y cache
+.next/
+out/
+build/
+dist/
+
+# Excluir archivos de desarrollo
+.env.local
+.env.development
+.env.test
+
+# Excluir archivos de testing
+coverage/
+.nyc_output/
+
+# Excluir archivos de documentación grandes
+*.md
+docs/
+
+# Excluir archivos SQL (no necesarios en producción)
+*.sql
+
+# Excluir archivos de configuración local
+.genkit/
+.vscode/
+.idea/
+
+# Excluir archivos temporales
+*.log
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Excluir archivos de git
+.git/
+git_log.txt
+
+# Excluir archivos de scripts (opcional, solo si no se usan en build)
+# scripts/
+
+# Nota: tsconfig.json, tailwind.config.ts, postcss.config.mjs y components.json
+# son necesarios para el build, NO deben excluirse

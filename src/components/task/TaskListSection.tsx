@@ -4,6 +4,7 @@ import type { CleaningTask, Department } from '@/lib/types';
 import { TaskCard } from '@/components/task/task-card';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 import type { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface TaskListSectionProps {
   tasks: CleaningTask[];
@@ -13,6 +14,8 @@ interface TaskListSectionProps {
   emptyStateTitle: string;
   emptyStateMessage: string;
   emptyStateIcon: LucideIcon;
+  selectedDeptId?: string | null;
+  onSelectDepartment?: (deptId: string) => void;
 }
 
 export function TaskListSection({
@@ -23,6 +26,8 @@ export function TaskListSection({
   emptyStateTitle,
   emptyStateMessage,
   emptyStateIcon: EmptyStateIcon,
+  selectedDeptId,
+  onSelectDepartment,
 }: TaskListSectionProps) {
 
   if (isLoading && !initialLoadDone) {
@@ -33,7 +38,7 @@ export function TaskListSection({
       </div>
     );
   }
-  
+
   if (!isLoading && tasks.length === 0) {
     return (
       <div className="text-center py-10 border rounded-lg bg-card shadow">
@@ -45,10 +50,23 @@ export function TaskListSection({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className={cn(
+      "grid gap-4 transition-all duration-300",
+      selectedDeptId
+        ? "grid-cols-1 md:grid-cols-2"
+        : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+    )}>
       {tasks.map((task) => {
         const department = getDepartmentById(task.departmentId);
-        return <TaskCard key={task.id} task={task} department={department} />;
+        return (
+          <TaskCard
+            key={task.id}
+            task={task}
+            department={department}
+            isSelected={selectedDeptId === task.departmentId}
+            onSelect={() => onSelectDepartment?.(task.departmentId)}
+          />
+        );
       })}
     </div>
   );

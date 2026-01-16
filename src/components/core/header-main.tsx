@@ -1,6 +1,7 @@
 
 "use client";
 import React from 'react';
+import Link from 'next/link';
 import { useAuth } from "@/contexts/auth-context";
 import { useData } from "@/contexts/data-context";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Moon, Sun, PanelLeft } from "lucide-react";
+import { LogOut, Moon, Sun, PanelLeft, CreditCard } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar"; // Todavía puede ser usado por AppSidebar desktop
 import { useTheme } from "next-themes";
 import { useIsMobile } from '@/hooks/use-mobile'; // Para ocultar el botón del panel
@@ -95,6 +96,15 @@ export function HeaderMain() {
                   </p>
                 </div>
               </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {(currentUser?.role === 'owner' || currentUser?.role === 'admin') && (
+                <DropdownMenuItem asChild>
+                  <Link href="/subscription" className="cursor-pointer">
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    <span>Suscripción</span>
+                  </Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />
