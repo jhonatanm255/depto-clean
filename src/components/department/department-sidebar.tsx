@@ -18,7 +18,8 @@ import {
     Bed,
     Bath,
     Utensils,
-    Info
+    Info,
+    DoorOpen
 } from 'lucide-react';
 import {
     AlertDialog,
@@ -132,7 +133,7 @@ export function DepartmentSidebar({
                             </div>
                         </div>
                         {department.address && (
-                            <p className="flex items-center text-sm text-muted-foreground bg-muted/20 p-3 rounded-lg border border-dashed">
+                            <p className="flex items-center text-sm text-muted-foreground bg-muted/20 p-3 rounded-2xl border border-dashed">
                                 <MapPin className="mr-2 h-4 w-4 shrink-0" />
                                 <span>{department.address}</span>
                             </p>
@@ -143,17 +144,17 @@ export function DepartmentSidebar({
 
                     {/* Configuration Grid */}
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-card border rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-sm">
-                            <Bed className="h-6 w-6 text-primary mb-2" />
+                        <div className="bg-card border rounded-3xl p-4 flex flex-col items-center justify-center text-center shadow-sm">
+                            <DoorOpen className="h-6 w-6 text-primary mb-2" />
                             <span className="text-2xl font-bold">{department.bedrooms ?? 0}</span>
                             <span className="text-xs text-muted-foreground uppercase font-semibold">Habitaciones</span>
                         </div>
-                        <div className="bg-card border rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-sm">
+                        <div className="bg-card border rounded-3xl p-4 flex flex-col items-center justify-center text-center shadow-sm">
                             <Bath className="h-6 w-6 text-primary mb-2" />
                             <span className="text-2xl font-bold">{department.bathrooms ?? 0}</span>
                             <span className="text-xs text-muted-foreground uppercase font-semibold">Baños</span>
                         </div>
-                        <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 flex flex-col gap-4 shadow-sm col-span-2">
+                        <div className="bg-primary/5 border border-primary/20 rounded-3xl p-5 flex flex-col gap-4 shadow-sm col-span-2">
                             <div className="flex items-center justify-between border-b border-primary/10 pb-3">
                                 <div className="flex items-center gap-3">
                                     <Bed className="h-6 w-6 text-primary" />
@@ -176,7 +177,7 @@ export function DepartmentSidebar({
                                     return bedTypes.map((type) => {
                                         const bed = department.beds?.find(b => b.type.toLowerCase() === type);
                                         return (
-                                            <div key={type} className="flex items-center gap-2 px-3 py-1.5 bg-white border border-primary/10 rounded-lg shadow-sm">
+                                            <div key={type} className="flex items-center gap-2 px-3 py-1.5 bg-white border border-primary/10 rounded-2xl shadow-sm">
                                                 <span className="text-[11px] font-bold text-primary/80">{labels[type]}</span>
                                                 <div className="h-4 w-[1px] bg-primary/20"></div>
                                                 <span className="text-xs font-black text-primary">{bed?.quantity ?? 0}</span>
@@ -192,11 +193,11 @@ export function DepartmentSidebar({
                     <div className="space-y-3">
                         <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Toallas Requeridas</h3>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="flex flex-col p-3 bg-muted/10 rounded-lg border border-primary/10">
+                            <div className="flex flex-col p-3 bg-muted/10 rounded-2xl border border-primary/10">
                                 <span className="text-xs text-muted-foreground mb-1">Mano</span>
                                 <span className="text-lg font-bold">{department.handTowels ?? 0}</span>
                             </div>
-                            <div className="flex flex-col p-3 bg-muted/10 rounded-lg border border-primary/10">
+                            <div className="flex flex-col p-3 bg-muted/10 rounded-2xl border border-primary/10">
                                 <span className="text-xs text-muted-foreground mb-1">Cuerpo</span>
                                 <span className="text-lg font-bold">{department.bodyTowels ?? 0}</span>
                             </div>
@@ -209,7 +210,7 @@ export function DepartmentSidebar({
                             <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Información Adicional</h3>
                             <div className="space-y-2">
                                 {department.customFields.map((field, idx) => (
-                                    <div key={idx} className="flex justify-between items-center p-3 bg-card border rounded-lg">
+                                    <div key={idx} className="flex justify-between items-center p-3 bg-card border rounded-2xl">
                                         <span className="text-sm font-medium text-muted-foreground">{field.name}</span>
                                         <span className="text-sm font-bold">{field.value}</span>
                                     </div>
@@ -219,7 +220,7 @@ export function DepartmentSidebar({
                     )}
 
                     {/* Assignments info */}
-                    <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-3">
+                    <div className="bg-primary/5 p-4 rounded-3xl border border-primary/10 space-y-3">
                         <h3 className="text-sm font-bold uppercase tracking-wider text-primary/70">Asignación Actual</h3>
                         {assignedEmployee ? (
                             <div className="flex items-center gap-3">
@@ -240,7 +241,7 @@ export function DepartmentSidebar({
                     {department.notes && (
                         <div className="space-y-2">
                             <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Notas Internas</h3>
-                            <div className="p-4 bg-yellow-50 border border-yellow-100 rounded-lg text-sm text-yellow-800 italic">
+                            <div className="p-4 bg-yellow-50 border border-yellow-100 rounded-2xl text-sm text-yellow-800 italic">
                                 "{department.notes}"
                             </div>
                         </div>

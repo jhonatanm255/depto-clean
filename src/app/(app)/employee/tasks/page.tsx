@@ -169,7 +169,7 @@ export default function EmployeeTasksPage() {
 
         {/* Sidebar de detalles (solo visible en desktop cuando hay selección) */}
         {selectedDeptId && (
-          <aside className="hidden lg:block w-[380px] sticky top-24 h-[calc(100vh-120px)] overflow-hidden rounded-xl border shadow-lg bg-card animate-in slide-in-from-right duration-300">
+          <aside className="hidden lg:block w-[480px] sticky top-24 h-[calc(100vh-120px)] overflow-hidden rounded-xl border shadow-lg bg-card animate-in slide-in-from-right duration-300">
             <DepartmentSidebar
               department={selectedDepartment || null}
               onClose={() => setSelectedDeptId(null)}

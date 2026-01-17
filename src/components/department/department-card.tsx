@@ -4,7 +4,7 @@ import type { Department, Employee } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, KeyRound, User, Edit3, Trash2, CheckCircle2, AlertTriangle, Loader2, MapPin, Camera, ChevronDown, ChevronUp, Bed, Bath } from 'lucide-react';
+import { Building2, KeyRound, User, Edit3, Trash2, CheckCircle2, AlertTriangle, Loader2, MapPin, Camera, ChevronDown, ChevronUp, Bed, Bath, DoorOpen } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -145,18 +145,21 @@ export function DepartmentCard({
           <div className="flex items-center justify-between p-3.5 gap-3">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Building2 className="h-6 w-6 text-primary shrink-0" />
                   <h3 className="font-headline text-lg font-bold truncate">
                     {department.name}
                   </h3>
                 </div>
-                <div className="flex items-center justify-between gap-3 mt-1">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="default" className={cn("text-primary-foreground capitalize text-[10px] sm:text-xs shrink-0 flex items-center gap-1 px-2.5 py-0.5", getStatusBadgeVariant(department.status))}>
+                <Badge variant="default" className={cn("text-primary-foreground capitalize text-[10px] sm:text-xs shrink-0 flex items-center gap-1 px-2.5 py-0.5", getStatusBadgeVariant(department.status))}>
                       {getStatusIcon(department.status)}
                       {translateStatus(department.status)}
-                    </Badge>
+                </Badge>
+                </div>
+                <div className="flex items-center justify-between gap-3 mt-1">
+                  <div className="flex items-center gap-2">
+                    
                     <span className="flex items-center text-sm text-muted-foreground ml-2">
                       <KeyRound className="mr-1 h-3.5 w-3.5 shrink-0" />
                       {department.accessCode}
@@ -165,7 +168,7 @@ export function DepartmentCard({
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2 border-t pt-2">
                   <div className="flex items-center">
-                    <Bed className="mr-2 h-5 w-5 text-primary/60" />
+                    <DoorOpen className="mr-2 h-5 w-5 text-primary/60" />
                     <span>{department.bedrooms ?? 0}</span>
                   </div>
                   <div className="flex items-center">
