@@ -193,7 +193,7 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
                   {/* Columna Izquierda: Información Básica */}
                   <div className="space-y-4">
-                    <div className="space-y-4 bg-muted/20 p-4 rounded-xl border border-dashed">
+                    <div className="space-y-4 bg-muted/20 p-4 rounded-3xl border border-dashed">
                       <FormLabel className="text-sm font-bold uppercase text-muted-foreground flex items-center">
                         <Building2 className="h-4 w-4 mr-2" /> Datos Generales
                       </FormLabel>
@@ -270,7 +270,7 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
 
                   {/* Columna Derecha: Camas y Campos Personalizados */}
                   <div className="space-y-6">
-                    <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 space-y-4">
+                    <div className="bg-primary/5 p-4 rounded-3xl border border-primary/20 space-y-4">
                       <div className="flex items-center gap-2 mb-2">
                         <Bed className="h-5 w-5 text-primary" />
                         <FormLabel className="text-base font-bold text-primary m-0 uppercase tracking-tight">Camas y Toallas</FormLabel>
@@ -363,7 +363,7 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
                       </div>
                     </div>
 
-                    <div className="space-y-4 bg-muted/20 p-4 rounded-xl border border-dashed">
+                    <div className="space-y-4 bg-muted/20 p-4 rounded-3xl border border-dashed">
                       <div className="flex items-center justify-between">
                         <FormLabel className="text-sm font-bold uppercase text-muted-foreground flex items-center">
                           <Plus className="h-4 w-4 mr-2" /> Camas Extras / Otros
@@ -381,7 +381,7 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
                       </div>
 
                       {customFields.map((field, index) => (
-                        <div key={field.id} className="flex gap-2 items-end group bg-white p-2 rounded-lg border shadow-sm">
+                        <div key={field.id} className="flex gap-2 items-end group bg-white p-2 rounded-2xl border shadow-sm">
                           <FormField
                             control={form.control}
                             name={`customFields.${index}.name`}
