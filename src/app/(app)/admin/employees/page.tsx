@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useState, useMemo, useCallback } from 'react';
-import type { EmployeeProfile } from '@/lib/types'; 
+import type { EmployeeProfile } from '@/lib/types';
 import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
 import { EmployeeForm } from '@/components/employee/employee-form';
@@ -26,15 +26,15 @@ export default function EmployeesPage() {
     setIsFormOpen(false);
     setEditingEmployee(null);
   }, []);
-  
+
   const filteredEmployees = useMemo(() => {
-    return employees.filter(emp => 
-      emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    return employees.filter(emp =>
+      emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (emp.email?.toLowerCase() ?? '').includes(searchTerm.toLowerCase())
-    ).sort((a,b) => a.name.localeCompare(b.name));
+    ).sort((a, b) => a.name.localeCompare(b.name));
   }, [employees, searchTerm]);
 
-  if (dataLoading && employees.length === 0) { 
+  if (dataLoading && employees.length === 0) {
     return (
       <div className="container mx-auto py-8 px-4 md:px-6 flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
         <LoadingSpinner size={32} />
@@ -73,16 +73,16 @@ export default function EmployeesPage() {
       </header>
 
       <div className="mb-6 p-4 border rounded-lg bg-card shadow">
-        <Input 
-            placeholder="Buscar empleadas por nombre o email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+        <Input
+          placeholder="Buscar empleadas por nombre o email..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
       {dataLoading && employees.length > 0 && (
-         <div className="flex items-center justify-center p-4 text-muted-foreground">
-            <LoadingSpinner size={20} className="mr-2"/> Actualizando lista de empleadas...
+        <div className="flex items-center justify-center p-4 text-muted-foreground">
+          <LoadingSpinner size={20} className="mr-2" /> Actualizando lista de empleadas...
         </div>
       )}
 
@@ -91,25 +91,25 @@ export default function EmployeesPage() {
           <Users className="mx-auto h-16 w-16 text-muted-foreground/70" />
           <p className="mt-4 text-xl font-semibold text-muted-foreground">No se encontraron empleadas.</p>
           <p className="text-sm text-muted-foreground">Comienza agregando una nueva empleada para administrarla.</p>
-           <Button onClick={() => handleOpenForm()} className="mt-6">
+          <Button onClick={() => handleOpenForm()} className="mt-6">
             <PlusCircle className="mr-2 h-5 w-5" /> Agregar Primera Empleada
           </Button>
         </div>
       ) : !dataLoading && filteredEmployees.length === 0 ? (
-         <div className="text-center py-10 border rounded-lg bg-card shadow-sm mt-6">
-           <Search className="mx-auto h-16 w-16 text-muted-foreground/70" />
-           <p className="mt-4 text-xl font-semibold text-muted-foreground">Ninguna empleada coincide con tu búsqueda.</p>
-           <p className="text-sm text-muted-foreground">Intenta ajustar el término de búsqueda.</p>
+        <div className="text-center py-10 border rounded-lg bg-card shadow-sm mt-6">
+          <Search className="mx-auto h-16 w-16 text-muted-foreground/70" />
+          <p className="mt-4 text-xl font-semibold text-muted-foreground">Ninguna empleada coincide con tu búsqueda.</p>
+          <p className="text-sm text-muted-foreground">Intenta ajustar el término de búsqueda.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(300px,350px))] justify-center md:justify-start">
           {filteredEmployees.map((emp) => {
-            const employeeTasks = getTasksForEmployee(emp.id); 
+            const employeeTasks = getTasksForEmployee(emp.id);
             return (
-              <EmployeeCard 
-                key={emp.id} 
-                employee={emp} 
-                onEdit={() => handleOpenForm(emp)} 
+              <EmployeeCard
+                key={emp.id}
+                employee={emp}
+                onEdit={() => handleOpenForm(emp)}
                 tasks={employeeTasks}
                 departments={departments}
               />

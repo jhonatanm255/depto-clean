@@ -52,9 +52,7 @@ export function TaskListSection({
   return (
     <div className={cn(
       "grid gap-4 transition-all duration-300",
-      selectedDeptId
-        ? "grid-cols-1 md:grid-cols-2"
-        : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+      "grid-cols-[repeat(auto-fill,minmax(300px,350px))]"
     )}>
       {tasks.map((task) => {
         const department = getDepartmentById(task.departmentId);

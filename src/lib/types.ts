@@ -42,9 +42,19 @@ export interface Company {
 }
 
 // Departamento
+export interface Condominium {
+  id: string;
+  companyId: string;
+  name: string;
+  address?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Department {
   id: string;
   companyId: string;
+  condominiumId?: string | null;
   name: string;
   accessCode?: string | null;
   address?: string | null;
