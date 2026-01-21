@@ -27,9 +27,11 @@ interface CondominiumCardProps {
     condominium: Condominium;
     onEdit: (condo: Condominium) => void;
     departmentCount: number;
+    hasActiveWork?: boolean;
 }
 
-export function CondominiumCard({ condominium, onEdit, departmentCount }: CondominiumCardProps) {
+
+export function CondominiumCard({ condominium, onEdit, departmentCount, hasActiveWork }: CondominiumCardProps) {
     const { deleteCondominium } = useData();
     const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
 
@@ -50,6 +52,12 @@ export function CondominiumCard({ condominium, onEdit, departmentCount }: Condom
                         <CardTitle className="flex items-center text-xl font-bold truncate pr-8" title={condominium.name}>
                             <Building className="h-5 w-5 mr-2 text-primary" />
                             {condominium.name}
+                            {hasActiveWork && (
+                                <span className="relative flex h-4 w-4 ml-2 items-center justify-center">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                </span>
+                            )}
                         </CardTitle>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -68,6 +76,7 @@ export function CondominiumCard({ condominium, onEdit, departmentCount }: Condom
                         </DropdownMenu>
                     </div>
                 </CardHeader>
+
                 <CardContent className="pb-4 space-y-3">
                     {condominium.address && (
                         <div className="flex items-start text-sm text-muted-foreground">

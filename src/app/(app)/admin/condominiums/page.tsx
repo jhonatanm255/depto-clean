@@ -45,6 +45,17 @@ export default function CondominiumsPage() {
         return counts;
     }, [departments]);
 
+    // Check for active work (in_progress) per condominium
+    const activeWorkByCondo = useMemo(() => {
+        const active: Record<string, boolean> = {};
+        departments.forEach(dept => {
+            if (dept.condominiumId && dept.status === 'in_progress') {
+                active[dept.condominiumId] = true;
+            }
+        });
+        return active;
+    }, [departments]);
+
     if (dataLoading && condominiums.length === 0) {
         return (
             <div className="container mx-auto py-8 px-4 md:px-6 flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
@@ -98,13 +109,14 @@ export default function CondominiumsPage() {
                     <p className="mt-4 text-xl font-semibold text-muted-foreground">No se encontraron resultados.</p>
                 </div>
             ) : (
-                <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
                     {filteredCondominiums.map((condo) => (
                         <CondominiumCard
                             key={condo.id}
                             condominium={condo}
                             onEdit={handleOpenForm}
                             departmentCount={deptsByCondo[condo.id] || 0}
+                            hasActiveWork={activeWorkByCondo[condo.id] || false}
                         />
                     ))}
                 </div>
