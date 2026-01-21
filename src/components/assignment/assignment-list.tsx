@@ -52,7 +52,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
     setIsMediaReportsOpen(false);
     setSelectedDepartmentForMedia(null);
   };
-  
+
   const getStatusBadgeVariant = (status: CleaningTask['status']) => {
     switch (status) {
       case 'completed': return 'bg-green-500 hover:bg-green-600';
@@ -61,7 +61,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
       default: return 'bg-gray-500 hover:bg-gray-600';
     }
   };
-  
+
   const getStatusIcon = (status: CleaningTask['status']) => {
     switch (status) {
       case 'completed': return <CheckCircle2 className="h-4 w-4 mr-1" />;
@@ -73,7 +73,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
 
   const employeesWithFilteredTasks = useMemo(() => {
     return employees.map(employee => {
-      let employeeTasks = getTasksForEmployee(employee.id); 
+      let employeeTasks = getTasksForEmployee(employee.id);
       if (dateRange?.from || dateRange?.to) {
         employeeTasks = employeeTasks.filter(task => {
           if (!task.assignedAt) return false;
@@ -92,7 +92,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
         });
       }
       return { ...employee, assignedTasks: employeeTasks };
-    }).sort((a,b) => a.name.localeCompare(b.name));
+    }).sort((a, b) => a.name.localeCompare(b.name));
   }, [employees, getTasksForEmployee, dateRange]);
 
   const filteredEmployeesWithTasks = useMemo(() => {
@@ -102,7 +102,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
   const employeesWithoutTasksInFilter = useMemo(() => {
     return employeesWithFilteredTasks
       .filter(employee => employee.assignedTasks.length === 0)
-      .sort((a,b) => a.name.localeCompare(b.name));
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [employeesWithFilteredTasks]);
 
 
@@ -111,7 +111,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="font-headline text-2xl flex items-center">
-             <Users2 className="mr-2 h-6 w-6 text-primary"/> Asignaciones por Empleada
+            <Users2 className="mr-2 h-6 w-6 text-primary" /> Asignaciones por Empleada
           </CardTitle>
           <CardDescription>Cargando datos de empleadas y tareas...</CardDescription>
         </CardHeader>
@@ -127,8 +127,8 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
     return (
       <Card className="shadow-lg">
         <CardHeader>
-           <CardTitle className="font-headline text-2xl flex items-center">
-             <Users2 className="mr-2 h-6 w-6 text-primary"/> Asignaciones por Empleada
+          <CardTitle className="font-headline text-2xl flex items-center">
+            <Users2 className="mr-2 h-6 w-6 text-primary" /> Asignaciones por Empleada
           </CardTitle>
           <CardDescription>No hay empleadas para mostrar asignaciones.</CardDescription>
         </CardHeader>
@@ -144,7 +144,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="font-headline text-2xl flex items-center">
-            <Users2 className="mr-2 h-6 w-6 text-primary"/> Asignaciones por Empleada
+            <Users2 className="mr-2 h-6 w-6 text-primary" /> Asignaciones por Empleada
           </CardTitle>
           <CardDescription>Resumen de tareas de limpieza agrupadas por cada empleada. Filtra por rango de fechas de asignación.</CardDescription>
         </CardHeader>
@@ -189,7 +189,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                   <Calendar
+                  <Calendar
                     mode="range"
                     selected={dateRange}
                     onSelect={setDateRange}
@@ -198,7 +198,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                   />
                 </PopoverContent>
               </Popover>
-               {dateRange && (
+              {dateRange && (
                 <Button variant="ghost" onClick={() => setDateRange(undefined)} className="text-xs text-muted-foreground sm:col-span-2">
                   Limpiar filtro de fecha
                 </Button>
@@ -207,17 +207,17 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
           </div>
 
           {dataLoading && employees.length > 0 && tasks.length === 0 && <p className="text-muted-foreground">Cargando tareas...</p>}
-          
+
           {!dataLoading && filteredEmployeesWithTasks.length === 0 && (
-              <p className="text-center text-muted-foreground py-4">
-                {dateRange?.from || dateRange?.to ? "Ninguna empleada tiene tareas en el rango de fechas seleccionado." : "No hay tareas asignadas a ninguna empleada."}
-              </p>
+            <p className="text-center text-muted-foreground py-4">
+              {dateRange?.from || dateRange?.to ? "Ninguna empleada tiene tareas en el rango de fechas seleccionado." : "No hay tareas asignadas a ninguna empleada."}
+            </p>
           )}
 
           {filteredEmployeesWithTasks.length > 0 && (
             <Accordion type="multiple" className="w-full space-y-2">
               {filteredEmployeesWithTasks.map((employee) => {
-                const employeeTasks = employee.assignedTasks; 
+                const employeeTasks = employee.assignedTasks;
                 return (
                   <AccordionItem value={employee.id} key={employee.id} className="border bg-card rounded-lg p-0">
                     <AccordionTrigger className="p-4 hover:no-underline hover:bg-muted/50 rounded-t-lg">
@@ -231,7 +231,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                     </AccordionTrigger>
                     <AccordionContent className="p-4 border-t">
                       {employeeTasks.length > 0 ? (
-                        <ScrollArea className="h-[250px] pr-3"> 
+                        <ScrollArea className="h-[250px] pr-3">
                           <ul className="space-y-3">
                             {employeeTasks.map((task: CleaningTask) => {
                               const department = departments.find(d => d.id === task.departmentId);
@@ -240,28 +240,33 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                                 <li key={task.id} className="p-3 border rounded-md hover:shadow-sm transition-shadow bg-background">
                                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1">
                                     <h4 className="text-lg font-semibold text-foreground flex items-center">
-                                      <Building2 className="mr-2 h-4 w-4 text-muted-foreground"/> {department.name}
+                                      <Building2 className="mr-2 h-4 w-4 text-muted-foreground" /> {department.name}
                                     </h4>
-                                    <Badge variant="default" className={cn("text-primary-foreground capitalize mt-1 sm:mt-0 text-sm", getStatusBadgeVariant(task.status))}>
-                                      {getStatusIcon(task.status)}
-                                      {translateStatus(task.status)}
-                                    </Badge>
+                                    <div className="flex items-center gap-1 mt-1 sm:mt-0">
+                                      {task.priority === 'high' && (
+                                        <Badge variant="destructive" className="bg-orange-500 text-[10px] px-1.5 py-0.5 h-auto">Prioritario</Badge>
+                                      )}
+                                      <Badge variant="default" className={cn("text-primary-foreground capitalize text-sm", getStatusBadgeVariant(task.status))}>
+                                        {getStatusIcon(task.status)}
+                                        {translateStatus(task.status)}
+                                      </Badge>
+                                    </div>
                                   </div>
                                   <div className="text-sm text-muted-foreground space-y-0.5">
                                     {department.address && (
-                                        <p className="flex items-center"><MapPin className="mr-1.5 h-3 w-3 shrink-0"/> {department.address}</p>
+                                      <p className="flex items-center"><MapPin className="mr-1.5 h-3 w-3 shrink-0" /> {department.address}</p>
                                     )}
                                     {task.assignedAt && (
                                       <p className="flex items-center">
-                                        <CalendarDays className="mr-1.5 h-3 w-3"/> Asignado: {new Date(task.assignedAt).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                        <CalendarDays className="mr-1.5 h-3 w-3" /> Asignado: {new Date(task.assignedAt).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                       </p>
                                     )}
                                     {task.status === 'completed' && task.completedAt && (
                                       <>
-                                        <p className="flex items-center text-green-600"><CheckCircle2 className="mr-1.5 h-3 w-3"/> Completado: {new Date(task.completedAt).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
-                                        <Button 
-                                          variant="outline" 
-                                          size="sm" 
+                                        <p className="flex items-center text-green-600"><CheckCircle2 className="mr-1.5 h-3 w-3" /> Completado: {new Date(task.completedAt).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
                                           className="mt-2 text-sm" // Aumentado de text-xs a text-sm
                                           onClick={() => handleOpenMediaDialog(department)}
                                         >
@@ -284,14 +289,14 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
               })}
             </Accordion>
           )}
-          
+
           {employeesWithoutTasksInFilter.length > 0 && (
-              <div className="mt-6">
-                  <h3 className="text-md font-semibold text-muted-foreground mb-2">Empleadas Sin Tareas Asignadas (en filtro actual):</h3>
-                  <ul className="text-sm text-muted-foreground list-disc list-inside">
-                      {employeesWithoutTasksInFilter.map(emp => <li key={emp.id}>{emp.name}</li>)}
-                  </ul>
-              </div>
+            <div className="mt-6">
+              <h3 className="text-md font-semibold text-muted-foreground mb-2">Empleadas Sin Tareas Asignadas (en filtro actual):</h3>
+              <ul className="text-sm text-muted-foreground list-disc list-inside">
+                {employeesWithoutTasksInFilter.map(emp => <li key={emp.id}>{emp.name}</li>)}
+              </ul>
+            </div>
           )}
 
         </CardContent>
@@ -308,6 +313,5 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
     </>
   );
 }
-    
 
-    
+

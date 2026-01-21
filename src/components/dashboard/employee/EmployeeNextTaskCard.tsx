@@ -4,7 +4,9 @@ import Link from 'next/link';
 import type { CleaningTask, Department } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
+import { Zap } from 'lucide-react';
 
 interface EmployeeNextTaskCardProps {
   nextTask?: CleaningTask & { department?: Department }; // Task could be undefined if none pending
@@ -36,13 +38,23 @@ export function EmployeeNextTaskCard({ nextTask, dataLoading, initialTasksLoaded
   }
 
   return (
-    <Card>
+    <Card className={nextTask.priority === 'high' ? "border-orange-500 border-.5 ring-1 ring-orange-500 shadow-orange-100 relative" : "relative"}>
+      {nextTask.priority === 'high' && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+          <Badge variant="destructive" className="bg-orange-500 hover:bg-orange-600 shadow-sm border-2 border-white flex items-center gap-1 px-3 py-0.5 h-6">
+            <div className="animate-pulse"><Zap className="h-3 w-3 fill-current" /></div>
+            <span className="text-xs font-bold uppercase tracking-wide">Prioritario</span>
+          </Badge>
+        </div>
+      )}
       <CardHeader>
         <CardTitle>Tu Próxima Tarea</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          <h3 className="text-lg font-semibold">{nextTask.department?.name || <LoadingSpinner size={14}/>}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold">{nextTask.department?.name || <LoadingSpinner size={14} />}</h3>
+          </div>
           <p className="text-sm text-muted-foreground">
             Dirección: {nextTask.department?.address || "No especificada"}
           </p>

@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ClipboardEdit } from 'lucide-react';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 import type { Department } from '@/lib/types';
@@ -15,6 +16,7 @@ import type { Department } from '@/lib/types';
 const assignmentSchema = z.object({
   departmentId: z.string().min(1, "Se requiere el departamento"),
   employeeId: z.string().min(1, "Se requiere la empleada"),
+  isUrgent: z.boolean().default(false),
 });
 
 type AssignmentFormData = z.infer<typeof assignmentSchema>;
@@ -30,10 +32,10 @@ function translateDepartmentStatus(status: Department['status']): string {
 
 export function AssignmentForm() {
   const { departments, employees, assignTask, dataLoading } = useData();
-  
+
   const form = useForm<AssignmentFormData>({
     resolver: zodResolver(assignmentSchema),
-    defaultValues: { departmentId: '', employeeId: '' },
+    defaultValues: { departmentId: '', employeeId: '', isUrgent: false },
   });
 
   // TODOS los departamentos son seleccionables. La lógica de si es nueva tarea o reasignación está en assignTask.
@@ -41,14 +43,14 @@ export function AssignmentForm() {
 
   const onSubmit: SubmitHandler<AssignmentFormData> = async (data) => {
     try {
-      await assignTask(data.departmentId, data.employeeId);
-      form.reset(); 
+      await assignTask(data.departmentId, data.employeeId, data.isUrgent ? 'high' : 'normal');
+      form.reset({ departmentId: '', employeeId: '', isUrgent: false });
     } catch (error) {
       console.error("Submit error in AssignmentForm:", error);
     }
   };
 
-  if (dataLoading && departments.length === 0 && employees.length === 0) { 
+  if (dataLoading && departments.length === 0 && employees.length === 0) {
     return (
       <Card className="w-full shadow-lg">
         <CardHeader>
@@ -83,9 +85,9 @@ export function AssignmentForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Departamento</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value || ""} 
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || ""}
                     disabled={allDepartments.length === 0 || employees.length === 0 || form.formState.isSubmitting}
                   >
                     <FormControl>
@@ -97,26 +99,26 @@ export function AssignmentForm() {
                       <SelectGroup>
                         <SelectLabel>Departamentos</SelectLabel>
                         {allDepartments.length > 0 ? (
-                            allDepartments.map((dept) => {
-                              const assignedEmployee = dept.assignedTo ? employees.find(emp => emp.id === dept.assignedTo) : null;
-                              const statusDisplay = translateDepartmentStatus(dept.status);
-                              let displayText = `${dept.name} (${statusDisplay})`;
-                              if (assignedEmployee && (dept.status === 'pending' || dept.status === 'in_progress')) {
-                                displayText += ` - Asignado a: ${assignedEmployee.name}`;
-                              } else if (dept.status === 'completed') {
-                                displayText += ` - Listo para nueva asignación`;
-                              } else if (dept.status === 'pending' && !assignedEmployee) {
-                                displayText += ` - Pendiente de asignación`;
-                              }
-                              
-                              return (
-                                <SelectItem key={dept.id} value={dept.id}>
-                                  {displayText}
-                                </SelectItem>
-                              );
-                            })
+                          allDepartments.map((dept) => {
+                            const assignedEmployee = dept.assignedTo ? employees.find(emp => emp.id === dept.assignedTo) : null;
+                            const statusDisplay = translateDepartmentStatus(dept.status);
+                            let displayText = `${dept.name} (${statusDisplay})`;
+                            if (assignedEmployee && (dept.status === 'pending' || dept.status === 'in_progress')) {
+                              displayText += ` - Asignado a: ${assignedEmployee.name}`;
+                            } else if (dept.status === 'completed') {
+                              displayText += ` - Listo para nueva asignación`;
+                            } else if (dept.status === 'pending' && !assignedEmployee) {
+                              displayText += ` - Pendiente de asignación`;
+                            }
+
+                            return (
+                              <SelectItem key={dept.id} value={dept.id}>
+                                {displayText}
+                              </SelectItem>
+                            );
+                          })
                         ) : (
-                            <SelectItem value="no-dept" disabled>No hay departamentos disponibles</SelectItem>
+                          <SelectItem value="no-dept" disabled>No hay departamentos disponibles</SelectItem>
                         )}
                       </SelectGroup>
                     </SelectContent>
@@ -131,9 +133,9 @@ export function AssignmentForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Empleada</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value || ""} 
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || ""}
                     disabled={employees.length === 0 || form.formState.isSubmitting}
                   >
                     <FormControl>
@@ -142,16 +144,16 @@ export function AssignmentForm() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                       <SelectGroup>
+                      <SelectGroup>
                         <SelectLabel>Empleadas</SelectLabel>
                         {employees.length > 0 ? (
-                            employees.map((emp) => ( 
-                                <SelectItem key={emp.id} value={emp.id}> 
-                                {emp.name} ({emp.email})
-                                </SelectItem>
-                            ))
+                          employees.map((emp) => (
+                            <SelectItem key={emp.id} value={emp.id}>
+                              {emp.name} ({emp.email})
+                            </SelectItem>
+                          ))
                         ) : (
-                            <SelectItem value="no-emp" disabled>No hay empleadas disponibles</SelectItem>
+                          <SelectItem value="no-emp" disabled>No hay empleadas disponibles</SelectItem>
                         )}
                       </SelectGroup>
                     </SelectContent>
@@ -160,9 +162,31 @@ export function AssignmentForm() {
                 </FormItem>
               )}
             />
-            <Button 
-              type="submit" 
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" 
+            <FormField
+              control={form.control}
+              name="isUrgent"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      Marcar como Urgente
+                    </FormLabel>
+                    <FormDescription>
+                      Esta tarea tendrá prioridad alta y se mostrará con un indicador especial.
+                    </FormDescription>
+                  </div>
+                </FormItem>
+              )}
+            />
+            <Button
+              type="submit"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
               disabled={allDepartments.length === 0 || employees.length === 0 || form.formState.isSubmitting}
             >
               {form.formState.isSubmitting && <LoadingSpinner size={16} className="mr-2" />}

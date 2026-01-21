@@ -44,7 +44,7 @@ const getStatusBadgeVariant = (status: Department['status'] | CleaningTask['stat
     default: return 'bg-gray-500 hover:bg-gray-600';
   }
 };
-  
+
 const getStatusIcon = (status: Department['status'] | CleaningTask['status']) => {
   switch (status) {
     case 'completed': return <CheckCircle2 className="h-4 w-4 mr-1" />;
@@ -65,14 +65,14 @@ export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeC
       console.error("Error eliminando empleada en EmployeeCard:", error);
     }
   };
-  
+
   const assignedTasksDetails = tasks
-    .filter(task => task.employeeId === employee.id) 
+    .filter(task => task.employeeId === employee.id)
     .map(task => {
       const department = departments.find(d => d.id === task.departmentId);
-      return department ? { ...task, departmentName: department.name, departmentStatus: department.status, departmentAddress: department.address } : null;
+      return department ? { ...task, departmentName: department.name, departmentStatus: department.status, departmentAddress: department.address, departmentPriority: department.priority } : null;
     })
-    .filter(Boolean) as (CleaningTask & { departmentName: string, departmentStatus: Department['status'], departmentAddress?: string })[];
+    .filter(Boolean) as (CleaningTask & { departmentName: string, departmentStatus: Department['status'], departmentAddress?: string, departmentPriority?: 'normal' | 'high' })[];
 
 
   return (
@@ -102,34 +102,39 @@ export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeC
                 {assignedTasksDetails.map(task => (
                   <li key={task.id} className="p-1.5 rounded-md bg-muted/50">
                     <div className="flex justify-between items-center">
-                       <span className="flex items-center text-foreground font-semibold"> {/* Department name made semibold */}
-                         <Building2 className="mr-1.5 h-3 w-3 text-muted-foreground" /> {task.departmentName}
-                       </span>
-                       <Badge 
-                          variant="default" 
+                      <span className="flex items-center text-foreground font-semibold"> {/* Department name made semibold */}
+                        <Building2 className="mr-1.5 h-3 w-3 text-muted-foreground" /> {task.departmentName}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {task.departmentPriority === 'high' && (
+                          <Badge variant="destructive" className="bg-orange-500 text-[10px] px-1.5 py-0.5 h-auto">Prioritario</Badge>
+                        )}
+                        <Badge
+                          variant="default"
                           className={cn("text-primary-foreground capitalize text-[10px] px-1.5 py-0.5", getStatusBadgeVariant(task.status))}
                         >
                           {getStatusIcon(task.status)}
                           {translateStatus(task.status)}
                         </Badge>
+                      </div>
                     </div>
                     {task.departmentAddress && (
-                        <p className="text-muted-foreground ml-5 flex items-center"> {/* Inherits text-sm */}
-                            <MapPin className="mr-1 h-3 w-3 shrink-0" /> {task.departmentAddress}
-                        </p>
-                    )}
-                     <p className="text-muted-foreground ml-5"> {/* Inherits text-sm */}
-                        Asignada: {new Date(task.assignedAt).toLocaleDateString('es-CL')}
+                      <p className="text-muted-foreground ml-5 flex items-center"> {/* Inherits text-sm */}
+                        <MapPin className="mr-1 h-3 w-3 shrink-0" /> {task.departmentAddress}
                       </p>
+                    )}
+                    <p className="text-muted-foreground ml-5"> {/* Inherits text-sm */}
+                      Asignada: {new Date(task.assignedAt).toLocaleDateString('es-CL')}
+                    </p>
                   </li>
                 ))}
               </ul>
             </ScrollArea>
           </div>
         )}
-         {assignedTasksDetails.length === 0 && (
-           <p className="mt-4 pt-3 border-t text-xs text-muted-foreground">No tiene tareas asignadas actualmente.</p>
-         )}
+        {assignedTasksDetails.length === 0 && (
+          <p className="mt-4 pt-3 border-t text-xs text-muted-foreground">No tiene tareas asignadas actualmente.</p>
+        )}
       </CardContent>
       <CardFooter className="flex justify-end gap-2 border-t pt-4">
         <Button variant="outline" size="sm" onClick={() => onEdit(employee)} aria-label={`Editar ${employee.name}`} disabled>

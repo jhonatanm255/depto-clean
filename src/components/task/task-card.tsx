@@ -5,7 +5,7 @@ import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Building2, KeyRound, CheckCircle2, Loader2, AlertTriangle, CalendarDays, MapPin, ExternalLink, UploadCloud } from 'lucide-react';
+import { Building2, KeyRound, CheckCircle2, Loader2, AlertTriangle, CalendarDays, MapPin, ExternalLink, UploadCloud, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import React, { useState } from 'react';
 import { MediaUploadDialog } from '@/components/media/media-upload-dialog';
@@ -107,10 +107,19 @@ export function TaskCard({ task, department, isSelected, onSelect }: TaskCardPro
       <Card
         onClick={handleCardClick}
         className={cn(
-          "flex flex-col shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden",
-          isSelected || isExpanded ? "ring-.5 ring-primary border-primary shadow-primary/20" : ""
+          "flex flex-col shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer relative", // Removed overflow-hidden
+          isSelected || isExpanded ? "ring-.5 ring-primary border-primary shadow-primary/20" : "",
+          task.priority === 'high' ? "border-orange-500 border-.5 ring-1 ring-orange-500 shadow-orange-100" : ""
         )}
       >
+        {task.priority === 'high' && (
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+            <Badge variant="destructive" className="bg-orange-500 hover:bg-orange-600 shadow-sm border-2 border-white flex items-center gap-1 px-3 py-0.5 h-6">
+              <div className="animate-pulse"><Zap className="h-3 w-3 fill-current" /></div>
+              <span className="text-xs font-bold uppercase tracking-wide">Prioritario</span>
+            </Badge>
+          </div>
+        )}
         {/* Header Compacto (Siempre visible) */}
         <CardHeader className="p-4 flex-grow-0">
           <div className="flex items-center justify-between gap-3">
@@ -128,6 +137,7 @@ export function TaskCard({ task, department, isSelected, onSelect }: TaskCardPro
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              {/* Priority Badge moved to floating */}
               <Badge variant="default" className={cn("text-primary-foreground capitalize text-[10px] sm:text-xs shrink-0 flex items-center gap-1 px-2.5 py-0.5", getStatusBadgeVariant(task.status))}>
                 {getStatusIcon(task.status)}
                 {translateStatus(task.status)}

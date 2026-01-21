@@ -34,7 +34,7 @@ interface DataContextType {
   deleteEmployee: (id: string) => Promise<void>;
 
   tasks: CleaningTask[];
-  assignTask: (departmentId: string, employeeProfileId: string) => Promise<void>;
+  assignTask: (departmentId: string, employeeProfileId: string, priority?: 'normal' | 'high') => Promise<void>;
   updateTaskStatus: (taskId: string, status: TaskStatus) => Promise<void>;
 
   addMediaReport: (
@@ -85,6 +85,7 @@ type DepartmentRow = {
   hand_towels: number | null;
   body_towels: number | null;
   custom_fields: Department['customFields'];
+  priority: 'normal' | 'high' | null;
   created_at: string;
   updated_at: string;
 };
@@ -113,6 +114,7 @@ type TaskRow = {
   started_at: string | null;
   completed_at: string | null;
   notes: string | null;
+  priority: 'normal' | 'high' | null;
   created_at: string;
   updated_at: string;
 };
@@ -165,6 +167,7 @@ const mapDepartment = (row: DepartmentRow): Department => ({
   handTowels: row.hand_towels,
   bodyTowels: row.body_towels,
   customFields: Array.isArray(row.custom_fields) ? row.custom_fields : [],
+  priority: row.priority ?? 'normal',
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -194,6 +197,7 @@ const mapTask = (row: TaskRow): CleaningTask => ({
   startedAt: row.started_at ?? undefined,
   completedAt: row.completed_at ?? undefined,
   notes: row.notes ?? undefined,
+  priority: row.priority ?? 'normal',
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -1062,7 +1066,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [currentUser, employees]);
 
-  const assignTask = useCallback<DataContextType['assignTask']>(async (departmentId, employeeProfileId) => {
+  const assignTask = useCallback<DataContextType['assignTask']>(async (departmentId, employeeProfileId, priority = 'normal') => {
     if (!currentUser) {
       throw new Error('Usuario no autenticado');
     }
@@ -1094,6 +1098,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             employee_id: employeeProfileId,
             assigned_at: now,
             status: 'pending',
+            priority: priority,
             started_at: null,
             completed_at: null,
           })
@@ -1115,6 +1120,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             employee_id: employeeProfileId,
             status: 'pending',
             assigned_at: now,
+            priority: priority,
           })
           .select('*')
           .single<TaskRow>();
@@ -1134,6 +1140,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         .update({
           assigned_to: employeeProfileId,
           status: 'pending',
+          priority: priority,
         })
         .eq('id', departmentId)
         .eq('company_id', currentUser.companyId)

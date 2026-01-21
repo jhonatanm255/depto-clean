@@ -59,6 +59,7 @@ export interface Department {
   accessCode?: string | null;
   address?: string | null;
   status: TaskStatus;
+  priority?: 'normal' | 'high';
   assignedTo?: string | null;
   lastCleanedAt?: string | null;
   notes?: string | null;
@@ -99,6 +100,7 @@ export interface CleaningTask {
   employeeId?: string;
   assignedBy?: string;
   status: TaskStatus;
+  priority?: 'normal' | 'high';
   assignedAt: string;
   startedAt?: string;
   completedAt?: string;
