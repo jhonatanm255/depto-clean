@@ -6,7 +6,7 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#F0F4F7",
+  "background_color": "#1D3658",
   "theme_color": "#1D3658",
   "categories": ["productivity", "business", "utilities"],
   "lang": "es-CL",
@@ -61,13 +61,13 @@
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-192x192-maskable.png",
+      "src": "/icons/icon-192x192-maskable.jpg",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icons/icon-512x512-maskable.png",
+      "src": "/icons/icon-512x512-maskable.jpg",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

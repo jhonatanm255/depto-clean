@@ -59,15 +59,15 @@ export default function EmployeesPage() {
           <ShieldAlert className="h-5 w-5 text-yellow-600" />
           <AlertTitle className="font-semibold">Gestión de cuentas en Supabase</AlertTitle>
           <AlertDescription className="space-y-1">
-            <p>
+            {/* <p>
               Al agregar una empleada, se crea un usuario en Supabase Auth con el <strong>correo y contraseña</strong> que indiques. La persona recibirá un correo de activación si tu proyecto lo requiere.
-            </p>
+            </p> */}
             <p>
               <strong>Contraseña inicial:</strong> Comunícala de forma segura; no podrás verla nuevamente después de crear la cuenta.
             </p>
-            <p>
+            {/* <p>
               La edición avanzada (roles adicionales, restablecer contraseñas, desactivar usuarios) se habilitará en próximas versiones. Mientras tanto, puedes administrar detalles sensibles desde la consola de Supabase.
-            </p>
+            </p> */}
           </AlertDescription>
         </Alert>
       </header>

@@ -221,9 +221,11 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                 return (
                   <AccordionItem value={employee.id} key={employee.id} className="border bg-card rounded-lg p-0">
                     <AccordionTrigger className="p-4 hover:no-underline hover:bg-muted/50 rounded-t-lg">
-                      <div className="flex items-center">
-                        <User className="mr-3 h-5 w-5 text-primary" />
-                        <span className="font-semibold text-lg">{employee.name}</span>
+                      <div className="lg:flex items-center">
+                        <div className='flex items-center'>
+                          <User className="mr-3 h-5 w-5 text-primary" />
+                          <span className="font-semibold text-lg">{employee.name}</span>
+                        </div>
                         <Badge variant="secondary" className="ml-3">{employeeTasks.length} tarea(s)</Badge>
                       </div>
                     </AccordionTrigger>

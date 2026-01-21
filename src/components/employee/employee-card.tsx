@@ -82,9 +82,9 @@ export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeC
           <UserCircle className="mr-2 h-6 w-6 text-primary" />
           {employee.name}
         </CardTitle>
-        <CardDescription className="flex items-center pt-1 text-xs text-muted-foreground">
+        {/* <CardDescription className="flex items-center pt-1 text-xs text-muted-foreground">
           ID Perfil: {employee.id}
-        </CardDescription>
+        </CardDescription> */}
       </CardHeader>
       <CardContent className="flex-grow space-y-2">
         <div className="flex items-center text-sm text-muted-foreground">

@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { 
-  LayoutDashboard, 
-  Building2, 
+import {
+  LayoutDashboard,
+  Building2,
   ClipboardEdit,
   Briefcase,
   Users,
@@ -23,7 +23,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Panel', icon: LayoutDashboard, roles: ['owner', 'admin', 'manager', 'employee'] },
-  { href: '/admin/departments', label: 'Deptos', icon: Building2, roles: ['owner', 'admin', 'manager'] },
+  { href: '/admin/condominiums', label: 'Condominios', icon: Building2, roles: ['owner', 'admin', 'manager'] },
   { href: '/admin/employees', label: 'Empleadas', icon: Users, roles: ['owner', 'admin'] },
   { href: '/admin/assignments', label: 'Asignar', icon: ClipboardEdit, roles: ['owner', 'admin', 'manager'] },
   { href: '/employee/tasks', label: 'Tareas', icon: Briefcase, roles: ['employee', 'manager'] },
@@ -45,9 +45,9 @@ export function BottomNavigationBar() {
         const itemPathname = item.href.split('?')[0];
         const itemQueryParam = item.href.split('?')[1]?.split('=')[1];
         const currentTab = searchParams.get('tab');
-        
+
         let isActive = false;
-        
+
         // Primero verificar que el pathname coincida
         if (pathname === itemPathname) {
           // Si el item tiene query params, verificar que coincidan exactamente
@@ -72,8 +72,8 @@ export function BottomNavigationBar() {
             href={item.href}
             className={cn(
               "flex flex-col items-center justify-center p-2 transition-colors w-full h-full",
-              isActive 
-                ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+              isActive
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             )}
           >
