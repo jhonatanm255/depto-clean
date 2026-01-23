@@ -124,12 +124,7 @@ export default function DepartmentsPage() {
               <p className="text-sm text-muted-foreground">Intenta ajustar los términos de búsqueda o los filtros aplicados.</p>
             </div>
           ) : (
-            <div className={cn(
-              "grid gap-4 transition-all duration-300",
-              selectedDeptId
-                ? "grid-cols-1 md:grid-cols-2"
-                : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-            )}>
+            <div className="grid gap-4 transition-all duration-300 grid-cols-[repeat(auto-fill,minmax(300px,350px))] justify-center md:justify-start">
               {filteredDepartments.map((dept) => (
                 <DepartmentCard
                   key={dept.id}

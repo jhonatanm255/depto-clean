@@ -1,5 +1,7 @@
 "use client";
-import type { Company, Department, EmployeeProfile, CleaningTask, MediaReport, MediaReportType, TaskStatus } from '@/lib/types';
+import type { Company, Department, EmployeeProfile, CleaningTask, MediaReport, MediaReportType, TaskStatus, Condominium } from '@/lib/types';
+
+
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from 'react';
 import { supabase, SUPABASE_MEDIA_BUCKET } from '@/lib/supabase';
@@ -8,9 +10,11 @@ import { useAuth } from './auth-context';
 
 interface DataContextType {
   company: Company | null;
+  condominiums: Condominium[];
   departments: Department[];
   addDepartment: (input: {
     name: string;
+    condominiumId?: string | null;
     accessCode?: string | null;
     address?: string | null;
     notes?: string | null;
@@ -30,7 +34,7 @@ interface DataContextType {
   deleteEmployee: (id: string) => Promise<void>;
 
   tasks: CleaningTask[];
-  assignTask: (departmentId: string, employeeProfileId: string) => Promise<void>;
+  assignTask: (departmentId: string, employeeProfileId: string, priority?: 'normal' | 'high') => Promise<void>;
   updateTaskStatus: (taskId: string, status: TaskStatus) => Promise<void>;
 
   addMediaReport: (
@@ -54,6 +58,11 @@ interface DataContextType {
   getAllEmployees: () => Promise<EmployeeProfile[]>;
   getAllTasks: () => Promise<CleaningTask[]>;
   getAllDepartments: () => Promise<Department[]>;
+
+  // Condominiums
+  addCondominium: (input: { name: string; address?: string | null }) => Promise<void>;
+  updateCondominium: (condo: Condominium) => Promise<void>;
+  deleteCondominium: (id: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -61,6 +70,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 type DepartmentRow = {
   id: string;
   company_id: string;
+  condominium_id: string | null;
   name: string;
   access_code: string | null;
   address: string | null;
@@ -75,6 +85,7 @@ type DepartmentRow = {
   hand_towels: number | null;
   body_towels: number | null;
   custom_fields: Department['customFields'];
+  priority: 'normal' | 'high' | null;
   created_at: string;
   updated_at: string;
 };
@@ -103,6 +114,7 @@ type TaskRow = {
   started_at: string | null;
   completed_at: string | null;
   notes: string | null;
+  priority: 'normal' | 'high' | null;
   created_at: string;
   updated_at: string;
 };
@@ -140,6 +152,7 @@ type CompanyRow = {
 const mapDepartment = (row: DepartmentRow): Department => ({
   id: row.id,
   companyId: row.company_id,
+  condominiumId: row.condominium_id,
   name: row.name,
   accessCode: row.access_code,
   address: row.address,
@@ -154,6 +167,7 @@ const mapDepartment = (row: DepartmentRow): Department => ({
   handTowels: row.hand_towels,
   bodyTowels: row.body_towels,
   customFields: Array.isArray(row.custom_fields) ? row.custom_fields : [],
+  priority: row.priority ?? 'normal',
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -183,6 +197,7 @@ const mapTask = (row: TaskRow): CleaningTask => ({
   startedAt: row.started_at ?? undefined,
   completedAt: row.completed_at ?? undefined,
   notes: row.notes ?? undefined,
+  priority: row.priority ?? 'normal',
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -219,6 +234,7 @@ const mapCompany = (row: CompanyRow): Company => ({
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [company, setCompany] = useState<Company | null>(null);
+  const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [employees, setEmployees] = useState<EmployeeProfile[]>([]);
   const [tasks, setTasks] = useState<CleaningTask[]>([]);
@@ -246,7 +262,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const startTime = Date.now();
 
       try {
-        const [companiesResp, departmentsResp, employeesResp, tasksResp] = await Promise.all([
+        const [companiesResp, departmentsResp, employeesResp, tasksResp, condosResp] = await Promise.all([
           supabase
             .from('companies')
             .select('id, name, slug, legal_name, tax_id, timezone, plan_code, metadata, display_name, created_at, updated_at')
@@ -263,6 +279,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
             .from('tasks')
             .select('*')
             .order('assigned_at', { ascending: false }),
+          supabase
+            .from('condominiums')
+            .select('*')
+            .order('name', { ascending: true }),
         ]);
 
         const elapsed = Date.now() - startTime;
@@ -285,13 +305,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
           console.error('[DataContext] Error en tasks:', tasksResp.error);
           throw tasksResp.error;
         }
+        if (condosResp.error) {
+          console.error('[DataContext] Error en condominiums:', condosResp.error);
+          throw condosResp.error;
+        }
 
         const companiesData = (companiesResp.data as CompanyRow[]) || [];
         const departmentsData = (departmentsResp.data as DepartmentRow[]) || [];
         const employeesData = (employeesResp.data as ProfileRow[]) || [];
         const tasksData = (tasksResp.data as TaskRow[]) || [];
+        const condosData = (condosResp.data as any[]) || [];
 
         setAllCompanies(companiesData.map(mapCompany));
+        setCondominiums(condosData.map((c: any) => ({
+          id: c.id,
+          companyId: c.company_id,
+          name: c.name,
+          address: c.address,
+          createdAt: c.created_at,
+          updatedAt: c.updated_at
+        })));
         setDepartments(departmentsData.map(mapDepartment));
         setEmployees(employeesData.map(mapEmployee));
         setTasks(tasksData.map(mapTask));
@@ -335,7 +368,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const startTime = Date.now();
 
     try {
-      const [companyResp, departmentsResp, employeesResp, tasksResp] = await Promise.all([
+      const [companyResp, departmentsResp, employeesResp, tasksResp, condosResp] = await Promise.all([
         supabase
           .from('companies')
           .select('id, name, slug, legal_name, tax_id, timezone, plan_code, metadata, display_name, created_at, updated_at')
@@ -357,6 +390,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
           .select('*')
           .eq('company_id', currentUser.companyId)
           .order('assigned_at', { ascending: false }),
+        supabase
+          .from('condominiums')
+          .select('*')
+          .eq('company_id', currentUser.companyId)
+          .order('name', { ascending: true }),
       ]);
 
       const elapsed = Date.now() - startTime;
@@ -378,13 +416,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
         console.error('[DataContext] Error cargando tasks:', tasksResp.error);
         throw tasksResp.error;
       }
+      if (condosResp.error) {
+        console.error('[DataContext] Error cargando condominiums:', condosResp.error);
+        throw condosResp.error;
+      }
 
       const departmentsData = (departmentsResp.data as DepartmentRow[]) || [];
       const employeesData = (employeesResp.data as ProfileRow[]) || [];
       const tasksData = (tasksResp.data as TaskRow[]) || [];
+      const condosData = (condosResp.data as any[]) || [];
+
+      setCondominiums(condosData.map((c: any) => ({
+        id: c.id,
+        companyId: c.company_id,
+        name: c.name,
+        address: c.address,
+        createdAt: c.created_at,
+        updatedAt: c.updated_at
+      })));
 
       console.log('[DataContext] Datos cargados:', {
         company: companyResp.data ? '✓' : '✗',
+        condominiums: condosData.length,
         departments: departmentsData.length,
         employees: employeesData.length,
         tasks: tasksData.length,
@@ -530,6 +583,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       // Insertar el departamento
       const insertData = {
         company_id: currentUser.companyId,
+        condominium_id: input.condominiumId || null,
         name: input.name.trim(),
         access_code: input.accessCode?.trim() || null,
         address: input.address?.trim() || null,
@@ -675,6 +729,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         .from('departments')
         .update({
           name: dept.name,
+          condominium_id: dept.condominiumId ?? null,
           access_code: dept.accessCode ?? null,
           address: dept.address ?? null,
           status: dept.status,
@@ -754,18 +809,120 @@ export function DataProvider({ children }: { children: ReactNode }) {
       }
 
       setDepartments((prev) => prev.filter((dept) => dept.id !== id));
-      setTasks((prev) => prev.filter((task) => task.departmentId !== id));
-      toast({ title: 'Departamento eliminado', description: 'Departamento y datos asociados eliminados.' });
+      toast({ title: 'Departamento eliminado', description: 'El departamento ha sido eliminado.' });
     } catch (error) {
       console.error('Error eliminando departamento:', error);
       toast({
         variant: 'destructive',
         title: 'Error al eliminar',
-        description: 'No se pudo eliminar el departamento.',
+        description: 'No se pudo eliminar el departamento. Verifica que no tenga tareas asignadas.',
       });
       throw error;
     }
   }, [currentUser]);
+
+  const addCondominium = useCallback<DataContextType['addCondominium']>(async (input) => {
+    if (!currentUser) throw new Error('Usuario no autenticado');
+
+    try {
+      const { data, error } = await supabase
+        .from('condominiums')
+        .insert({
+          company_id: currentUser.companyId,
+          name: input.name.trim(),
+          address: input.address?.trim() || null,
+        })
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      const newCondo: Condominium = {
+        id: data.id,
+        companyId: data.company_id,
+        name: data.name,
+        address: data.address,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+
+      setCondominiums(prev => [...prev, newCondo].sort((a, b) => a.name.localeCompare(b.name)));
+      toast({ title: 'Condominio creado', description: `"${input.name}" ha sido creado.` });
+    } catch (error) {
+      console.error('Error creating condominium:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error al crear',
+        description: 'No se pudo crear el condominio.',
+      });
+      throw error;
+    }
+  }, [currentUser]);
+
+  const updateCondominium = useCallback<DataContextType['updateCondominium']>(async (condo) => {
+    if (!currentUser) throw new Error('Usuario no autenticado');
+
+    try {
+      const { data, error } = await supabase
+        .from('condominiums')
+        .update({
+          name: condo.name,
+          address: condo.address,
+        })
+        .eq('id', condo.id)
+        .eq('company_id', currentUser.companyId)
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      const updatedCondo: Condominium = {
+        id: data.id,
+        companyId: data.company_id,
+        name: data.name,
+        address: data.address,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+
+      setCondominiums(prev => prev.map(c => c.id === condo.id ? updatedCondo : c));
+      toast({ title: 'Condominio actualizado', description: `"${condo.name}" ha sido actualizado.` });
+    } catch (error) {
+      console.error('Error updating condominium:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error al actualizar',
+        description: 'No se pudo actualizar el condominio.',
+      });
+      throw error;
+    }
+  }, [currentUser]);
+
+  const deleteCondominium = useCallback<DataContextType['deleteCondominium']>(async (id) => {
+    if (!currentUser) throw new Error('Usuario no autenticado');
+
+    try {
+      const { error } = await supabase
+        .from('condominiums')
+        .delete()
+        .eq('id', id)
+        .eq('company_id', currentUser.companyId);
+
+      if (error) throw error;
+
+      setCondominiums(prev => prev.filter(c => c.id !== id));
+      toast({ title: 'Condominio eliminado', description: 'El condominio ha sido eliminado.' });
+    } catch (error) {
+      console.error('Error deleting condominium:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error al eliminar',
+        description: 'No se pudo eliminar el condominio. Verifica que no tenga departamentos asociados.',
+      });
+      throw error;
+    }
+  }, [currentUser]);
+
 
   const addEmployeeWithAuth = useCallback<DataContextType['addEmployeeWithAuth']>(async (name, email, password) => {
     if (!currentUser) {
@@ -909,7 +1066,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [currentUser, employees]);
 
-  const assignTask = useCallback<DataContextType['assignTask']>(async (departmentId, employeeProfileId) => {
+  const assignTask = useCallback<DataContextType['assignTask']>(async (departmentId, employeeProfileId, priority = 'normal') => {
     if (!currentUser) {
       throw new Error('Usuario no autenticado');
     }
@@ -941,6 +1098,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             employee_id: employeeProfileId,
             assigned_at: now,
             status: 'pending',
+            priority: priority,
             started_at: null,
             completed_at: null,
           })
@@ -962,6 +1120,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             employee_id: employeeProfileId,
             status: 'pending',
             assigned_at: now,
+            priority: priority,
           })
           .select('*')
           .single<TaskRow>();
@@ -981,6 +1140,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         .update({
           assigned_to: employeeProfileId,
           status: 'pending',
+          priority: priority,
         })
         .eq('id', departmentId)
         .eq('company_id', currentUser.companyId)
@@ -1255,6 +1415,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<DataContextType>(() => ({
     company,
+    condominiums,
     departments,
     addDepartment,
     updateDepartment,
@@ -1276,29 +1437,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
     getAllEmployees,
     getAllTasks,
     getAllDepartments,
+    addCondominium,
+    updateCondominium,
+    deleteCondominium,
   }), [
-    company,
-    departments,
-    addDepartment,
-    updateDepartment,
-    deleteDepartment,
-    employees,
-    addEmployeeWithAuth,
-    deleteEmployee,
-    tasks,
-    assignTask,
-    updateTaskStatus,
-    addMediaReport,
-    getMediaReportsForDepartment,
-    getTasksForEmployee,
-    getDepartmentById,
-    getEmployeeProfileById,
-    dataLoading,
-    allCompanies,
-    getAllCompanies,
-    getAllEmployees,
-    getAllTasks,
-    getAllDepartments,
+    company, condominiums, departments, employees, tasks, dataLoading,
+    addDepartment, updateDepartment, deleteDepartment,
+    addEmployeeWithAuth, deleteEmployee,
+    assignTask, updateTaskStatus,
+    addMediaReport, getMediaReportsForDepartment,
+    getTasksForEmployee, getDepartmentById, getEmployeeProfileById,
+    allCompanies, getAllCompanies, getAllEmployees, getAllTasks, getAllDepartments,
+    addCondominium, updateCondominium, deleteCondominium,
   ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

@@ -41,9 +41,10 @@ interface DepartmentFormProps {
   isOpen: boolean;
   onClose: () => void;
   department?: Department | null;
+  defaultCondominiumId?: string;
 }
 
-export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormProps) {
+export function DepartmentForm({ isOpen, onClose, department, defaultCondominiumId }: DepartmentFormProps) {
   const { addDepartment, updateDepartment } = useData();
 
   const form = useForm<DepartmentFormData>({
@@ -142,6 +143,7 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
         await updateDepartment({
           ...department,
           name: data.name,
+          condominiumId: department.condominiumId, // Mantener el condominio existente
           accessCode: data.accessCode,
           address: data.address?.trim() ? data.address : null,
           bedrooms: data.bedrooms,
@@ -155,6 +157,7 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
       } else {
         await addDepartment({
           name: data.name,
+          condominiumId: defaultCondominiumId, // Usar el prop por defecto
           accessCode: data.accessCode,
           address: data.address?.trim() ? data.address : null,
           bedrooms: data.bedrooms,
@@ -435,7 +438,7 @@ export function DepartmentForm({ isOpen, onClose, department }: DepartmentFormPr
             </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
+      </DialogContent >
     </Dialog >
   );
 }

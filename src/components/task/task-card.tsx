@@ -5,13 +5,14 @@ import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Building2, KeyRound, CheckCircle2, Loader2, AlertTriangle, CalendarDays, MapPin, ExternalLink, UploadCloud } from 'lucide-react';
+import { Building2, KeyRound, CheckCircle2, Loader2, AlertTriangle, CalendarDays, MapPin, ExternalLink, UploadCloud, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import React, { useState } from 'react';
 import { MediaUploadDialog } from '@/components/media/media-upload-dialog';
 import { Bed, Bath, ChevronDown, ChevronUp, User, Utensils } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
 interface TaskCardProps {
   task: CleaningTask;
   department?: Department;
@@ -29,7 +30,7 @@ function translateStatus(status: CleaningTask['status']) {
 }
 
 export function TaskCard({ task, department, isSelected, onSelect }: TaskCardProps) {
-  const { updateTaskStatus, tasks } = useData();
+  const { updateTaskStatus, tasks, condominiums } = useData();
   const [isMediaUploadOpen, setIsMediaUploadOpen] = useState(false);
   const [localIsExpanded, setLocalIsExpanded] = useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
@@ -44,6 +45,10 @@ export function TaskCard({ task, department, isSelected, onSelect }: TaskCardPro
 
   const isExpanded = isMobile ? localIsExpanded : false;
 
+  const condominium = department?.condominiumId
+    ? condominiums.find(c => c.id === department.condominiumId)
+    : null;
+
   const handleCardClick = () => {
     if (!isMobile && onSelect) {
       onSelect();
@@ -57,6 +62,7 @@ export function TaskCard({ task, department, isSelected, onSelect }: TaskCardPro
     if (!department?.beds) return 0;
     return department.beds.reduce((acc, bed) => acc + (bed.quantity || 0), 0);
   }, [department]);
+
   const handleUpdateStatus = async (status: 'pending' | 'in_progress' | 'completed') => {
     await updateTaskStatus(task.id, status);
   };
@@ -101,20 +107,37 @@ export function TaskCard({ task, department, isSelected, onSelect }: TaskCardPro
       <Card
         onClick={handleCardClick}
         className={cn(
-          "flex flex-col shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden",
-          isSelected || isExpanded ? "ring-2 ring-primary border-primary shadow-primary/20" : ""
+          "flex flex-col shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer relative", // Removed overflow-hidden
+          isSelected || isExpanded ? "ring-.5 ring-primary border-primary shadow-primary/20" : "",
+          task.priority === 'high' ? "border-accent border-.5 ring-1 ring-accent" : "" // Accent border (same as theme toggle hover)
         )}
       >
+        {task.priority === 'high' && (
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+            <Badge variant="destructive" className="bg-accent hover:bg-accent/90 text-accent-foreground flex items-center gap-1 px-3 py-0.5 h-6">
+              <div className="animate-pulse"><Zap className="h-3 w-3 fill-current" /></div>
+              <span className="text-xs font-bold uppercase tracking-wide">Prioritario</span>
+            </Badge>
+          </div>
+        )}
         {/* Header Compacto (Siempre visible) */}
         <CardHeader className="p-4 flex-grow-0">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <Building2 className="h-6 w-6 text-primary shrink-0" />
-              <h3 className="font-headline text-lg font-bold truncate">
-                {department.name}
-              </h3>
+              <div className="min-w-0">
+                {condominium && (
+                  <p className="text-xs text-muted-foreground uppercase font-bold truncate">
+                    {condominium.name}
+                  </p>
+                )}
+                <h3 className="font-headline text-lg font-bold truncate">
+                  {department.name}
+                </h3>
+              </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              {/* Priority Badge moved to floating */}
               <Badge variant="default" className={cn("text-primary-foreground capitalize text-[10px] sm:text-xs shrink-0 flex items-center gap-1 px-2.5 py-0.5", getStatusBadgeVariant(task.status))}>
                 {getStatusIcon(task.status)}
                 {translateStatus(task.status)}
@@ -147,10 +170,17 @@ export function TaskCard({ task, department, isSelected, onSelect }: TaskCardPro
               </div>
             </div>
           </div>
-          {department.address && (
+          {(department.address || condominium?.address) && (
             <CardDescription className="flex items-center pt-2 text-xs text-muted-foreground border-t mt-2">
               <MapPin className="mr-2 h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{department.address}</span>
+              <div className="flex flex-col min-w-0">
+                {condominium?.address && (
+                  <span className="truncate font-medium">{condominium.address}</span>
+                )}
+                {department.address && (
+                  <span className="truncate">{department.address}</span>
+                )}
+              </div>
             </CardDescription>
           )}
         </CardHeader>
@@ -265,7 +295,7 @@ export function TaskCard({ task, department, isSelected, onSelect }: TaskCardPro
               </Button>
             )}
             {task.status === 'completed' && (
-              <div className="bg-green-50 text-green-600 text-xs font-bold py-2 rounded-lg flex items-center justify-center border border-green-100 italic">
+              <div className="bg-green-5 text-green-600 text-xs font-bold py-2 rounded-lg flex items-center justify-center border border-green-100 italic">
                 <CheckCircle2 className="mr-1.5 h-4 w-4" /> Tarea Completada con Éxito
               </div>
             )}

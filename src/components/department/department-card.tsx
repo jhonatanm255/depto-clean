@@ -4,7 +4,7 @@ import type { Department, Employee } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, KeyRound, User, Edit3, Trash2, CheckCircle2, AlertTriangle, Loader2, MapPin, Camera, ChevronDown, ChevronUp, Bed, Bath, DoorOpen } from 'lucide-react';
+import { Building2, KeyRound, User, Edit3, Trash2, CheckCircle2, AlertTriangle, Loader2, MapPin, Camera, ChevronDown, ChevronUp, Bed, Bath, DoorOpen, Zap } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -129,10 +129,20 @@ export function DepartmentCard({
       <Card
         onClick={handleCardClick}
         className={cn(
-          "flex flex-col shadow-lg hover:shadow-xl overflow-hidden cursor-pointer transition-all duration-200",
-          isSelected ? "ring-.5 ring-primary border-primary shadow-primary/20" : ""
+          "flex flex-col shadow-lg hover:shadow-xl cursor-pointer transition-all duration-200 relative", // Removed overflow-hidden, added relative
+          isSelected ? "ring-.5 ring-primary border-primary shadow-primary/20" : "",
+          department.priority === 'high' ? "border-accent border-.5 ring-1 ring-accent" : "" // Accent border (same as theme toggle hover)
         )}
       >
+        {department.priority === 'high' && (
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+            <Badge variant="destructive" className="bg-accent hover:bg-accent/90 text-accent-foreground flex items-center gap-1 px-3 py-0.5 h-6">
+              <div className="animate-pulse"><Zap className="h-3 w-3 fill-current" /></div>
+              <span className="text-xs font-bold uppercase tracking-wide">Prioritario</span>
+            </Badge>
+          </div>
+        )}
+
         {/* Vista compacta (colapsada) */}
         <div
           className={cn(
@@ -146,20 +156,21 @@ export function DepartmentCard({
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-6 w-6 text-primary shrink-0" />
-                  <h3 className="font-headline text-lg font-bold truncate">
-                    {department.name}
-                  </h3>
-                </div>
-                <Badge variant="default" className={cn("text-primary-foreground capitalize text-[10px] sm:text-xs shrink-0 flex items-center gap-1 px-2.5 py-0.5", getStatusBadgeVariant(department.status))}>
-                      {getStatusIcon(department.status)}
-                      {translateStatus(department.status)}
-                </Badge>
+                  <div className="flex items-center gap-2">
+
+                    <Building2 className="h-6 w-6 text-primary shrink-0" />
+                    <h3 className="font-headline text-lg font-bold truncate">
+                      {department.name}
+                    </h3>
+                  </div>
+                  <Badge variant="default" className={cn("text-primary-foreground capitalize text-[10px] sm:text-xs shrink-0 flex items-center gap-1 px-2.5 py-0.5", getStatusBadgeVariant(department.status))}>
+                    {getStatusIcon(department.status)}
+                    {translateStatus(department.status)}
+                  </Badge>
                 </div>
                 <div className="flex items-center justify-between gap-3 mt-1">
                   <div className="flex items-center gap-2">
-                    
+
                     <span className="flex items-center text-sm text-muted-foreground ml-2">
                       <KeyRound className="mr-1 h-3.5 w-3.5 shrink-0" />
                       {department.accessCode}
@@ -221,10 +232,13 @@ export function DepartmentCard({
                       <Building2 className="mr-2 h-5 w-5 text-primary shrink-0" />
                       <span className="truncate">{department.name}</span>
                     </CardTitle>
-                    <Badge variant="default" className={cn("text-primary-foreground capitalize shrink-0 flex items-center justify-center gap-1 px-2.5 h-6", getStatusBadgeVariant(department.status))}>
-                      {getStatusIcon(department.status)}
-                      {translateStatus(department.status)}
-                    </Badge>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Priority Badge moved to floating */}
+                      <Badge variant="default" className={cn("text-primary-foreground capitalize shrink-0 flex items-center justify-center gap-1 px-2.5 h-6", getStatusBadgeVariant(department.status))}>
+                        {getStatusIcon(department.status)}
+                        {translateStatus(department.status)}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
                 {!onSelect && !isSelected && (
@@ -392,9 +406,9 @@ export function DepartmentCard({
                 </AlertDialogContent>
               </AlertDialog>
             </CardFooter>
-          </div>
-        </div>
-      </Card>
+          </div >
+        </div >
+      </Card >
       <MediaReportsDialog
         isOpen={isMediaReportsOpen}
         onClose={() => setIsMediaReportsOpen(false)}

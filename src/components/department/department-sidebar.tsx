@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Department, Employee } from '@/lib/types';
@@ -61,13 +62,17 @@ export function DepartmentSidebar({
     onEdit,
     employees
 }: DepartmentSidebarProps) {
-    const { deleteDepartment } = useData();
+    const { deleteDepartment, condominiums } = useData();
     const { currentUser } = useAuth();
     const [isMediaReportsOpen, setIsMediaReportsOpen] = React.useState(false);
 
     const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'owner';
 
     if (!department) return null;
+
+    const condominium = department.condominiumId
+        ? condominiums.find(c => c.id === department.condominiumId)
+        : null;
 
     // Calcular total de camas desde el array de distribución
     const totalBeds = (department.beds || []).reduce((acc, bed) => acc + (bed.quantity || 0), 0);
@@ -118,6 +123,11 @@ export function DepartmentSidebar({
                 <div className="p-6 space-y-8">
                     {/* Main Info */}
                     <div>
+                        {condominium && (
+                            <p className="text-sm font-bold text-muted-foreground uppercase tracking-wide mb-1">
+                                {condominium.name}
+                            </p>
+                        )}
                         <div className="flex items-start justify-between gap-4 mb-3">
                             <h1 className="text-3xl font-bold font-headline leading-tight">{department.name}</h1>
                             <div className="flex flex-col items-end gap-2 shrink-0">
@@ -132,11 +142,21 @@ export function DepartmentSidebar({
                                 )}
                             </div>
                         </div>
-                        {department.address && (
-                            <p className="flex items-center text-sm text-muted-foreground bg-muted/20 p-3 rounded-2xl border border-dashed">
-                                <MapPin className="mr-2 h-4 w-4 shrink-0" />
-                                <span>{department.address}</span>
-                            </p>
+                        {(department.address || condominium?.address) && (
+                            <div className="space-y-2">
+                                {condominium?.address && (
+                                    <p className="flex items-center text-sm text-muted-foreground bg-muted/20 p-3 rounded-2xl border border-dashed">
+                                        <MapPin className="mr-2 h-4 w-4 shrink-0 text-primary" />
+                                        <span className="font-semibold">{condominium.address}</span>
+                                    </p>
+                                )}
+                                {department.address && (
+                                    <p className="flex items-center text-sm text-muted-foreground bg-muted/20 p-3 rounded-2xl border border-dashed">
+                                        <MapPin className="mr-2 h-4 w-4 shrink-0" />
+                                        <span>{department.address}</span>
+                                    </p>
+                                )}
+                            </div>
                         )}
                     </div>
 
