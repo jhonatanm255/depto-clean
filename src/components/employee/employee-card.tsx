@@ -107,7 +107,7 @@ export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeC
                       </span>
                       <div className="flex items-center gap-1">
                         {task.departmentPriority === 'high' && (
-                          <Badge variant="destructive" className="bg-orange-500 text-[10px] px-1.5 py-0.5 h-auto">Prioritario</Badge>
+                          <Badge variant="destructive" className="bg-accent text-accent-foreground text-[10px] px-1.5 py-0.5 h-auto">Prioritario</Badge>
                         )}
                         <Badge
                           variant="default"

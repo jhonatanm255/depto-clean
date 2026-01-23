@@ -244,7 +244,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                                     </h4>
                                     <div className="flex items-center gap-1 mt-1 sm:mt-0">
                                       {task.priority === 'high' && (
-                                        <Badge variant="destructive" className="bg-orange-500 text-[10px] px-1.5 py-0.5 h-auto">Prioritario</Badge>
+                                        <Badge variant="destructive" className="bg-accent text-accent-foreground text-[10px] px-1.5 py-0.5 h-auto">Prioritario</Badge>
                                       )}
                                       <Badge variant="default" className={cn("text-primary-foreground capitalize text-sm", getStatusBadgeVariant(task.status))}>
                                         {getStatusIcon(task.status)}
