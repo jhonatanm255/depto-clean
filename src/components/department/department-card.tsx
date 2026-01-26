@@ -376,8 +376,8 @@ export function DepartmentCard({
               )}
             </CardContent>
             <CardFooter className="flex justify-end gap-2 border-t pt-4 flex-wrap">
-              <Button variant="outline" size="sm" onClick={() => setIsMediaReportsOpen(true)} aria-label={`Ver evidencias de ${department.name}`}>
-                <Camera className="mr-1 h-4 w-4" /> Ver Evidencias
+              <Button variant="outline" size="sm" onClick={() => setIsMediaReportsOpen(true)} aria-label={`Ver reportes de ${department.name}`}>
+                <Camera className="mr-1 h-4 w-4" /> Ver Reportes
               </Button>
               <Button variant="outline" size="sm" onClick={() => onEdit(department)} aria-label={`Editar ${department.name}`}>
                 <Edit3 className="mr-1 h-4 w-4" /> Editar

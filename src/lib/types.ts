@@ -114,6 +114,7 @@ export interface MediaReport {
   id: string;
   companyId: string;
   departmentId: string;
+  taskId?: string; // Vinculación a la tarea específica
   employeeId?: string;
   uploadedBy: string;
   storagePath: string;

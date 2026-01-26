@@ -274,7 +274,7 @@ export function TaskCard({ task, department, isSelected, onSelect }: TaskCardPro
               className="flex-1 h-8 text-xs"
               disabled={task.status === 'completed'}
             >
-              <UploadCloud className="mr-1.5 h-3.5 w-3.5" /> Evidencia
+              <UploadCloud className="mr-1.5 h-3.5 w-3.5" /> Fotos/Videos
             </Button>
           </div>
 
@@ -307,6 +307,7 @@ export function TaskCard({ task, department, isSelected, onSelect }: TaskCardPro
           isOpen={isMediaUploadOpen}
           onClose={() => setIsMediaUploadOpen(false)}
           departmentId={department.id}
+          taskId={task.id}
         />
       )}
     </>

@@ -43,7 +43,8 @@ interface DataContextType {
     file: File,
     reportType: MediaReportType,
     description?: string,
-    onProgress?: (percentage: number) => void
+    onProgress?: (percentage: number) => void,
+    taskId?: string
   ) => Promise<void>;
   getMediaReportsForDepartment: (departmentId: string) => Promise<MediaReport[]>;
 
@@ -123,6 +124,7 @@ type MediaReportRow = {
   id: string;
   company_id: string;
   department_id: string;
+  task_id: string | null;
   employee_id: string | null;
   uploaded_by: string;
   report_type: MediaReportType;
@@ -206,6 +208,7 @@ const mapMediaReport = (row: MediaReportRow): MediaReport => ({
   id: row.id,
   companyId: row.company_id,
   departmentId: row.department_id,
+  taskId: row.task_id ?? undefined,
   employeeId: row.employee_id ?? undefined,
   uploadedBy: row.uploaded_by,
   storagePath: row.storage_path,
@@ -1254,7 +1257,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     file,
     reportType,
     description,
-    onProgress
+    onProgress,
+    taskId
   ) => {
     if (!currentUser) {
       throw new Error('Usuario no autenticado');
@@ -1290,6 +1294,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         .insert({
           company_id: currentUser.companyId,
           department_id: departmentId,
+          task_id: taskId ?? null,
           employee_id: employeeProfileId,
           uploaded_by: currentUser.id,
           storage_path: uploadData.path,
@@ -1304,14 +1309,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
         throw error;
       }
 
-      toast({ title: 'Evidencia subida', description: 'El archivo fue registrado correctamente.' });
+      toast({ title: 'Reporte guardado', description: 'El archivo fue registrado correctamente.' });
     } catch (error) {
       console.error('Error subiendo media report:', error);
       onProgress?.(0);
       toast({
         variant: 'destructive',
         title: 'Error al subir',
-        description: 'No se pudo subir la evidencia.',
+        description: 'No se pudo subir el reporte.',
       });
       throw error;
     }
