@@ -6,6 +6,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './auth-context';
 import { toast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 
 interface NotificationRow {
   id: string;
@@ -71,6 +72,24 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     // Cargar permisos de notificación
     if ('Notification' in window) {
       setNotificationPermission(Notification.permission);
+      
+      // Si el permiso es 'default' (no preguntado), solicitar automáticamente via Toast
+      // Esto cumple con "al inicio solo se le pregunte al usuario"
+      if (Notification.permission === 'default' && currentUser) {
+        const timer = setTimeout(() => {
+          toast({
+            title: "¿Activar notificaciones?",
+            description: "Recibe alertas en tiempo real sobre tareas y reportes.",
+            action: (
+              <ToastAction altText="Activar notificaciones" onClick={() => requestNotificationPermission()}>
+                Activar
+              </ToastAction>
+            ),
+            duration: Infinity, // Se queda hasta que el usuario decida
+          });
+        }, 3000); // Pequeño retraso para no ser intrusivo al cargar
+        return () => clearTimeout(timer);
+      }
     }
 
     // Registrar service worker para notificaciones push nativas

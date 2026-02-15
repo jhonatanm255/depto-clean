@@ -125,6 +125,9 @@ export function RegisterForm() {
             className="object-contain"
           />
         </div>
+        <div className="mt-1 text-xl font-semibold tracking-wide text-muted-foreground">
+          CleanSweep Manager
+        </div>
         <CardTitle className="font-headline text-3xl">
           Registra tu empresa
         </CardTitle>

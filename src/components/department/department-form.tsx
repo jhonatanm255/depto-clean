@@ -191,7 +191,7 @@ export function DepartmentForm({ isOpen, onClose, department, defaultCondominium
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-            <ScrollArea className="flex-1 px-6 h-full">
+            <ScrollArea className="px-6 h-[calc(90vh-150px)]">
               <div className="py-6 pr-1">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
                   {/* Columna Izquierda: Información Básica */}

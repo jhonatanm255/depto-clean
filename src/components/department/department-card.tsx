@@ -49,7 +49,7 @@ export function DepartmentCard({
   isSelected,
   onSelect
 }: DepartmentCardProps) {
-  const { deleteDepartment } = useData();
+  const { deleteDepartment, toggleDepartmentPriority } = useData();
   const [isMediaReportsOpen, setIsMediaReportsOpen] = useState(false);
   const [localIsExpanded, setLocalIsExpanded] = useState(false);
 
@@ -124,6 +124,13 @@ export function DepartmentCard({
   // Determinar si estamos en desktop (cuando hay control desde el padre)
   const isDesktop = controlledIsExpanded !== undefined;
 
+  const canTogglePriority = !!department.assignedTo && department.status !== 'in_progress';
+
+  const handleTogglePriority = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleDepartmentPriority(department.id, department.priority ?? 'normal');
+  };
+
   return (
     <>
       <Card
@@ -176,6 +183,17 @@ export function DepartmentCard({
                       {department.accessCode}
                     </span>
                   </div>
+                  {canTogglePriority && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 w-6 p-0 hover:bg-transparent" 
+                      onClick={handleTogglePriority}
+                      title={department.priority === 'high' ? "Quitar prioridad" : "Marcar como prioritario"}
+                    >
+                       <Zap className={cn("h-4 w-4", department.priority === 'high' ? "text-orange-500 fill-orange-500" : "text-gray-400")} />
+                    </Button>
+                  )}
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2 border-t pt-2">
                   <div className="flex items-center">
@@ -260,10 +278,23 @@ export function DepartmentCard({
                   </Button>
                 )}
               </div>
-              <CardDescription className="flex items-center pt-1 text-sm">
-                <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />
-                Código de Acceso: {department.accessCode}
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <CardDescription className="flex items-center pt-1 text-sm">
+                  <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />
+                  Código de Acceso: {department.accessCode}
+                </CardDescription>
+                {canTogglePriority && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 w-6 p-0 hover:bg-transparent" 
+                    onClick={handleTogglePriority}
+                    title={department.priority === 'high' ? "Quitar prioridad" : "Marcar como prioritario"}
+                  >
+                     <Zap className={cn("h-4 w-4", department.priority === 'high' ? "text-orange-500 fill-orange-500" : "text-gray-400")} />
+                  </Button>
+                )}
+              </div>
               {department.address && (
                 <CardDescription className="flex items-center pt-1 text-xs text-muted-foreground">
                   <MapPin className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
