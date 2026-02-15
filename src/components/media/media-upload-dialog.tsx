@@ -33,9 +33,10 @@ interface MediaUploadDialogProps {
   isOpen: boolean;
   onClose: () => void;
   departmentId: string;
+  taskId?: string;
 }
 
-export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUploadDialogProps) {
+export function MediaUploadDialog({ isOpen, onClose, departmentId, taskId }: MediaUploadDialogProps) {
   const { addMediaReport } = useData();
   const { currentUser } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
@@ -64,7 +65,9 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
         currentUser.role === 'employee' ? currentUser.id : null,
         fileToUpload,
         data.reportType as MediaReportType,
-        data.description
+        data.description,
+        undefined, // onProgress callback placeholder
+        taskId // Pass taskId here
       );
       submissionSuccessful = true; // Marcamos como exitoso para que el finally cierre el modal
       form.reset();
@@ -97,10 +100,10 @@ export function MediaUploadDialog({ isOpen, onClose, departmentId }: MediaUpload
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <UploadCloud className="mr-2 h-6 w-6 text-primary" />
-            Subir Evidencia Multimedia
+            Subir Registro Visual
           </DialogTitle>
           <DialogDescription>
-            Selecciona una foto o video (máx. {MAX_FILE_SIZE_MB}MB) para adjuntar al reporte del departamento. La subida se realizará a Supabase Storage.
+            Selecciona una foto o video (máx. {MAX_FILE_SIZE_MB}MB) para adjuntar al reporte de limpieza. La subida se realizará a Supabase Storage.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

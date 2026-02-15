@@ -273,7 +273,7 @@ export function DepartmentSidebar({
             <div className="p-6 border-t bg-muted/30 flex flex-col gap-3">
                 <div className="grid grid-cols-2 gap-3">
                     <Button variant="outline" className="w-full" onClick={() => setIsMediaReportsOpen(true)}>
-                        <Camera className="mr-2 h-4 w-4" /> Evidencias
+                        <Camera className="mr-2 h-4 w-4" /> Reportes
                     </Button>
                     {isAdmin && (
                         <Button variant="outline" className="w-full" onClick={() => onEdit(department)}>

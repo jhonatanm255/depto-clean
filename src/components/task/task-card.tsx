@@ -109,10 +109,10 @@ export function TaskCard({ task, department, isSelected, onSelect }: TaskCardPro
         className={cn(
           "flex flex-col shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer relative", // Removed overflow-hidden
           isSelected || isExpanded ? "ring-.5 ring-primary border-primary shadow-primary/20" : "",
-          task.priority === 'high' ? "border-accent border-.5 ring-1 ring-accent" : "" // Accent border (same as theme toggle hover)
+          department.priority === 'high' && department.status !== 'completed' ? "border-accent border-.5 ring-1 ring-accent" : "" // Accent border (same as theme toggle hover)
         )}
       >
-        {task.priority === 'high' && (
+        {department.priority === 'high' && department.status !== 'completed' && (
           <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
             <Badge variant="destructive" className="bg-accent hover:bg-accent/90 text-accent-foreground flex items-center gap-1 px-3 py-0.5 h-6">
               <div className="animate-pulse"><Zap className="h-3 w-3 fill-current" /></div>
@@ -274,7 +274,7 @@ export function TaskCard({ task, department, isSelected, onSelect }: TaskCardPro
               className="flex-1 h-8 text-xs"
               disabled={task.status === 'completed'}
             >
-              <UploadCloud className="mr-1.5 h-3.5 w-3.5" /> Evidencia
+              <UploadCloud className="mr-1.5 h-3.5 w-3.5" /> Fotos/Videos
             </Button>
           </div>
 
@@ -307,6 +307,7 @@ export function TaskCard({ task, department, isSelected, onSelect }: TaskCardPro
           isOpen={isMediaUploadOpen}
           onClose={() => setIsMediaUploadOpen(false)}
           departmentId={department.id}
+          taskId={task.id}
         />
       )}
     </>

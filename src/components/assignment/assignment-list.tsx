@@ -270,7 +270,7 @@ export function AssignmentList({ tasks, departments, employees }: AssignmentList
                                           className="mt-2 text-sm" // Aumentado de text-xs a text-sm
                                           onClick={() => handleOpenMediaDialog(department)}
                                         >
-                                          <Camera className="mr-1.5 h-3 w-3" /> Ver Evidencias
+                                          <Camera className="mr-1.5 h-3 w-3" /> Ver Reportes
                                         </Button>
                                       </>
                                     )}

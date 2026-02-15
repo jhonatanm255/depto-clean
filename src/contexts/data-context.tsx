@@ -36,6 +36,7 @@ interface DataContextType {
   tasks: CleaningTask[];
   assignTask: (departmentId: string, employeeProfileId: string, priority?: 'normal' | 'high') => Promise<void>;
   updateTaskStatus: (taskId: string, status: TaskStatus) => Promise<void>;
+  toggleDepartmentPriority: (departmentId: string, currentPriority: 'normal' | 'high') => Promise<void>;
 
   addMediaReport: (
     departmentId: string,
@@ -43,7 +44,8 @@ interface DataContextType {
     file: File,
     reportType: MediaReportType,
     description?: string,
-    onProgress?: (percentage: number) => void
+    onProgress?: (percentage: number) => void,
+    taskId?: string
   ) => Promise<void>;
   getMediaReportsForDepartment: (departmentId: string) => Promise<MediaReport[]>;
 
@@ -123,6 +125,7 @@ type MediaReportRow = {
   id: string;
   company_id: string;
   department_id: string;
+  task_id: string | null;
   employee_id: string | null;
   uploaded_by: string;
   report_type: MediaReportType;
@@ -206,6 +209,7 @@ const mapMediaReport = (row: MediaReportRow): MediaReport => ({
   id: row.id,
   companyId: row.company_id,
   departmentId: row.department_id,
+  taskId: row.task_id ?? undefined,
   employeeId: row.employee_id ?? undefined,
   uploadedBy: row.uploaded_by,
   storagePath: row.storage_path,
@@ -243,6 +247,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const { currentUser } = useAuth();
   const lastLoadedUserIdRef = React.useRef<string | null>(null);
   const lastLoadedCompanyIdRef = React.useRef<string | null>(null);
+  const priorityChannelRef = React.useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const isSuperadmin = currentUser?.role === 'superadmin';
 
@@ -520,6 +525,117 @@ export function DataProvider({ children }: { children: ReactNode }) {
       console.log('[DataContext] Usuario y companyId no cambiaron, omitiendo recarga de datos para optimizar rendimiento');
     }
   }, [currentUser, isSuperadmin, loadData]);
+
+  // Canal de broadcast para cambios de prioridad (funciona incluso si Postgres Realtime no está habilitado)
+  useEffect(() => {
+    if (!currentUser?.companyId) return;
+    // Limpiar canal anterior si existe
+    if (priorityChannelRef.current) {
+      supabase.removeChannel(priorityChannelRef.current);
+      priorityChannelRef.current = null;
+    }
+    const channel = supabase.channel(`company-${currentUser.companyId}-dept-priority`, {
+      config: { broadcast: { self: false } },
+    });
+    channel.on('broadcast', { event: 'priority_changed' }, ({ payload }) => {
+      const { departmentId, priority } = payload as { departmentId: string; priority: 'normal' | 'high' };
+      setDepartments((prev) => prev.map((d) => (d.id === departmentId ? { ...d, priority } : d)));
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.departmentId === departmentId && t.status !== 'completed' ? { ...t, priority } : t
+        )
+      );
+    });
+    channel.on('broadcast', { event: 'task_status_changed' }, ({ payload }) => {
+      const { taskId, departmentId, status, departmentPriority } = payload as {
+        taskId: string;
+        departmentId: string;
+        status: TaskStatus;
+        departmentPriority?: 'normal' | 'high';
+      };
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status } : t)));
+      setDepartments((prev) => prev.map((d) => {
+        if (d.id !== departmentId) return d;
+        const base = { ...d, status };
+        const withPriority = departmentPriority ? { ...base, priority: departmentPriority } : base;
+        // Si la tarea se completó, limpiar asignación para ocultar el icono de rayo en tiempo real
+        return status === 'completed' ? { ...withPriority, assignedTo: null } : withPriority;
+      }));
+    });
+    channel.subscribe();
+    priorityChannelRef.current = channel;
+    return () => {
+      if (priorityChannelRef.current) {
+        supabase.removeChannel(priorityChannelRef.current);
+        priorityChannelRef.current = null;
+      }
+    };
+  }, [currentUser?.companyId]);
+
+  // Suscripción a cambios en tiempo real (Realtime)
+  useEffect(() => {
+    if (!currentUser?.companyId) return;
+
+    console.log('[DataContext] 🔌 Suscribiendo a cambios en tiempo real para company:', currentUser.companyId);
+
+    const channel = supabase.channel('db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'departments',
+          filter: `company_id=eq.${currentUser.companyId}`,
+        },
+        (payload) => {
+          console.log('[DataContext] ⚡ Cambio en departments:', payload.eventType);
+          if (payload.eventType === 'INSERT') {
+            const newDept = mapDepartment(payload.new as DepartmentRow);
+            setDepartments((prev) => {
+              if (prev.some(d => d.id === newDept.id)) return prev; // Evitar duplicados
+              return [...prev, newDept].sort((a, b) => a.name.localeCompare(b.name));
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedDept = mapDepartment(payload.new as DepartmentRow);
+            setDepartments((prev) => prev.map((d) => (d.id === updatedDept.id ? updatedDept : d)));
+          } else if (payload.eventType === 'DELETE') {
+            setDepartments((prev) => prev.filter((d) => d.id !== payload.old.id));
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tasks',
+          filter: `company_id=eq.${currentUser.companyId}`,
+        },
+        (payload) => {
+          console.log('[DataContext] ⚡ Cambio en tasks:', payload.eventType);
+          if (payload.eventType === 'INSERT') {
+            const newTask = mapTask(payload.new as TaskRow);
+            setTasks((prev) => {
+              if (prev.some(t => t.id === newTask.id)) return prev;
+              return [newTask, ...prev].sort((a, b) => new Date(b.assignedAt).getTime() - new Date(a.assignedAt).getTime());
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedTask = mapTask(payload.new as TaskRow);
+            setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+          } else if (payload.eventType === 'DELETE') {
+            setTasks((prev) => prev.filter((t) => t.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[DataContext] Estado de suscripción realtime:', status);
+      });
+
+    return () => {
+      console.log('[DataContext] 🔌 Desuscribiendo realtime...');
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser?.companyId]);
 
   const addDepartment = useCallback<DataContextType['addDepartment']>(async (input) => {
     if (!currentUser) {
@@ -1176,6 +1292,81 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [currentUser, departments, employees, tasks]);
 
+  const toggleDepartmentPriority = useCallback<DataContextType['toggleDepartmentPriority']>(async (departmentId, currentPriority) => {
+    if (!currentUser) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const newPriority = currentPriority === 'high' ? 'normal' : 'high';
+
+    try {
+      // 1. Actualizar departamento
+      const { error: deptError } = await supabase
+        .from('departments')
+        .update({ priority: newPriority })
+        .eq('id', departmentId)
+        .eq('company_id', currentUser.companyId);
+
+      if (deptError) throw deptError;
+
+      // 2. Buscar tarea activa y actualizarla si existe
+      const activeTask = tasks.find(t => t.departmentId === departmentId && t.status !== 'completed');
+      if (activeTask) {
+        const { error: taskError } = await supabase
+          .from('tasks')
+          .update({ priority: newPriority })
+          .eq('id', activeTask.id)
+          .eq('company_id', currentUser.companyId);
+
+        if (taskError) throw taskError;
+
+        // Actualizar estado local de tareas
+        setTasks((prev) => prev.map((t) => (t.id === activeTask.id ? { ...t, priority: newPriority } : t)));
+      }
+
+      // 3. Actualizar estado local de departamentos
+      setDepartments((prev) => prev.map((d) => (d.id === departmentId ? { ...d, priority: newPriority } : d)));
+
+      // 4. Notificar al empleado asignado
+      const currentDept = departments.find(d => d.id === departmentId);
+      if (currentDept && currentDept.assignedTo) {
+         const { error: notifError } = await supabase.from('notifications').insert({
+           company_id: currentUser.companyId,
+           user_id: currentDept.assignedTo,
+           type: 'department_status_changed',
+           title: newPriority === 'high' ? '¡Prioridad Alta!' : 'Prioridad Normalizada',
+           message: `El departamento ${currentDept.name} ha cambiado a prioridad ${newPriority === 'high' ? 'ALTA' : 'normal'}.`,
+           related_department_id: departmentId,
+           read: false
+         });
+         
+         if (notifError) {
+            console.error('Error enviando notificación de prioridad:', notifError);
+         }
+      }
+
+      // 5. Broadcast a todos los clientes de la misma compañía para reflejar el cambio al instante
+      priorityChannelRef.current?.send({
+        type: 'broadcast',
+        event: 'priority_changed',
+        payload: { departmentId, priority: newPriority },
+      });
+
+      toast({ 
+        title: newPriority === 'high' ? 'Prioridad Alta' : 'Prioridad Normal', 
+        description: `El departamento ${newPriority === 'high' ? 'ahora es prioritario' : 'ya no es prioritario'}.` 
+      });
+    } catch (error) {
+      console.error('Error cambiando prioridad:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No se pudo cambiar la prioridad.',
+      });
+      throw error;
+    }
+  }, [currentUser, tasks, departments]);
+
   const updateTaskStatus = useCallback<DataContextType['updateTaskStatus']>(async (taskId, newStatus) => {
     if (!currentUser) {
       throw new Error('Usuario no autenticado');
@@ -1217,6 +1408,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (newStatus === 'completed') {
         departmentUpdates.last_cleaned_at = now;
         departmentUpdates.assigned_to = null;
+        departmentUpdates.priority = 'normal'; // Reset priority automatically
       } else {
         departmentUpdates.assigned_to = data.employee_id;
       }
@@ -1236,6 +1428,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setTasks((prev) => prev.map((t) => (t.id === taskId ? mapTask(data) : t)));
       setDepartments((prev) => prev.map((d) => (d.id === data.department_id ? mapDepartment(deptRow) : d)));
 
+      // Broadcast de cambio de estado (y prioridad normal si se completó)
+      priorityChannelRef.current?.send({
+        type: 'broadcast',
+        event: 'task_status_changed',
+        payload: {
+          taskId,
+          departmentId: data.department_id,
+          status: newStatus,
+          departmentPriority: newStatus === 'completed' ? 'normal' : undefined,
+        },
+      });
+      if (newStatus === 'completed') {
+        priorityChannelRef.current?.send({
+          type: 'broadcast',
+          event: 'priority_changed',
+          payload: { departmentId: data.department_id, priority: 'normal' },
+        });
+      }
+
       toast({ title: 'Tarea actualizada', description: `Estado cambiado a ${newStatus}.` });
     } catch (error) {
       console.error('Error actualizando tarea:', error);
@@ -1254,7 +1465,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     file,
     reportType,
     description,
-    onProgress
+    onProgress,
+    taskId
   ) => {
     if (!currentUser) {
       throw new Error('Usuario no autenticado');
@@ -1290,6 +1502,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         .insert({
           company_id: currentUser.companyId,
           department_id: departmentId,
+          task_id: taskId ?? null,
           employee_id: employeeProfileId,
           uploaded_by: currentUser.id,
           storage_path: uploadData.path,
@@ -1304,14 +1517,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
         throw error;
       }
 
-      toast({ title: 'Evidencia subida', description: 'El archivo fue registrado correctamente.' });
+      toast({ title: 'Reporte guardado', description: 'El archivo fue registrado correctamente.' });
     } catch (error) {
       console.error('Error subiendo media report:', error);
       onProgress?.(0);
       toast({
         variant: 'destructive',
         title: 'Error al subir',
-        description: 'No se pudo subir la evidencia.',
+        description: 'No se pudo subir el reporte.',
       });
       throw error;
     }
@@ -1426,6 +1639,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     tasks,
     assignTask,
     updateTaskStatus,
+    toggleDepartmentPriority,
     addMediaReport,
     getMediaReportsForDepartment,
     getTasksForEmployee,
@@ -1444,7 +1658,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     company, condominiums, departments, employees, tasks, dataLoading,
     addDepartment, updateDepartment, deleteDepartment,
     addEmployeeWithAuth, deleteEmployee,
-    assignTask, updateTaskStatus,
+    assignTask, updateTaskStatus, toggleDepartmentPriority,
     addMediaReport, getMediaReportsForDepartment,
     getTasksForEmployee, getDepartmentById, getEmployeeProfileById,
     allCompanies, getAllCompanies, getAllEmployees, getAllTasks, getAllDepartments,

@@ -87,6 +87,9 @@ export function LoginForm() {
             className="object-contain"
           />
         </div>
+        <div className="mt-1 text-xl font-semibold tracking-wide text-muted-foreground">
+          CleanSweep Manager
+        </div>
         <CardTitle className="font-headline text-3xl">¡Bienvenido/a!</CardTitle>
         <CardDescription>Inicia sesión para gestionar tus tareas de limpieza.</CardDescription>
       </CardHeader>
