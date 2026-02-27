@@ -118,8 +118,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               <div className="flex flex-1 flex-col">
                 <HeaderMain />
                 <main className={cn(
-                  "flex-1 overflow-y-auto bg-background p-4 sm:p-6 lg:p-8",
-                  isMobile && "pb-20" // Padding para la barra de navegación inferior (h-16 + p-4 usual)
+                  "flex-1 overflow-y-auto bg-background p-4 sm:p-6 lg:p-8 min-h-[calc(100vh-4rem)]",
+                  isMobile && "pb-20"
                 )}>
                   {children}
                 </main>

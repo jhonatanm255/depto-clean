@@ -5,15 +5,17 @@ import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
 import { CondominiumForm } from '@/components/condominium/condominium-form';
 import { CondominiumCard } from '@/components/condominium/condominium-card';
-import { PlusCircle, Building2, Search } from 'lucide-react';
+import { PlusCircle, Building2, Search, CheckCircle2, Loader2 } from 'lucide-react';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 export default function CondominiumsPage() {
     const { condominiums, departments, dataLoading } = useData();
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingCondominium, setEditingCondominium] = useState<Condominium | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterActive, setFilterActive] = useState<'all' | 'active'>('all');
 
     const handleOpenForm = (condo?: Condominium) => {
         setEditingCondominium(condo || null);
@@ -24,15 +26,6 @@ export default function CondominiumsPage() {
         setIsFormOpen(false);
         setEditingCondominium(null);
     };
-
-    const filteredCondominiums = useMemo(() => {
-        return condominiums
-            .filter(condo =>
-                condo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (condo.address && condo.address.toLowerCase().includes(searchTerm.toLowerCase()))
-            )
-            .sort((a, b) => a.name.localeCompare(b.name));
-    }, [condominiums, searchTerm]);
 
     // Count departments per condominium
     const deptsByCondo = useMemo(() => {
@@ -56,6 +49,33 @@ export default function CondominiumsPage() {
         return active;
     }, [departments]);
 
+    const filteredCondominiums = useMemo(() => {
+        return condominiums
+            .filter(condo => {
+                const matchesSearch =
+                    condo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (condo.address && condo.address.toLowerCase().includes(searchTerm.toLowerCase()));
+                if (!matchesSearch) return false;
+                if (filterActive === 'active') return activeWorkByCondo[condo.id] || false;
+                return true;
+            })
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }, [condominiums, searchTerm, filterActive, activeWorkByCondo]);
+
+    // Completed count per condominium (for progress bar)
+    const completedByCondo = useMemo(() => {
+        const counts: Record<string, number> = {};
+        departments.forEach(dept => {
+            if (dept.condominiumId && dept.status === 'completed') {
+                counts[dept.condominiumId] = (counts[dept.condominiumId] || 0) + 1;
+            }
+        });
+        return counts;
+    }, [departments]);
+
+    const readyUnits = useMemo(() => departments.filter(d => d.status === 'completed').length, [departments]);
+    const inProgressUnits = useMemo(() => departments.filter(d => d.status === 'in_progress').length, [departments]);
+
     if (dataLoading && condominiums.length === 0) {
         return (
             <div className="container mx-auto py-8 px-4 md:px-6 flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
@@ -67,30 +87,59 @@ export default function CondominiumsPage() {
 
     return (
         <div className="container mx-auto py-8 px-4 md:px-6">
-            <header className="mb-8">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                    <h1 className="text-3xl font-bold font-headline text-foreground flex items-center">
-                        <Building2 className="mr-3 h-8 w-8 text-primary" />
-                        Condominios
-                    </h1>
-                    <Button onClick={() => handleOpenForm()} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                        <PlusCircle className="mr-2 h-5 w-5" /> Nuevo Condominio
-                    </Button>
+            <header className="mb-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-bold font-headline text-foreground flex items-center gap-2">
+                            <Building2 className="h-7 w-7 text-primary" />
+                            Gestión de propiedades
+                        </h1>
+                        <p className="text-muted-foreground mt-1 text-sm">
+                            Estado de limpieza en tiempo real en {condominiums.length} {condominiums.length === 1 ? 'propiedad' : 'propiedades'}.
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-3 py-2 text-sm font-medium">
+                            <CheckCircle2 className="h-4 w-4" />
+                            {readyUnits} listos
+                        </div>
+                        <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 px-3 py-2 text-sm font-medium">
+                            <Loader2 className="h-4 w-4" />
+                            {inProgressUnits} en progreso
+                        </div>
+                        <Button onClick={() => handleOpenForm()} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                            <PlusCircle className="mr-2 h-5 w-5" /> Añadir propiedad
+                        </Button>
+                    </div>
                 </div>
-                <p className="text-muted-foreground mt-1">
-                    Gestiona los condominios y agrupa tus departamentos para una mejor organización.
-                </p>
             </header>
 
-            <div className="mb-6 max-w-md">
-                <div className="relative">
+            <div className="mb-6 flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Buscar condominios..."
+                        placeholder="Buscar por nombre, dirección o ciudad..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-9"
                     />
+                </div>
+                <div className="flex gap-2">
+                    <Button
+                        variant={filterActive === 'all' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setFilterActive('all')}
+                    >
+                        Todos
+                    </Button>
+                    <Button
+                        variant={filterActive === 'active' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setFilterActive('active')}
+                        className={cn(filterActive === 'active' && 'bg-amber-500 hover:bg-amber-600')}
+                    >
+                        Con trabajo activo
+                    </Button>
                 </div>
             </div>
 
@@ -116,6 +165,7 @@ export default function CondominiumsPage() {
                             condominium={condo}
                             onEdit={handleOpenForm}
                             departmentCount={deptsByCondo[condo.id] || 0}
+                            completedCount={completedByCondo[condo.id] || 0}
                             hasActiveWork={activeWorkByCondo[condo.id] || false}
                         />
                     ))}

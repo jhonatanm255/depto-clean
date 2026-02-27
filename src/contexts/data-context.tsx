@@ -1,5 +1,5 @@
 "use client";
-import type { Company, Department, EmployeeProfile, CleaningTask, MediaReport, MediaReportType, TaskStatus, Condominium } from '@/lib/types';
+import type { Company, Department, EmployeeProfile, CleaningTask, MediaReport, MediaReportType, TaskStatus, Condominium, Rental, RentalPayment, RentalGuest } from '@/lib/types';
 
 
 import type { ReactNode } from 'react';
@@ -65,6 +65,17 @@ interface DataContextType {
   addCondominium: (input: { name: string; address?: string | null }) => Promise<void>;
   updateCondominium: (condo: Condominium) => Promise<void>;
   deleteCondominium: (id: string) => Promise<void>;
+
+  // Rentals
+  rentals: Rental[];
+  addRental: (input: Omit<Rental, 'id' | 'createdAt' | 'updatedAt'> & { createdAt?: string; updatedAt?: string }) => Promise<void>;
+  updateRental: (rental: Rental) => Promise<void>;
+  updateRentalStatus: (rentalId: string, status: Rental['rentalStatus']) => Promise<void>;
+  deleteRental: (id: string) => Promise<void>;
+  addRentalPayment: (input: { rentalId: string; amount: number; paymentMethod: string; paymentType: string; paymentReference?: string; notes?: string }) => Promise<void>;
+  getRentalPayments: (rentalId: string) => Promise<RentalPayment[]>;
+  getRentalGuests: (rentalId: string) => Promise<RentalGuest[]>;
+  getAllRentals: () => Promise<Rental[]>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -90,6 +101,83 @@ type DepartmentRow = {
   priority: 'normal' | 'high' | null;
   created_at: string;
   updated_at: string;
+  rental_status?: string | null;
+  current_rental_id?: string | null;
+  is_rentable?: boolean | null;
+  rental_price_per_night?: number | null;
+  max_guests?: number | null;
+  min_nights?: number | null;
+  cleaning_fee?: number | null;
+};
+
+type RentalRow = {
+  id: string;
+  company_id: string;
+  department_id: string;
+  tenant_name: string;
+  tenant_email: string | null;
+  tenant_phone: string | null;
+  tenant_id_number: string | null;
+  tenant_emergency_contact: string | null;
+  tenant_emergency_phone: string | null;
+  rental_status: string;
+  check_in_date: string;
+  check_out_date: string;
+  actual_check_in: string | null;
+  actual_check_out: string | null;
+  total_amount: number;
+  deposit_amount: number | null;
+  payment_status: string;
+  amount_paid: number | null;
+  currency: string | null;
+  number_of_guests: number;
+  number_of_adults: number | null;
+  number_of_children: number | null;
+  special_requests: string | null;
+  keys_delivered: boolean | null;
+  keys_delivered_at: string | null;
+  keys_delivered_by: string | null;
+  keys_returned: boolean | null;
+  keys_returned_at: string | null;
+  keys_returned_to: string | null;
+  check_in_inventory: Record<string, unknown> | null;
+  check_out_inventory: Record<string, unknown> | null;
+  damages_reported: unknown[] | null;
+  cleaning_notes: string | null;
+  booking_source: string | null;
+  booking_reference: string | null;
+  notes: string | null;
+  metadata: Record<string, unknown> | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type RentalPaymentRow = {
+  id: string;
+  rental_id: string;
+  company_id: string;
+  amount: number;
+  currency: string | null;
+  payment_method: string;
+  payment_type: string;
+  payment_date: string;
+  payment_reference: string | null;
+  notes: string | null;
+  received_by: string | null;
+  created_at: string;
+};
+
+type RentalGuestRow = {
+  id: string;
+  rental_id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  id_number: string | null;
+  age_group: string | null;
+  created_at: string;
 };
 
 type ProfileRow = {
@@ -173,6 +261,83 @@ const mapDepartment = (row: DepartmentRow): Department => ({
   priority: row.priority ?? 'normal',
   createdAt: row.created_at,
   updatedAt: row.updated_at,
+  rentalStatus: row.rental_status as Department['rentalStatus'] ?? undefined,
+  currentRentalId: row.current_rental_id ?? undefined,
+  isRentable: row.is_rentable ?? undefined,
+  rentalPricePerNight: row.rental_price_per_night ?? undefined,
+  maxGuests: row.max_guests ?? undefined,
+  minNights: row.min_nights ?? undefined,
+  cleaningFee: row.cleaning_fee ?? undefined,
+});
+
+const mapRental = (row: RentalRow): Rental => ({
+  id: row.id,
+  companyId: row.company_id,
+  departmentId: row.department_id,
+  tenantName: row.tenant_name,
+  tenantEmail: row.tenant_email ?? undefined,
+  tenantPhone: row.tenant_phone ?? undefined,
+  tenantIdNumber: row.tenant_id_number ?? undefined,
+  tenantEmergencyContact: row.tenant_emergency_contact ?? undefined,
+  tenantEmergencyPhone: row.tenant_emergency_phone ?? undefined,
+  rentalStatus: row.rental_status as Rental['rentalStatus'],
+  checkInDate: row.check_in_date,
+  checkOutDate: row.check_out_date,
+  actualCheckIn: row.actual_check_in ?? undefined,
+  actualCheckOut: row.actual_check_out ?? undefined,
+  totalAmount: row.total_amount,
+  depositAmount: row.deposit_amount ?? undefined,
+  paymentStatus: row.payment_status as Rental['paymentStatus'],
+  amountPaid: row.amount_paid ?? undefined,
+  currency: row.currency ?? undefined,
+  numberOfGuests: row.number_of_guests,
+  numberOfAdults: row.number_of_adults ?? undefined,
+  numberOfChildren: row.number_of_children ?? undefined,
+  specialRequests: row.special_requests ?? undefined,
+  keysDelivered: row.keys_delivered ?? undefined,
+  keysDeliveredAt: row.keys_delivered_at ?? undefined,
+  keysDeliveredBy: row.keys_delivered_by ?? undefined,
+  keysReturned: row.keys_returned ?? undefined,
+  keysReturnedAt: row.keys_returned_at ?? undefined,
+  keysReturnedTo: row.keys_returned_to ?? undefined,
+  checkInInventory: row.check_in_inventory ?? undefined,
+  checkOutInventory: row.check_out_inventory ?? undefined,
+  damagesReported: row.damages_reported ?? undefined,
+  cleaningNotes: row.cleaning_notes ?? undefined,
+  bookingSource: row.booking_source ?? undefined,
+  bookingReference: row.booking_reference ?? undefined,
+  notes: row.notes ?? undefined,
+  metadata: row.metadata ?? undefined,
+  createdBy: row.created_by ?? undefined,
+  updatedBy: row.updated_by ?? undefined,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const mapRentalPayment = (row: RentalPaymentRow): RentalPayment => ({
+  id: row.id,
+  rentalId: row.rental_id,
+  companyId: row.company_id,
+  amount: row.amount,
+  currency: row.currency ?? undefined,
+  paymentMethod: row.payment_method,
+  paymentType: row.payment_type,
+  paymentDate: row.payment_date,
+  paymentReference: row.payment_reference ?? undefined,
+  notes: row.notes ?? undefined,
+  receivedBy: row.received_by ?? undefined,
+  createdAt: row.created_at,
+});
+
+const mapRentalGuest = (row: RentalGuestRow): RentalGuest => ({
+  id: row.id,
+  rentalId: row.rental_id,
+  fullName: row.full_name,
+  email: row.email ?? undefined,
+  phone: row.phone ?? undefined,
+  idNumber: row.id_number ?? undefined,
+  ageGroup: row.age_group ?? undefined,
+  createdAt: row.created_at,
 });
 
 const mapEmployee = (row: ProfileRow): EmployeeProfile => ({
@@ -242,6 +407,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [employees, setEmployees] = useState<EmployeeProfile[]>([]);
   const [tasks, setTasks] = useState<CleaningTask[]>([]);
+  const [rentals, setRentals] = useState<Rental[]>([]);
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [dataLoading, setDataLoading] = useState<boolean>(true);
   const { currentUser } = useAuth();
@@ -267,7 +433,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const startTime = Date.now();
 
       try {
-        const [companiesResp, departmentsResp, employeesResp, tasksResp, condosResp] = await Promise.all([
+        const [companiesResp, departmentsResp, employeesResp, tasksResp, condosResp, rentalsResp] = await Promise.all([
           supabase
             .from('companies')
             .select('id, name, slug, legal_name, tax_id, timezone, plan_code, metadata, display_name, created_at, updated_at')
@@ -288,6 +454,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
             .from('condominiums')
             .select('*')
             .order('name', { ascending: true }),
+          supabase
+            .from('rentals')
+            .select('*')
+            .order('check_in_date', { ascending: false }),
         ]);
 
         const elapsed = Date.now() - startTime;
@@ -314,9 +484,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
           console.error('[DataContext] Error en condominiums:', condosResp.error);
           throw condosResp.error;
         }
+        // Rentals es opcional: si la tabla no existe aún (migración 0009), no bloquear el resto de datos
+        if (rentalsResp.error) {
+          console.warn('[DataContext] Rentals no disponible (¿migración 0009 aplicada?):', rentalsResp.error.message);
+        }
 
         const companiesData = (companiesResp.data as CompanyRow[]) || [];
         const departmentsData = (departmentsResp.data as DepartmentRow[]) || [];
+        const rentalsData = (rentalsResp.error ? [] : (rentalsResp.data as RentalRow[]) || []);
         const employeesData = (employeesResp.data as ProfileRow[]) || [];
         const tasksData = (tasksResp.data as TaskRow[]) || [];
         const condosData = (condosResp.data as any[]) || [];
@@ -333,6 +508,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setDepartments(departmentsData.map(mapDepartment));
         setEmployees(employeesData.map(mapEmployee));
         setTasks(tasksData.map(mapTask));
+        setRentals(rentalsData.map(mapRental));
         setCompany(null); // Superadmin no tiene una compañía específica
 
         console.log('[DataContext] ✓ Datos globales cargados:', {
@@ -373,7 +549,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const startTime = Date.now();
 
     try {
-      const [companyResp, departmentsResp, employeesResp, tasksResp, condosResp] = await Promise.all([
+      const [companyResp, departmentsResp, employeesResp, tasksResp, condosResp, rentalsResp] = await Promise.all([
         supabase
           .from('companies')
           .select('id, name, slug, legal_name, tax_id, timezone, plan_code, metadata, display_name, created_at, updated_at')
@@ -400,6 +576,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
           .select('*')
           .eq('company_id', currentUser.companyId)
           .order('name', { ascending: true }),
+        supabase
+          .from('rentals')
+          .select('*')
+          .eq('company_id', currentUser.companyId)
+          .order('check_in_date', { ascending: false }),
       ]);
 
       const elapsed = Date.now() - startTime;
@@ -425,11 +606,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
         console.error('[DataContext] Error cargando condominiums:', condosResp.error);
         throw condosResp.error;
       }
+      // Rentals es opcional: si la tabla no existe aún, no bloquear condominios, departamentos, etc.
+      if (rentalsResp.error) {
+        console.warn('[DataContext] Rentals no disponible (¿migración 0009 aplicada?):', rentalsResp.error.message);
+      }
 
       const departmentsData = (departmentsResp.data as DepartmentRow[]) || [];
       const employeesData = (employeesResp.data as ProfileRow[]) || [];
       const tasksData = (tasksResp.data as TaskRow[]) || [];
       const condosData = (condosResp.data as any[]) || [];
+      const rentalsData = (rentalsResp.error ? [] : (rentalsResp.data as RentalRow[]) || []);
 
       setCondominiums(condosData.map((c: any) => ({
         id: c.id,
@@ -471,6 +657,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setDepartments(departmentsData.map(mapDepartment));
       setEmployees(employeesData.map(mapEmployee));
       setTasks(tasksData.map(mapTask));
+      setRentals(rentalsData.map(mapRental));
 
       console.log('[DataContext] ✓ Datos actualizados en estado');
     } catch (error) {
@@ -493,6 +680,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setDepartments([]);
       setEmployees([]);
       setTasks([]);
+      setRentals([]);
       setAllCompanies([]);
       setDataLoading(false);
       lastLoadedUserIdRef.current = null;
@@ -1039,6 +1227,221 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [currentUser]);
 
+  const addRental = useCallback<DataContextType['addRental']>(async (input) => {
+    if (!currentUser?.companyId) throw new Error('Usuario no autenticado');
+    try {
+      const { data, error } = await supabase
+        .from('rentals')
+        .insert({
+          company_id: currentUser.companyId,
+          department_id: input.departmentId,
+          tenant_name: input.tenantName,
+          tenant_email: input.tenantEmail ?? null,
+          tenant_phone: input.tenantPhone ?? null,
+          tenant_id_number: input.tenantIdNumber ?? null,
+          tenant_emergency_contact: input.tenantEmergencyContact ?? null,
+          tenant_emergency_phone: input.tenantEmergencyPhone ?? null,
+          rental_status: input.rentalStatus ?? 'reserved',
+          check_in_date: input.checkInDate,
+          check_out_date: input.checkOutDate,
+          actual_check_in: input.actualCheckIn ?? null,
+          actual_check_out: input.actualCheckOut ?? null,
+          total_amount: input.totalAmount,
+          deposit_amount: input.depositAmount ?? 0,
+          payment_status: input.paymentStatus ?? 'pending',
+          amount_paid: input.amountPaid ?? 0,
+          currency: input.currency ?? 'USD',
+          number_of_guests: input.numberOfGuests,
+          number_of_adults: input.numberOfAdults ?? null,
+          number_of_children: input.numberOfChildren ?? null,
+          special_requests: input.specialRequests ?? null,
+          keys_delivered: input.keysDelivered ?? false,
+          keys_delivered_at: input.keysDeliveredAt ?? null,
+          keys_delivered_by: input.keysDeliveredBy ?? null,
+          keys_returned: input.keysReturned ?? false,
+          keys_returned_at: input.keysReturnedAt ?? null,
+          keys_returned_to: input.keysReturnedTo ?? null,
+          check_in_inventory: input.checkInInventory ?? {},
+          check_out_inventory: input.checkOutInventory ?? {},
+          damages_reported: input.damagesReported ?? [],
+          cleaning_notes: input.cleaningNotes ?? null,
+          booking_source: input.bookingSource ?? null,
+          booking_reference: input.bookingReference ?? null,
+          notes: input.notes ?? null,
+          metadata: input.metadata ?? {},
+          created_by: currentUser.id,
+        })
+        .select('*')
+        .single<RentalRow>();
+      if (error) throw error;
+      const rental = mapRental(data);
+      setRentals((prev) => [rental, ...prev]);
+      toast({ title: 'Renta creada', description: `Reserva para ${input.tenantName}.` });
+    } catch (err) {
+      console.error('Error creando renta:', err);
+      toast({ variant: 'destructive', title: 'Error al crear renta', description: 'No se pudo registrar la renta.' });
+      throw err;
+    }
+  }, [currentUser]);
+
+  const updateRental = useCallback<DataContextType['updateRental']>(async (rental) => {
+    if (!currentUser?.companyId) throw new Error('Usuario no autenticado');
+    try {
+      const { data, error } = await supabase
+        .from('rentals')
+        .update({
+          department_id: rental.departmentId,
+          tenant_name: rental.tenantName,
+          tenant_email: rental.tenantEmail ?? null,
+          tenant_phone: rental.tenantPhone ?? null,
+          tenant_id_number: rental.tenantIdNumber ?? null,
+          tenant_emergency_contact: rental.tenantEmergencyContact ?? null,
+          tenant_emergency_phone: rental.tenantEmergencyPhone ?? null,
+          rental_status: rental.rentalStatus,
+          check_in_date: rental.checkInDate,
+          check_out_date: rental.checkOutDate,
+          actual_check_in: rental.actualCheckIn ?? null,
+          actual_check_out: rental.actualCheckOut ?? null,
+          total_amount: rental.totalAmount,
+          deposit_amount: rental.depositAmount ?? null,
+          payment_status: rental.paymentStatus,
+          amount_paid: rental.amountPaid ?? null,
+          currency: rental.currency ?? null,
+          number_of_guests: rental.numberOfGuests,
+          number_of_adults: rental.numberOfAdults ?? null,
+          number_of_children: rental.numberOfChildren ?? null,
+          special_requests: rental.specialRequests ?? null,
+          keys_delivered: rental.keysDelivered ?? false,
+          keys_delivered_at: rental.keysDeliveredAt ?? null,
+          keys_delivered_by: rental.keysDeliveredBy ?? null,
+          keys_returned: rental.keysReturned ?? false,
+          keys_returned_at: rental.keysReturnedAt ?? null,
+          keys_returned_to: rental.keysReturnedTo ?? null,
+          check_in_inventory: rental.checkInInventory ?? {},
+          check_out_inventory: rental.checkOutInventory ?? {},
+          damages_reported: rental.damagesReported ?? [],
+          cleaning_notes: rental.cleaningNotes ?? null,
+          booking_source: rental.bookingSource ?? null,
+          booking_reference: rental.bookingReference ?? null,
+          notes: rental.notes ?? null,
+          metadata: rental.metadata ?? {},
+          updated_by: currentUser.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', rental.id)
+        .eq('company_id', currentUser.companyId)
+        .select('*')
+        .single<RentalRow>();
+      if (error) throw error;
+      const updated = mapRental(data);
+      setRentals((prev) => prev.map((r) => (r.id === rental.id ? updated : r)));
+      toast({ title: 'Renta actualizada', description: `Renta de ${rental.tenantName} actualizada.` });
+    } catch (err) {
+      console.error('Error actualizando renta:', err);
+      toast({ variant: 'destructive', title: 'Error al actualizar', description: 'No se pudo actualizar la renta.' });
+      throw err;
+    }
+  }, [currentUser]);
+
+  const updateRentalStatus = useCallback<DataContextType['updateRentalStatus']>(async (rentalId, status) => {
+    if (!currentUser?.companyId) throw new Error('Usuario no autenticado');
+    try {
+      const updates: Record<string, unknown> = { rental_status: status, updated_by: currentUser.id };
+      if (status === 'active') {
+        updates.actual_check_in = new Date().toISOString();
+      }
+      if (status === 'completed') {
+        updates.actual_check_out = new Date().toISOString();
+      }
+      const { data, error } = await supabase
+        .from('rentals')
+        .update(updates)
+        .eq('id', rentalId)
+        .eq('company_id', currentUser.companyId)
+        .select('*')
+        .single<RentalRow>();
+      if (error) throw error;
+      const updated = mapRental(data);
+      setRentals((prev) => prev.map((r) => (r.id === rentalId ? updated : r)));
+      toast({ title: 'Estado actualizado', description: `Renta marcada como ${status}.` });
+    } catch (err) {
+      console.error('Error actualizando estado de renta:', err);
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo cambiar el estado.' });
+      throw err;
+    }
+  }, [currentUser]);
+
+  const deleteRental = useCallback<DataContextType['deleteRental']>(async (id) => {
+    if (!currentUser?.companyId) throw new Error('Usuario no autenticado');
+    try {
+      const { error } = await supabase
+        .from('rentals')
+        .delete()
+        .eq('id', id)
+        .eq('company_id', currentUser.companyId);
+      if (error) throw error;
+      setRentals((prev) => prev.filter((r) => r.id !== id));
+      toast({ title: 'Renta eliminada', description: 'La renta ha sido eliminada.' });
+    } catch (err) {
+      console.error('Error eliminando renta:', err);
+      toast({ variant: 'destructive', title: 'Error al eliminar', description: 'No se pudo eliminar la renta.' });
+      throw err;
+    }
+  }, [currentUser]);
+
+  const addRentalPayment = useCallback<DataContextType['addRentalPayment']>(async (input) => {
+    if (!currentUser?.companyId) throw new Error('Usuario no autenticado');
+    try {
+      await supabase.from('rental_payments').insert({
+        rental_id: input.rentalId,
+        company_id: currentUser.companyId,
+        amount: input.amount,
+        currency: 'USD',
+        payment_method: input.paymentMethod,
+        payment_type: input.paymentType,
+        payment_reference: input.paymentReference ?? null,
+        notes: input.notes ?? null,
+        received_by: currentUser.id,
+      });
+      const { data: rentalData } = await supabase.from('rentals').select('*').eq('id', input.rentalId).single<RentalRow>();
+      if (rentalData) {
+        const updated = mapRental(rentalData);
+        setRentals((prev) => prev.map((r) => (r.id === input.rentalId ? updated : r)));
+      }
+      toast({ title: 'Pago registrado', description: 'El pago se ha registrado correctamente.' });
+    } catch (err) {
+      console.error('Error registrando pago:', err);
+      toast({ variant: 'destructive', title: 'Error al registrar pago', description: 'No se pudo registrar el pago.' });
+      throw err;
+    }
+  }, [currentUser]);
+
+  const getRentalPayments = useCallback<DataContextType['getRentalPayments']>(async (rentalId) => {
+    const { data, error } = await supabase
+      .from('rental_payments')
+      .select('*')
+      .eq('rental_id', rentalId)
+      .order('payment_date', { ascending: false });
+    if (error) throw error;
+    return (data as RentalPaymentRow[])?.map(mapRentalPayment) ?? [];
+  }, []);
+
+  const getRentalGuests = useCallback<DataContextType['getRentalGuests']>(async (rentalId) => {
+    const { data, error } = await supabase
+      .from('rental_guests')
+      .select('*')
+      .eq('rental_id', rentalId)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data as RentalGuestRow[])?.map(mapRentalGuest) ?? [];
+  }, []);
+
+  const getAllRentals = useCallback<DataContextType['getAllRentals']>(async () => {
+    if (!isSuperadmin) throw new Error('Solo superadmin puede acceder a todas las rentas');
+    const { data, error } = await supabase.from('rentals').select('*').order('check_in_date', { ascending: false });
+    if (error) throw error;
+    return (data as RentalRow[]).map(mapRental);
+  }, [isSuperadmin]);
 
   const addEmployeeWithAuth = useCallback<DataContextType['addEmployeeWithAuth']>(async (name, email, password) => {
     if (!currentUser) {
@@ -1654,8 +2057,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     addCondominium,
     updateCondominium,
     deleteCondominium,
+    rentals,
+    addRental,
+    updateRental,
+    updateRentalStatus,
+    deleteRental,
+    addRentalPayment,
+    getRentalPayments,
+    getRentalGuests,
+    getAllRentals,
   }), [
-    company, condominiums, departments, employees, tasks, dataLoading,
+    company, condominiums, departments, employees, tasks, rentals, dataLoading,
     addDepartment, updateDepartment, deleteDepartment,
     addEmployeeWithAuth, deleteEmployee,
     assignTask, updateTaskStatus, toggleDepartmentPriority,
@@ -1663,6 +2075,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     getTasksForEmployee, getDepartmentById, getEmployeeProfileById,
     allCompanies, getAllCompanies, getAllEmployees, getAllTasks, getAllDepartments,
     addCondominium, updateCondominium, deleteCondominium,
+    addRental, updateRental, updateRentalStatus, deleteRental, addRentalPayment, getRentalPayments, getRentalGuests, getAllRentals,
   ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

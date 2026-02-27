@@ -70,9 +70,15 @@ const SidebarProvider = React.forwardRef<
     const isMobile = useIsMobile()
     const [openMobile, setOpenMobile] = React.useState(false)
 
+    // Initial state from cookie so collapse/expand persists across reloads.
+    const getInitialOpen = () => {
+      if (typeof document === "undefined") return defaultOpen
+      const m = document.cookie.match(new RegExp(`${SIDEBAR_COOKIE_NAME}=([^;]+)`))
+      return m ? m[1].trim() !== "false" : defaultOpen
+    }
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
-    const [_open, _setOpen] = React.useState(defaultOpen)
+    const [_open, _setOpen] = React.useState(getInitialOpen)
     const open = openProp ?? _open
     const setOpen = React.useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
