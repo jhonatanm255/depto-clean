@@ -16,6 +16,11 @@ export type NotificationType =
   | 'department_assigned'
   | 'department_status_changed';
 
+// Estados de renta (rentals)
+export type RentalStatus = 'reserved' | 'active' | 'completed' | 'cancelled';
+export type RentalPaymentStatus = 'pending' | 'partial' | 'paid' | 'refunded';
+export type DepartmentRentalStatus = 'available' | 'reserved' | 'occupied' | 'maintenance';
+
 // Usuario de la aplicación
 export interface AppUser {
   id: string;
@@ -72,6 +77,14 @@ export interface Department {
   customFields?: Array<{ name: string, value: string }> | null;
   createdAt: string;
   updatedAt: string;
+  // Campos de gestión de rentas (migración 0009)
+  rentalStatus?: DepartmentRentalStatus | null;
+  currentRentalId?: string | null;
+  isRentable?: boolean | null;
+  rentalPricePerNight?: number | null;
+  maxGuests?: number | null;
+  minNights?: number | null;
+  cleaningFee?: number | null;
 }
 
 // Perfil de empleado
@@ -125,6 +138,79 @@ export interface MediaReport {
   description?: string;
   uploadedAt: string;
   metadata?: Record<string, unknown>;
+}
+
+// Renta de departamento
+export interface Rental {
+  id: string;
+  companyId: string;
+  departmentId: string;
+  tenantName: string;
+  tenantEmail?: string | null;
+  tenantPhone?: string | null;
+  tenantIdNumber?: string | null;
+  tenantEmergencyContact?: string | null;
+  tenantEmergencyPhone?: string | null;
+  rentalStatus: RentalStatus;
+  checkInDate: string;
+  checkOutDate: string;
+  actualCheckIn?: string | null;
+  actualCheckOut?: string | null;
+  totalAmount: number;
+  depositAmount?: number | null;
+  paymentStatus: RentalPaymentStatus;
+  amountPaid?: number | null;
+  currency?: string | null;
+  numberOfGuests: number;
+  numberOfAdults?: number | null;
+  numberOfChildren?: number | null;
+  specialRequests?: string | null;
+  keysDelivered?: boolean | null;
+  keysDeliveredAt?: string | null;
+  keysDeliveredBy?: string | null;
+  keysReturned?: boolean | null;
+  keysReturnedAt?: string | null;
+  keysReturnedTo?: string | null;
+  checkInInventory?: Record<string, unknown> | null;
+  checkOutInventory?: Record<string, unknown> | null;
+  damagesReported?: unknown[] | null;
+  cleaningNotes?: string | null;
+  bookingSource?: string | null;
+  bookingReference?: string | null;
+  notes?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdBy?: string | null;
+  updatedBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Pago de renta
+export interface RentalPayment {
+  id: string;
+  rentalId: string;
+  companyId: string;
+  amount: number;
+  currency?: string | null;
+  paymentMethod: string;
+  paymentType: string;
+  paymentDate: string;
+  paymentReference?: string | null;
+  notes?: string | null;
+  receivedBy?: string | null;
+  createdAt: string;
+}
+
+// Huésped de renta
+export interface RentalGuest {
+  id: string;
+  rentalId: string;
+  fullName: string;
+  email?: string | null;
+  phone?: string | null;
+  idNumber?: string | null;
+  ageGroup?: string | null;
+  createdAt: string;
 }
 
 // Notificación

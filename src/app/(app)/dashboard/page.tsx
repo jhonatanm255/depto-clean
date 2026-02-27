@@ -12,6 +12,8 @@ import type { AppUser, Department, CleaningTask, EmployeeProfile } from '@/lib/t
 import { isToday } from '@/lib/utils';
 
 import { AdminStatsGrid } from '@/components/dashboard/admin/AdminStatsGrid';
+import { CriticalAlertsCard, type AlertItem } from '@/components/dashboard/admin/CriticalAlertsCard';
+import { TurnoverStatusCard, type TurnoverItem } from '@/components/dashboard/admin/TurnoverStatusCard';
 import { UnassignedDepartmentsListCard } from '@/components/dashboard/admin/UnassignedDepartmentsListCard';
 import { CompletedTasksListCard } from '@/components/dashboard/admin/CompletedTasksListCard';
 import { EmployeeStatsGrid } from '@/components/dashboard/employee/EmployeeStatsGrid';
@@ -62,7 +64,34 @@ function AdminDashboard() {
   const unassignedDepartments = useMemo(() => {
     return departments
       .filter(d => d.status === 'pending' && !d.assignedTo)
-      .slice(0,5);
+      .slice(0, 5);
+  }, [departments]);
+
+  const criticalAlerts = useMemo((): AlertItem[] => {
+    const alerts: AlertItem[] = [];
+    unassignedDepartments.forEach((d, i) => {
+      alerts.push({
+        id: `unassigned-${d.id}`,
+        type: 'unassigned',
+        title: 'Sin asignar',
+        description: `${d.name} requiere limpieza y no tiene equipo asignado.`,
+        actionHref: '/admin/assignments',
+        actionLabel: 'Asignar ahora',
+      });
+    });
+    return alerts.slice(0, 5);
+  }, [unassignedDepartments]);
+
+  const turnoverItems = useMemo((): TurnoverItem[] => {
+    const total = departments.length || 1;
+    const pending = departments.filter(d => d.status === 'pending').length;
+    const inProgress = departments.filter(d => d.status === 'in_progress').length;
+    const completed = departments.filter(d => d.status === 'completed').length;
+    return [
+      { id: 'pending', label: 'Pendientes', percent: Math.round((pending / total) * 100) },
+      { id: 'in_progress', label: 'En progreso', percent: Math.round((inProgress / total) * 100) },
+      { id: 'completed', label: 'Completados', percent: Math.round((completed / total) * 100) },
+    ];
   }, [departments]);
 
   const userName = currentUser?.fullName || currentUser?.name || currentUser?.email || 'Usuario';
@@ -80,56 +109,64 @@ function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold font-headline text-foreground">
-          Panel de {company?.displayName ?? 'tu empresa'}
+        <h2 className="text-2xl sm:text-3xl font-bold font-headline text-foreground">
+          Vista ejecutiva
         </h2>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Resumen operativo del día para {company?.displayName ?? 'tu empresa'}.
+        </p>
         {currentUser && (
-          <p className="text-muted-foreground mt-2 flex items-center gap-2">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
-              {roleName}
-            </span>
-            <span>•</span>
-            <span>{userName}</span>
+          <p className="text-muted-foreground mt-1 text-xs">
+            {roleName} · {userName}
           </p>
         )}
-        <p className="text-muted-foreground">
-          Gestiona departamentos, personal y tareas de limpieza.
-        </p>
       </div>
-      
-      <AdminStatsGrid
-        pendingCount={pendingCount}
-        inProgressCount={inProgressCount}
-        completedTodayCount={completedTodayCount}
-        departmentsCount={departments.length}
-        employeesCount={employees.length}
-        dataLoading={dataLoading}
-        initialDataLoaded={initialDataLoaded}
-      />
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <UnassignedDepartmentsListCard 
-            departments={unassignedDepartments} 
-            dataLoading={dataLoading && departments.length === 0} 
-        />
-        <CompletedTasksListCard
-          title="Tareas Completadas Hoy"
-          description="Limpiezas completadas durante el día de hoy."
-          tasks={recentlyCompletedTodayTasks}
-          employees={employees}
-          dataLoading={dataLoading && tasks.length === 0 && departments.length > 0}
-          emptyMessage="No hay tareas completadas hoy."
-          icon={Clock}
-        />
-        <CompletedTasksListCard
-          title="Historial (Días Anteriores)"
-          description="Últimas 5 tareas completadas en días pasados."
-          tasks={completedHistoryTasks}
-          employees={employees}
-          dataLoading={dataLoading && tasks.length > 0 && departments.length > 0 && completedHistoryTasks.length === 0}
-          emptyMessage="No hay historial de tareas completadas en días anteriores."
-          icon={History}
-        />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-6">
+          <AdminStatsGrid
+            pendingCount={pendingCount}
+            inProgressCount={inProgressCount}
+            completedTodayCount={completedTodayCount}
+            departmentsCount={departments.length}
+            employeesCount={employees.length}
+            dataLoading={dataLoading}
+            initialDataLoaded={initialDataLoaded}
+          />
+
+          <TurnoverStatusCard items={turnoverItems} />
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <UnassignedDepartmentsListCard
+              departments={unassignedDepartments}
+              dataLoading={dataLoading && departments.length === 0}
+            />
+            <CompletedTasksListCard
+              title="Tareas Completadas Hoy"
+              description="Limpiezas completadas durante el día."
+              tasks={recentlyCompletedTodayTasks}
+              employees={employees}
+              dataLoading={dataLoading && tasks.length === 0 && departments.length > 0}
+              emptyMessage="No hay tareas completadas hoy."
+              icon={Clock}
+            />
+            <CompletedTasksListCard
+              title="Historial"
+              description="Últimas completadas (días anteriores)."
+              tasks={completedHistoryTasks}
+              employees={employees}
+              dataLoading={dataLoading && tasks.length > 0 && departments.length > 0 && completedHistoryTasks.length === 0}
+              emptyMessage="Sin historial reciente."
+              icon={History}
+            />
+          </div>
+        </div>
+
+        <div className="lg:col-span-1">
+          <div className="lg:sticky lg:top-20">
+            <CriticalAlertsCard alerts={criticalAlerts} />
+          </div>
+        </div>
       </div>
     </div>
   );

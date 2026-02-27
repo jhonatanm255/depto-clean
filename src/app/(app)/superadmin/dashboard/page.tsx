@@ -213,54 +213,46 @@ export default function SuperadminDashboardPage() {
       {/* Estadísticas principales */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-2 lg:grid-cols-4 md:gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
-            <CardTitle className="text-xs md:text-sm font-medium">Total Empresas</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-5">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Total Empresas</CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
-          <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+          <CardContent className="p-3 pt-0 md:p-5 md:pt-0">
             <div className="text-xl md:text-2xl font-bold">{stats.totalCompanies}</div>
-            <p className="text-xs text-muted-foreground mt-1 hidden md:block">
-              Empresas registradas
-            </p>
+            <p className="text-xs text-muted-foreground mt-1 hidden md:block">Empresas registradas</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
-            <CardTitle className="text-xs md:text-sm font-medium">Total Empleados</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-5">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Total Empleados</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
-          <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+          <CardContent className="p-3 pt-0 md:p-5 md:pt-0">
             <div className="text-xl md:text-2xl font-bold">{stats.totalEmployees}</div>
-            <p className="text-xs text-muted-foreground mt-1 hidden md:block">
-              Empleados totales
-            </p>
+            <p className="text-xs text-muted-foreground mt-1 hidden md:block">Empleados totales</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
-            <CardTitle className="text-xs md:text-sm font-medium">Departamentos</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-5">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Departamentos</CardTitle>
             <Briefcase className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
-          <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+          <CardContent className="p-3 pt-0 md:p-5 md:pt-0">
             <div className="text-xl md:text-2xl font-bold">{stats.totalDepartments}</div>
-            <p className="text-xs text-muted-foreground mt-1 hidden md:block">
-              Departamentos registrados
-            </p>
+            <p className="text-xs text-muted-foreground mt-1 hidden md:block">Departamentos registrados</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
-            <CardTitle className="text-xs md:text-sm font-medium">Tareas Hoy</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-5">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Tareas Hoy</CardTitle>
             <CheckSquare className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
-          <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+          <CardContent className="p-3 pt-0 md:p-5 md:pt-0">
             <div className="text-xl md:text-2xl font-bold">{stats.completedToday}</div>
-            <p className="text-xs text-muted-foreground mt-1 hidden md:block">
-              De {stats.totalTasks} tareas totales
-            </p>
+            <p className="text-xs text-muted-foreground mt-1 hidden md:block">De {stats.totalTasks} tareas totales</p>
           </CardContent>
         </Card>
       </div>

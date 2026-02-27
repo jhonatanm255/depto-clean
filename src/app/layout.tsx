@@ -1,17 +1,17 @@
 
 import type { Metadata, Viewport } from 'next';
-import { PT_Sans } from 'next/font/google';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/contexts/auth-context';
 import { DataProvider } from '@/contexts/data-context';
 import { Toaster } from "@/components/ui/toaster";
 
-const ptSans = PT_Sans({
+const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  weight: ['400', '700'],
+  weight: ['400', '500', '600', '700'],
   style: ['normal', 'italic'],
   display: 'swap',
-  variable: '--font-pt-sans',
+  variable: '--font-headline',
 });
 
 export const metadata: Metadata = {
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#1D3658',
+  themeColor: '#4285f4',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -55,7 +55,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es-CL" className={ptSans.variable}>
+    <html lang="es-CL" className={plusJakarta.variable}>
       <head>
         {/* Preconnect para Supabase */}
         <link rel="preconnect" href="https://*.supabase.co" />
@@ -86,13 +86,13 @@ export default function RootLayout({
         <meta name="application-name" content="CleanSweep" />
         
         {/* Microsoft Meta Tags */}
-        <meta name="msapplication-TileColor" content="#1D3658" />
+        <meta name="msapplication-TileColor" content="#4285f4" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
         
         {/* PWA Meta Tags */}
         <meta name="format-detection" content="telephone=no" />
       </head>
-      <body className={`${ptSans.className} font-body antialiased`} suppressHydrationWarning>
+      <body className={`${plusJakarta.className} font-body antialiased`} suppressHydrationWarning>
         <AuthProvider>
           <DataProvider>
             {children}

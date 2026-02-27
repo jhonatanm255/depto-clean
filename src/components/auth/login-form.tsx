@@ -75,16 +75,16 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-md shadow-xl">
+    <Card className="w-full max-w-md shadow-md border border-border">
       <CardHeader className="text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center bg-primary p-4 rounded-md">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
           <Image
             src="/logo.png"
             alt="Logo de la aplicación"
-            width={64}
-            height={64}
+            width={40}
+            height={40}
             priority
-            className="object-contain"
+            className="object-contain h-10 w-10"
           />
         </div>
         <div className="mt-1 text-xl font-semibold tracking-wide text-muted-foreground">

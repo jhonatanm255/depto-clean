@@ -10,6 +10,7 @@ import {
   Briefcase,
   Users,
   History,
+  KeyRound,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/lib/types';
@@ -24,6 +25,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Panel', icon: LayoutDashboard, roles: ['owner', 'admin', 'manager', 'employee'] },
   { href: '/admin/condominiums', label: 'Condominios', icon: Building2, roles: ['owner', 'admin', 'manager'] },
+  { href: '/admin/rentals', label: 'Rentas', icon: KeyRound, roles: ['owner', 'admin', 'manager'] },
   { href: '/admin/employees', label: 'Empleadas', icon: Users, roles: ['owner', 'admin'] },
   { href: '/admin/assignments', label: 'Asignar', icon: ClipboardEdit, roles: ['owner', 'admin', 'manager'] },
   { href: '/employee/tasks', label: 'Tareas', icon: Briefcase, roles: ['employee', 'manager'] },
@@ -40,7 +42,7 @@ export function BottomNavigationBar() {
   const filteredNavItems = navItems.filter(item => item.roles.includes(currentUser.role));
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-center justify-around border-t bg-sidebar text-sidebar-foreground shadow-top md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-center justify-around border-t border-sidebar-border bg-sidebar text-sidebar-foreground md:hidden">
       {filteredNavItems.map((item) => {
         const itemPathname = item.href.split('?')[0];
         const itemQueryParam = item.href.split('?')[1]?.split('=')[1];
@@ -73,8 +75,8 @@ export function BottomNavigationBar() {
             className={cn(
               "flex flex-col items-center justify-center p-2 transition-colors w-full h-full",
               isActive
-                ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium"
+                : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             )}
           >
             <item.icon className={cn("h-6 w-6 mb-0.5", isActive ? "text-sidebar-primary-foreground" : "text-sidebar-foreground")} />

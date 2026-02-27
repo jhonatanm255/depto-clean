@@ -27,11 +27,13 @@ interface CondominiumCardProps {
     condominium: Condominium;
     onEdit: (condo: Condominium) => void;
     departmentCount: number;
+    /** Number of departments in this condo with status completed (for progress bar) */
+    completedCount?: number;
     hasActiveWork?: boolean;
 }
 
 
-export function CondominiumCard({ condominium, onEdit, departmentCount, hasActiveWork }: CondominiumCardProps) {
+export function CondominiumCard({ condominium, onEdit, departmentCount, completedCount = 0, hasActiveWork }: CondominiumCardProps) {
     const { deleteCondominium } = useData();
     const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
 
@@ -88,6 +90,23 @@ export function CondominiumCard({ condominium, onEdit, departmentCount, hasActiv
                         <Building2 className="h-4 w-4 mr-2 text-primary" />
                         {departmentCount} {departmentCount === 1 ? 'Departamento' : 'Departamentos'}
                     </div>
+                    {departmentCount > 0 && (
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>Progreso de limpieza</span>
+                                <span>{Math.round((completedCount / departmentCount) * 100)}%</span>
+                            </div>
+                            <div className="h-2 rounded-full bg-muted overflow-hidden">
+                                <div
+                                    className="h-full rounded-full bg-primary transition-all"
+                                    style={{ width: `${Math.min(100, (completedCount / departmentCount) * 100)}%` }}
+                                />
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                {completedCount}/{departmentCount} unidades atendidas
+                            </p>
+                        </div>
+                    )}
                 </CardContent>
                 <CardFooter className="pt-0">
                     <Button asChild className="w-full hover:bg-primary hover:text-primary-foreground transition-colors" variant="outline">
