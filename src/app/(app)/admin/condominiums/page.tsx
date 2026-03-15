@@ -98,7 +98,7 @@ export default function CondominiumsPage() {
                             Estado de limpieza en tiempo real en {condominiums.length} {condominiums.length === 1 ? 'propiedad' : 'propiedades'}.
                         </p>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto mt-4 md:mt-0">
                         <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-3 py-2 text-sm font-medium">
                             <CheckCircle2 className="h-4 w-4" />
                             {readyUnits} listos
@@ -124,7 +124,7 @@ export default function CondominiumsPage() {
                         className="pl-9"
                     />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto mt-4 sm:mt-0">
                     <Button
                         variant={filterActive === 'all' ? 'default' : 'outline'}
                         size="sm"

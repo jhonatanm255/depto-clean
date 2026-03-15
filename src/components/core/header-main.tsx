@@ -64,18 +64,18 @@ export function HeaderMain() {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex justify-between h-14 sm:h-16 items-center gap-2 sm:gap-3 border-b border-b-1 border-gray-200 md:border-l md:border-sidebar-border bg-card text-foreground pl-3 pr-3 sm:pl-2 sm:pr-6">
+    <header className="sticky top-0 z-30 flex justify-between h-14 sm:h-16 items-center gap-2 sm:gap-3 border-b border-border/40 hover:border-border/60 transition-colors bg-card text-foreground pl-3 pr-3 sm:pl-2 sm:pr-6">
       <div className="flex items-center gap-2">
       <SidebarTrigger className="hidden md:flex shrink-0 h-8 w-8" aria-label="Contraer o expandir menú" />
-      <form onSubmit={handleSearch} className="flex-1 min-w-3xl max-w-4xl hidden sm:block">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <form onSubmit={handleSearch} className="flex-1 w-full max-w-2xl lg:max-w-4xl xl:max-w-5xl hidden sm:block ml-2 lg:ml-6">
+        <div className="relative flex items-center w-full">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             type="search"
             placeholder="Buscar tareas, propiedades o personal..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9 bg-muted/50 focus:outline-none"
+            className="pl-11 h-[42px] w-full bg-muted/40 border-transparent hover:bg-muted/60 focus:bg-background focus:border-border/60 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none transition-all rounded-full text-[15px]"
           />
         </div>
       </form>

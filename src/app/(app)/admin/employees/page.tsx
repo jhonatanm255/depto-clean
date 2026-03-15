@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import type { EmployeeProfile, UserRole } from '@/lib/types';
 import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
@@ -54,6 +54,12 @@ export default function EmployeesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setViewMode('grid');
+    }
+  }, []);
 
   const handleOpenForm = useCallback((employee?: EmployeeProfile) => {
     setEditingEmployee(employee || null);
@@ -141,7 +147,7 @@ export default function EmployeesPage() {
             className="pl-9"
           />
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={filteredEmployees.length === 0}>
             <Download className="mr-2 h-4 w-4" /> Exportar CSV
           </Button>
@@ -201,8 +207,8 @@ export default function EmployeesPage() {
           <p className="mt-4 text-xl font-semibold text-muted-foreground">Ningún resultado con los filtros actuales.</p>
         </div>
       ) : viewMode === 'list' ? (
-        <div className="border rounded-lg overflow-hidden bg-card">
-          <Table>
+        <div className="border rounded-lg overflow-x-auto bg-card">
+          <Table className="min-w-[600px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Personal</TableHead>
@@ -275,7 +281,7 @@ export default function EmployeesPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(300px,350px))]">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredEmployees.map((emp) => (
             <EmployeeCard
               key={emp.id}

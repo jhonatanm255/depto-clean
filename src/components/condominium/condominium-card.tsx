@@ -10,6 +10,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 import { useData } from '@/contexts/data-context';
 import {
     AlertDialog,
@@ -98,7 +99,12 @@ export function CondominiumCard({ condominium, onEdit, departmentCount, complete
                             </div>
                             <div className="h-2 rounded-full bg-muted overflow-hidden">
                                 <div
-                                    className="h-full rounded-full bg-primary transition-all"
+                                    className={cn(
+                                        "h-full rounded-full transition-all",
+                                        completedCount === departmentCount ? "bg-green-500" :
+                                        (completedCount > 0 || hasActiveWork) ? "bg-blue-500" :
+                                        "bg-yellow-500"
+                                    )}
                                     style={{ width: `${Math.min(100, (completedCount / departmentCount) * 100)}%` }}
                                 />
                             </div>

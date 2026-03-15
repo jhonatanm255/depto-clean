@@ -73,19 +73,19 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar hidden md:flex">
-      <SidebarHeader className="p-4 flex items-center justify-start border-b border-sidebar-border">
-        <Link href="/dashboard" className="flex items-center gap-3 group-data-[collapsible=icon]:hidden">
+      <SidebarHeader className="h-14 sm:h-16 px-4 py-0 flex items-center justify-start border-b border-sidebar-border">
+        <Link href="/dashboard" className="flex w-full items-center justify-start gap-3 my-auto group-data-[collapsible=icon]:hidden">
           <Image src="/logo.png" alt="CleanSweep Logo" width={32} height={32} className="h-8 w-8 object-contain opacity-95" data-ai-hint="company logo" />
-          <span className="font-headline text-[1.1rem] font-normal text-sidebar-foreground whitespace-nowrap tracking-wide">
+          <span className="font-semibold text-[1.15rem] leading-none text-sidebar-foreground whitespace-nowrap tracking-wide">
             Clean<span className='text-[#E1C750]'>Sweep</span>
           </span>
         </Link>
-        <Link href="/dashboard" className="hidden items-center justify-center group-data-[collapsible=icon]:flex">
-          <Image src="/logo.png" alt="CleanSweep Logo" width={28} height={28} className="h-7 w-7 object-contain opacity-95" data-ai-hint="company logo" />
+        <Link href="/dashboard" className="hidden w-full h-full items-center justify-center mt-1 group-data-[collapsible=icon]:flex">
+          <Image src="/logo.png" alt="CleanSweep Logo" width={32} height={32} className="h-8 w-8 object-contain opacity-95" data-ai-hint="company logo" />
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="p-2 group-data-[collapsible=icon]:px-1.5">
+      <SidebarContent className="p-2 group-data-[collapsible=icon]:px-2">
         <SidebarMenu className="gap-0.5">
           {filteredNavItems.map((item) => {
             const currentTab = pathname.includes('?') ? pathname.substring(pathname.indexOf('?') + 1) : null;
@@ -111,7 +111,7 @@ export function AppSidebar() {
                   tooltip={item.label}
                   className={cn(
                     "rounded-lg transition-colors min-h-10 py-2.5 [&>svg]:!size-6 font-normal",
-                    "group-data-[collapsible=icon]:!size-auto group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-full group-data-[collapsible=icon]:!px-3 group-data-[collapsible=icon]:!py-2 group-data-[collapsible=icon]:!justify-center",
+                    "group-data-[collapsible=icon]:!size-auto group-data-[collapsible=icon]:!h-10 group-data-[collapsible=icon]:!w-full group-data-[collapsible=icon]:!px-2 group-data-[collapsible=icon]:!py-2 group-data-[collapsible=icon]:!justify-center",
                     isActive
                       ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
                       : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sidebar-foreground/80"
@@ -145,7 +145,7 @@ export function AppSidebar() {
         <SidebarMenuButton
           asChild
           tooltip="Configuración"
-          className="w-full justify-start rounded-lg hover:bg-sidebar-accent text-sidebar-foreground/80 hover:text-sidebar-foreground font-normal group-data-[collapsible=icon]:!size-auto group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-full group-data-[collapsible=icon]:!px-3 group-data-[collapsible=icon]:!justify-center"
+          className="w-full justify-start rounded-lg hover:bg-sidebar-accent text-sidebar-foreground/80 hover:text-sidebar-foreground font-normal group-data-[collapsible=icon]:!size-auto group-data-[collapsible=icon]:!h-10 group-data-[collapsible=icon]:!w-full group-data-[collapsible=icon]:!px-2 group-data-[collapsible=icon]:!justify-center"
         >
           <Link href="/subscription" className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full">
             <Settings className="h-5 w-5 shrink-0" strokeWidth={1.5} />
@@ -155,7 +155,7 @@ export function AppSidebar() {
         <SidebarMenuButton
           onClick={logout}
           tooltip="Cerrar Sesión"
-          className="w-full justify-start rounded-lg hover:bg-sidebar-accent text-sidebar-foreground/80 hover:text-sidebar-foreground font-normal group-data-[collapsible=icon]:!size-auto group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-full group-data-[collapsible=icon]:!px-3 group-data-[collapsible=icon]:!justify-center"
+          className="w-full justify-start rounded-lg hover:bg-sidebar-accent text-sidebar-foreground/80 hover:text-sidebar-foreground font-normal group-data-[collapsible=icon]:!size-auto group-data-[collapsible=icon]:!h-10 group-data-[collapsible=icon]:!w-full group-data-[collapsible=icon]:!px-2 group-data-[collapsible=icon]:!justify-center"
         >
           <LogOut className="h-6 w-6 shrink-0" strokeWidth={1.5} />
           <span className="group-data-[collapsible=icon]:hidden text-[0.95rem]">Cerrar Sesión</span>

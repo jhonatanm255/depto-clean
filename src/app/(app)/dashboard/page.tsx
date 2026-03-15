@@ -122,8 +122,8 @@ function AdminDashboard() {
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid gap-6 lg:grid-cols-4">
+        <div className="lg:col-span-3 space-y-6">
           <AdminStatsGrid
             pendingCount={pendingCount}
             inProgressCount={inProgressCount}
