@@ -85,6 +85,8 @@ export interface Department {
   maxGuests?: number | null;
   minNights?: number | null;
   cleaningFee?: number | null;
+  images?: string[] | null;
+  description?: string | null;
 }
 
 // Perfil de empleado

@@ -25,6 +25,13 @@ interface DataContextType {
     handTowels?: number | null;
     bodyTowels?: number | null;
     customFields?: Department['customFields'];
+    isRentable?: boolean | null;
+    rentalPricePerNight?: number | null;
+    maxGuests?: number | null;
+    minNights?: number | null;
+    cleaningFee?: number | null;
+    images?: string[] | null;
+    description?: string | null;
   }) => Promise<void>;
   updateDepartment: (dept: Department) => Promise<void>;
   deleteDepartment: (id: string) => Promise<void>;
@@ -108,6 +115,8 @@ type DepartmentRow = {
   max_guests?: number | null;
   min_nights?: number | null;
   cleaning_fee?: number | null;
+  images?: string[] | null;
+  description?: string | null;
 };
 
 type RentalRow = {
@@ -268,6 +277,8 @@ const mapDepartment = (row: DepartmentRow): Department => ({
   maxGuests: row.max_guests ?? undefined,
   minNights: row.min_nights ?? undefined,
   cleaningFee: row.cleaning_fee ?? undefined,
+  images: Array.isArray(row.images) ? row.images : undefined,
+  description: row.description ?? undefined,
 });
 
 const mapRental = (row: RentalRow): Rental => ({
@@ -899,6 +910,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         hand_towels: input.handTowels ?? null,
         body_towels: input.bodyTowels ?? null,
         custom_fields: input.customFields || [],
+        images: input.images || null,
+        description: input.description || null,
       };
 
       console.log('[DataContext] 🔄 Insertando en Supabase:', insertData);
@@ -1047,6 +1060,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
           hand_towels: dept.handTowels ?? null,
           body_towels: dept.bodyTowels ?? null,
           custom_fields: dept.customFields || [],
+          images: dept.images || null,
+          description: dept.description || null,
         })
         .eq('id', dept.id)
         .eq('company_id', currentUser.companyId)
@@ -1276,6 +1291,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       const rental = mapRental(data);
       setRentals((prev) => [rental, ...prev]);
+
+      // Sincronizar estado del departamento
+      const deptRentalStatus = input.rentalStatus === 'active' ? 'occupied' : 
+                             input.rentalStatus === 'reserved' ? 'reserved' : 
+                             'available';
+      
+      await supabase
+        .from('departments')
+        .update({ 
+          rental_status: deptRentalStatus,
+          current_rental_id: data.id 
+        })
+        .eq('id', input.departmentId);
+
+      setDepartments(prev => prev.map(d => 
+        d.id === input.departmentId 
+          ? { ...d, rentalStatus: deptRentalStatus as any, currentRentalId: data.id } 
+          : d
+      ));
+
       toast({ title: 'Renta creada', description: `Reserva para ${input.tenantName}.` });
     } catch (err) {
       console.error('Error creando renta:', err);
@@ -1335,6 +1370,30 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       const updated = mapRental(data);
       setRentals((prev) => prev.map((r) => (r.id === rental.id ? updated : r)));
+
+      // Sincronizar estado del departamento si el estado de la renta cambió
+      const deptRentalStatus = rental.rentalStatus === 'active' ? 'occupied' : 
+                             rental.rentalStatus === 'reserved' ? 'reserved' : 
+                             'available';
+      
+      await supabase
+        .from('departments')
+        .update({ 
+          rental_status: deptRentalStatus,
+          current_rental_id: rental.rentalStatus === 'completed' || rental.rentalStatus === 'cancelled' ? null : rental.id 
+        })
+        .eq('id', rental.departmentId);
+
+      setDepartments(prev => prev.map(d => 
+        d.id === rental.departmentId 
+          ? { 
+              ...d, 
+              rentalStatus: deptRentalStatus as any, 
+              currentRentalId: rental.rentalStatus === 'completed' || rental.rentalStatus === 'cancelled' ? null : rental.id 
+            } 
+          : d
+      ));
+
       toast({ title: 'Renta actualizada', description: `Renta de ${rental.tenantName} actualizada.` });
     } catch (err) {
       console.error('Error actualizando renta:', err);
@@ -1363,6 +1422,40 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       const updated = mapRental(data);
       setRentals((prev) => prev.map((r) => (r.id === rentalId ? updated : r)));
+
+      // Sincronizar estado del departamento
+      // - Si es Check-in (active): Ocupada
+      // - Si es Check-out (completed): Mantenimiento (esperando limpieza) y marcar dpto como Pendiente limpieza
+      // - Si es Reserva (reserved): Reservada
+      const deptRentalStatus = status === 'active' ? 'occupied' : 
+                             status === 'reserved' ? 'reserved' : 
+                             status === 'completed' ? 'maintenance' :
+                             'available';
+      
+      const departmentUpdates: any = { 
+        rental_status: deptRentalStatus,
+        current_rental_id: status === 'completed' || status === 'cancelled' ? null : rentalId 
+      };
+
+      if (status === 'completed') {
+        departmentUpdates.status = 'pending'; // Activar limpieza
+      }
+
+      await supabase
+        .from('departments')
+        .update(departmentUpdates)
+        .eq('id', updated.departmentId);
+
+      setDepartments(prev => prev.map(d => 
+        d.id === updated.departmentId 
+          ? { 
+              ...d, 
+              ...departmentUpdates,
+              rentalStatus: deptRentalStatus as any
+            } 
+          : d
+      ));
+
       toast({ title: 'Estado actualizado', description: `Renta marcada como ${status}.` });
     } catch (err) {
       console.error('Error actualizando estado de renta:', err);
@@ -1374,13 +1467,35 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const deleteRental = useCallback<DataContextType['deleteRental']>(async (id) => {
     if (!currentUser?.companyId) throw new Error('Usuario no autenticado');
     try {
+      // Obtener información de la renta antes de eliminarla para saber qué departamento actualizar
+      const rentalToDelete = rentals.find(r => r.id === id);
+
       const { error } = await supabase
         .from('rentals')
         .delete()
         .eq('id', id)
         .eq('company_id', currentUser.companyId);
+
       if (error) throw error;
+      
       setRentals((prev) => prev.filter((r) => r.id !== id));
+
+      if (rentalToDelete) {
+        await supabase
+          .from('departments')
+          .update({ 
+            rental_status: 'available', 
+            current_rental_id: null 
+          })
+          .eq('id', rentalToDelete.departmentId);
+
+        setDepartments(prev => prev.map(d => 
+          d.id === rentalToDelete.departmentId 
+            ? { ...d, rentalStatus: 'available', currentRentalId: null } 
+            : d
+        ));
+      }
+
       toast({ title: 'Renta eliminada', description: 'La renta ha sido eliminada.' });
     } catch (err) {
       console.error('Error eliminando renta:', err);
@@ -1812,6 +1927,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         departmentUpdates.last_cleaned_at = now;
         departmentUpdates.assigned_to = null;
         departmentUpdates.priority = 'normal'; // Reset priority automatically
+        departmentUpdates.rental_status = 'available'; // ¡Disponible para rentar de nuevo!
       } else {
         departmentUpdates.assigned_to = data.employee_id;
       }

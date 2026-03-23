@@ -36,6 +36,8 @@ export function AdminStatsGrid({
     subtitle,
     subtitleClassName,
     isLoading,
+    overallBg,
+    className,
   }: {
     title: string;
     value: number;
@@ -46,8 +48,10 @@ export function AdminStatsGrid({
     subtitle?: string;
     subtitleClassName?: string;
     isLoading?: boolean;
+    overallBg?: string;
+    className?: string;
   }) => (
-    <Card className="overflow-hidden relative bg-card border border-border shadow-sm">
+    <Card className={`overflow-hidden relative ${overallBg ?? 'bg-card'} border border-border shadow-sm ${className ?? ''}`}>
       <div className={`absolute left-0 top-0 bottom-0 w-1 ${accentBg}`} />
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pl-5 pr-4 pt-4">
         <div className="space-y-1">
@@ -75,31 +79,37 @@ export function AdminStatsGrid({
     <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
+          className="h-full"
           title="Tareas Pendientes"
           value={pendingCount}
           icon={AlertTriangle}
           accentBg="bg-amber-500"
           accentText="text-white"
+          overallBg="bg-amber-100/100"
           tag={unassignedCount > 0 ? `Atrasadas: ${unassignedCount}` : undefined}
           subtitle={pendingCount > 0 ? "Requieren asignación" : undefined}
           isLoading={dataLoading && !initialDataLoaded}
         />
         <StatCard
+          className="h-full"
           title="En Progreso"
           value={inProgressCount}
           icon={Activity}
           accentBg="bg-blue-500"
           accentText="text-white"
+          overallBg="bg-blue-100/100"
           tag={inProgressCount > 0 ? `${inProgressCount} activos` : undefined}
           subtitle="Al día"
           isLoading={dataLoading && !initialDataLoaded}
         />
         <StatCard
+          className="h-full"
           title="Completadas Hoy"
           value={completedTodayCount}
           icon={Clock}
           accentBg="bg-emerald-500"
           accentText="text-white"
+          overallBg="bg-emerald-100/100"
           tag={`Meta: ${targetDaily}`}
           subtitle={completedTodayCount >= targetDaily ? "Meta alcanzada" : undefined}
           subtitleClassName={completedTodayCount >= targetDaily ? "text-emerald-600 dark:text-emerald-400" : undefined}

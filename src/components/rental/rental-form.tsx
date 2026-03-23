@@ -29,6 +29,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 const rentalFormSchema = z
   .object({
+    condominiumId: z.string().optional(),
     departmentId: z.string().min(1, "Selecciona un departamento"),
     tenantName: z.string().min(2, "Nombre del arrendatario requerido"),
     tenantEmail: z.string().email("Email inválido").optional().or(z.literal("")),
@@ -64,7 +65,7 @@ interface RentalFormProps {
 }
 
 export function RentalForm({ onSuccess, rental }: RentalFormProps) {
-  const { company, departments, addRental, updateRental } = useData();
+  const { company, departments, condominiums, addRental, updateRental } = useData();
 
   const form = useForm<RentalFormData>({
     resolver: zodResolver(rentalFormSchema),
@@ -90,6 +91,7 @@ export function RentalForm({ onSuccess, rental }: RentalFormProps) {
           notes: rental.notes ?? "",
         }
       : {
+          condominiumId: "",
           departmentId: "",
           tenantName: "",
           tenantEmail: "",
@@ -167,50 +169,93 @@ export function RentalForm({ onSuccess, rental }: RentalFormProps) {
     onSuccess();
   };
 
-  const availableDepartments = departments.filter((d) => d.isRentable !== false);
+  const selectedCondominiumId = form.watch("condominiumId");
+
+  const availableDepartments = departments.filter((d) => {
+    const isRentable = d.isRentable !== false;
+    const matchesCondo = !selectedCondominiumId || 
+                        selectedCondominiumId === "all_condos" || 
+                        d.condominiumId === selectedCondominiumId;
+    return isRentable && matchesCondo && d.rentalStatus === 'available';
+  });
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <ScrollArea className="max-h-[60vh] pr-4">
           <div className="space-y-4">
-            <FormField
-              control={form.control}
-              name="departmentId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Departamento</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={!!rental}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar departamento" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {availableDepartments.length === 0 ? (
-                        <SelectItem value="none" disabled>
-                          No hay departamentos disponibles
-                        </SelectItem>
-                      ) : (
-                        availableDepartments.map((d) => (
-                          <SelectItem key={d.id} value={d.id}>
-                            {d.name}
-                            {d.rentalStatus && d.rentalStatus !== "available"
-                              ? ` (${d.rentalStatus})`
-                              : ""}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="condominiumId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Condominio</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        form.setValue("departmentId", "");
+                      }}
+                      value={field.value}
+                      disabled={!!rental}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Todos los condominios" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="all_condos">Todos los condominios</SelectItem>
+                        {condominiums.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
                           </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="departmentId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Departamento</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={!!rental}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar departamento" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {availableDepartments.length === 0 ? (
+                          <SelectItem value="none" disabled>
+                            No hay departamentos disponibles
+                          </SelectItem>
+                        ) : (
+                          availableDepartments.map((d) => (
+                            <SelectItem key={d.id} value={d.id}>
+                              {d.name}
+                              {d.rentalStatus && d.rentalStatus !== "available"
+                                ? ` (${d.rentalStatus})`
+                                : ""}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField

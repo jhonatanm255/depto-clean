@@ -12,8 +12,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
-import { Plus, Trash2, Bed, CheckCircle2, Building2 } from 'lucide-react';
+import { Plus, Trash2, Bed, CheckCircle2, Building2, CalendarDays } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
@@ -33,6 +34,11 @@ const departmentSchema = z.object({
     name: z.string().min(1, "Nombre requerido"),
     value: z.string().min(1, "Valor requerido")
   })).optional(),
+  isRentable: z.boolean().default(false),
+  rentalPricePerNight: z.number().min(0).optional().nullable(),
+  maxGuests: z.number().min(1).optional().nullable(),
+  description: z.string().optional().nullable(),
+  images: z.string().optional().nullable(), // Se manejará como texto separado por comas para el MVP
 });
 
 type DepartmentFormData = z.infer<typeof departmentSchema>;
@@ -63,6 +69,11 @@ export function DepartmentForm({ isOpen, onClose, department, defaultCondominium
         matrimonialBeds: department.beds?.find(b => b.type === 'matrimonial')?.quantity || 0,
         kingBeds: department.beds?.find(b => b.type === 'king')?.quantity || 0,
         customFields: department.customFields || [],
+        isRentable: department.isRentable ?? false,
+        rentalPricePerNight: department.rentalPricePerNight ?? 0,
+        maxGuests: department.maxGuests ?? 1,
+        description: department.description ?? '',
+        images: department.images ? department.images.join(', ') : '',
       }
       : {
         name: '',
@@ -77,6 +88,11 @@ export function DepartmentForm({ isOpen, onClose, department, defaultCondominium
         matrimonialBeds: 0,
         kingBeds: 0,
         customFields: [],
+        isRentable: false,
+        rentalPricePerNight: 0,
+        maxGuests: 1,
+        description: '',
+        images: '',
       },
   });
 
@@ -111,6 +127,11 @@ export function DepartmentForm({ isOpen, onClose, department, defaultCondominium
           matrimonialBeds: department.beds?.find(b => b.type === 'matrimonial')?.quantity || 0,
           kingBeds: department.beds?.find(b => b.type === 'king')?.quantity || 0,
           customFields: (department.customFields && department.customFields.length > 0) ? department.customFields : [],
+          isRentable: department.isRentable ?? false,
+          rentalPricePerNight: department.rentalPricePerNight ?? 0,
+          maxGuests: department.maxGuests ?? 1,
+          description: department.description ?? '',
+          images: department.images ? department.images.join(', ') : '',
         });
       } else {
         form.reset({
@@ -126,6 +147,11 @@ export function DepartmentForm({ isOpen, onClose, department, defaultCondominium
           matrimonialBeds: 0,
           kingBeds: 0,
           customFields: [{ name: '', value: '' }], // Add one empty field by default for creation
+          isRentable: false,
+          rentalPricePerNight: 0,
+          maxGuests: 1,
+          description: '',
+          images: '',
         });
       }
     }
@@ -138,6 +164,8 @@ export function DepartmentForm({ isOpen, onClose, department, defaultCondominium
         { type: 'matrimonial' as const, quantity: data.matrimonialBeds },
         { type: 'king' as const, quantity: data.kingBeds },
       ].filter(b => b.quantity > 0);
+
+      const imagesArray = data.images ? data.images.split(',').map(url => url.trim()).filter(url => url.length > 0) : null;
 
       if (department) {
         await updateDepartment({
@@ -153,6 +181,11 @@ export function DepartmentForm({ isOpen, onClose, department, defaultCondominium
           bodyTowels: data.bodyTowels,
           beds,
           customFields: data.customFields,
+          isRentable: data.isRentable,
+          rentalPricePerNight: data.rentalPricePerNight,
+          maxGuests: data.maxGuests,
+          description: data.description,
+          images: imagesArray,
         });
       } else {
         await addDepartment({
@@ -421,6 +454,129 @@ export function DepartmentForm({ isOpen, onClose, department, defaultCondominium
                           </Button>
                         </div>
                       ))}
+                    </div>
+                    
+                    {/* Sección: Configuración de Rentas */}
+                    <div className="space-y-4 bg-muted/20 p-4 rounded-3xl border border-dashed">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CalendarDays className="h-4 w-4 text-primary" />
+                        <FormLabel className="text-sm font-bold uppercase text-muted-foreground flex items-center">
+                          Alojamientos (Renta Pública)
+                        </FormLabel>
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="isRentable"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-white">
+                            <div className="space-y-0.5">
+                              <FormLabel>Disponible para Arrendar</FormLabel>
+                              <p className="text-[10px] text-muted-foreground hidden sm:block">
+                                Permite que esta unidad se vea públicamente en /alojamientos.
+                              </p>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      {form.watch("isRentable") && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="rentalPricePerNight"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Precio por Noche ($)</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      {...field}
+                                      value={field.value ?? 0}
+                                      onChange={e => field.onChange(parseInt(e.target.value) || 0)}
+                                      disabled={form.formState.isSubmitting}
+                                      className="bg-white"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="maxGuests"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Huéspedes Máximos</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      {...field}
+                                      value={field.value ?? 1}
+                                      onChange={e => field.onChange(parseInt(e.target.value) || 1)}
+                                      disabled={form.formState.isSubmitting}
+                                      className="bg-white"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <FormField
+                            control={form.control}
+                            name="images"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Imágenes URLs (Separadas por comas)</FormLabel>
+                                <FormControl>
+                                  <Textarea 
+                                    placeholder="https://imagen1.jpg, https://imagen2.jpg" 
+                                    {...field} 
+                                    value={field.value ?? ''}
+                                    disabled={form.formState.isSubmitting} 
+                                    rows={2}
+                                    className="bg-white text-xs"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="description"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Descripción Pública</FormLabel>
+                                <FormControl>
+                                  <Textarea 
+                                    placeholder="Hermoso departamento con vista..." 
+                                    {...field} 
+                                    value={field.value ?? ''}
+                                    disabled={form.formState.isSubmitting} 
+                                    rows={4}
+                                    className="bg-white text-xs"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

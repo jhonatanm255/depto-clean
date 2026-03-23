@@ -236,6 +236,11 @@ export default function RentalsPage() {
                         RESERVA
                       </Badge>
                     )}
+                    {(rental.rentalStatus === "active" || rental.rentalStatus === "reserved") && new Date(rental.checkOutDate) <= new Date() && (
+                      <Badge className="bg-orange-600 text-white border-0 shadow-sm uppercase text-[10px] font-bold tracking-wider rounded-md">
+                        TIEMPO CUMPLIDO
+                      </Badge>
+                    )}
                   </div>
 
                   <div className="relative z-10 mt-auto">

@@ -1,0 +1,27 @@
+
+> nextn@0.1.0 typecheck
+> tsc --noEmit
+
+.next/types/app/(guest)/alojamientos/[id]/page.ts(34,29): error TS2344: Type '{ params: { id: string; }; }' does not satisfy the constraint 'PageProps'.
+  Types of property 'params' are incompatible.
+    Type '{ id: string; }' is missing the following properties from type 'Promise<any>': then, catch, finally, [Symbol.toStringTag]
+src/app/(guest)/alojamientos/[id]/page.tsx(28,30): error TS2339: Property 'name' does not exist on type '{ name: any; }[]'.
+src/app/(guest)/alojamientos/[id]/page.tsx(34,29): error TS2339: Property 'name' does not exist on type '{ name: any; }[]'.
+src/app/(guest)/alojamientos/page.tsx(8,16): error TS2393: Duplicate function implementation.
+src/app/(guest)/alojamientos/page.tsx(22,16): error TS2393: Duplicate function implementation.
+src/app/(guest)/alojamientos/page.tsx(78,19): error TS2339: Property 'length' does not exist on type 'void'.
+src/app/(guest)/alojamientos/page.tsx(86,23): error TS2339: Property 'map' does not exist on type 'void'.
+src/app/api/subscriptions/create/route.ts(4,10): error TS2305: Module '"@paypal/paypal-server-sdk"' has no exported member 'core'.
+src/app/api/subscriptions/create/route.ts(198,47): error TS2339: Property 'execute' does not exist on type 'Client'.
+src/components/subscription/current-subscription.tsx(9,10): error TS2305: Module '"@/lib/types"' has no exported member 'Subscription'.
+src/components/subscription/subscription-plans.tsx(8,10): error TS2305: Module '"@/lib/types"' has no exported member 'SubscriptionPlan'.
+src/components/subscription/subscription-plans.tsx(152,37): error TS7006: Parameter 'feature' implicitly has an 'any' type.
+src/components/subscription/subscription-plans.tsx(152,46): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/components/ui/chart.tsx(4,36): error TS2307: Cannot find module 'recharts' or its corresponding type declarations.
+src/components/ui/chart.tsx(188,25): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/ui/chart.tsx(188,31): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/components/ui/chart.tsx(288,23): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/lib/firebase.ts(3,48): error TS2307: Cannot find module 'firebase/app' or its corresponding type declarations.
+src/lib/firebase.ts(4,30): error TS2307: Cannot find module 'firebase/firestore' or its corresponding type declarations.
+src/lib/firebase.ts(5,28): error TS2307: Cannot find module 'firebase/storage' or its corresponding type declarations.
+src/lib/paypal.ts(248,41): error TS2339: Property 'subscriptionsController' does not exist on type 'Client'.

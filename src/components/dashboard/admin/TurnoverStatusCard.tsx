@@ -11,11 +11,12 @@ export interface TurnoverItem {
 
 interface TurnoverStatusCardProps {
   items: TurnoverItem[];
+  className?: string;
 }
 
-export function TurnoverStatusCard({ items }: TurnoverStatusCardProps) {
+export function TurnoverStatusCard({ items, className }: TurnoverStatusCardProps) {
   return (
-    <Card className="border border-border shadow-sm">
+    <Card className={`border border-border shadow-sm ${className}`}>
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold">Estado de rotación</CardTitle>
       </CardHeader>
