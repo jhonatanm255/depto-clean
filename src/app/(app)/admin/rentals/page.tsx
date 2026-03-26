@@ -289,23 +289,11 @@ export default function RentalsPage() {
                 </CardContent>
 
                 {/* Footer Actions */}
-                <div className="px-3 py-3 border-t bg-slate-50 dark:bg-muted/20 flex justify-between gap-2">
-                  <Button variant="ghost" size="sm" className="flex-1 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800" asChild>
+                <div className="px-3 py-3 border-t bg-slate-50 dark:bg-muted/20">
+                  <Button variant="ghost" size="sm" className="w-full text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800" asChild>
                     <Link href={`/admin/rentals/${rental.id}`}>
                       <Eye className="w-4 h-4 mr-2" />
-                      <span className="text-[11px] font-bold uppercase">Ver</span>
-                    </Link>
-                  </Button>
-                  <Button variant="ghost" size="sm" className="flex-1 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800" asChild>
-                    <Link href={`/admin/rentals/${rental.id}?tab=guests`}>
-                      <User className="w-4 h-4 mr-2" />
-                      <span className="text-[11px] font-bold uppercase">Huésped</span>
-                    </Link>
-                  </Button>
-                  <Button variant="ghost" size="sm" className="flex-1 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800" asChild>
-                    <Link href={`/admin/rentals/${rental.id}?tab=financials`}>
-                      <BarChart2 className="w-4 h-4 mr-2" />
-                      <span className="text-[11px] font-bold uppercase">Stats</span>
+                      <span className="text-[11px] font-bold uppercase tracking-wider">Ver Detalles de Renta</span>
                     </Link>
                   </Button>
                 </div>
