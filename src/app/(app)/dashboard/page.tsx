@@ -34,6 +34,7 @@ function AdminDashboard() {
   const { currentUser } = useAuth();
   const { company, departments, employees, tasks, rentals, dataLoading, getEmployeeProfileById, updateRentalStatus } = useData();
   const [now, setNow] = useState(new Date());
+  const [dismissedAlertIds, setDismissedAlertIds] = useState<string[]>([]);
 
   const handleAlertAction = async (alert: AlertItem) => {
     if (alert.type === 'urgent') {
@@ -44,6 +45,10 @@ function AdminDashboard() {
         console.error("Error confirming checkout from alert:", error);
       }
     }
+  };
+
+  const handleDismissAlert = (alertId: string) => {
+    setDismissedAlertIds(prev => [...prev, alertId]);
   };
 
   useEffect(() => {
@@ -121,8 +126,31 @@ function AdminDashboard() {
       }
     });
 
-    return alerts.slice(0, 5);
-  }, [unassignedDepartments, departuresToday, departments]);
+    // Alertas por Check-outs inminentes (Próxima hora)
+    rentals.forEach((r) => {
+      if (r.rentalStatus === 'active' || r.rentalStatus === 'reserved') {
+        const checkOutDate = new Date(r.checkOutDate);
+        const timeDiff = checkOutDate.getTime() - now.getTime();
+        
+        // Si falta menos de 1 hora y aún no ha pasado
+        if (timeDiff > 0 && timeDiff <= 3600000) {
+          const dept = departments.find(d => d.id === r.departmentId);
+          if (dept) {
+            alerts.push({
+              id: `checkout-imminent-${r.id}`,
+              type: 'warning',
+              title: 'Check-out inminente',
+              description: `${dept.name}: El check-out de ${r.tenantName} es en menos de una hora.`,
+              guestName: r.tenantName,
+              timeAgo: `En ${Math.round(timeDiff / 60000)} min`,
+            });
+          }
+        }
+      }
+    });
+
+    return alerts.filter(a => !dismissedAlertIds.includes(a.id)).slice(0, 5);
+  }, [unassignedDepartments, departuresToday, departments, now, rentals, dismissedAlertIds]);
 
   const turnoverItems = useMemo((): TurnoverItem[] => {
     const total = departments.length || 1;
@@ -184,6 +212,7 @@ function AdminDashboard() {
             <CriticalAlertsCard 
               alerts={criticalAlerts} 
               onAction={handleAlertAction}
+              onDismiss={handleDismissAlert}
             />
           </div>
         </div>

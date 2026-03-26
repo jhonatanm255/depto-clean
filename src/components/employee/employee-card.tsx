@@ -38,10 +38,10 @@ function translateStatus(status: Department['status'] | CleaningTask['status']) 
 
 const getStatusBadgeVariant = (status: Department['status'] | CleaningTask['status']) => {
   switch (status) {
-    case 'completed': return 'bg-green-500 hover:bg-green-600';
-    case 'in_progress': return 'bg-primary hover:bg-primary/90';
-    case 'pending': return 'bg-yellow-500 hover:bg-yellow-600';
-    default: return 'bg-gray-500 hover:bg-gray-600';
+    case 'completed': return 'bg-green-100 dark:bg-emerald-400/10 text-green-600 dark:text-green-400';
+    case 'in_progress': return 'bg-blue-100 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400';
+    case 'pending': return 'bg-yellow-100 dark:bg-yellow-400/10 text-yellow-600 dark:text-yellow-400';
+    default: return 'bg-gray-100 dark:bg-gray-400/10 text-gray-600 dark:text-gray-400';
   }
 };
 
@@ -97,17 +97,17 @@ export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeC
               <Briefcase className="mr-2 h-4 w-4 text-primary" />
               Tareas Asignadas ({assignedTasksDetails.length})
             </h4>
-            <ScrollArea className="h-[120px] pr-2">
+            <ScrollArea className="h-[130px] pr-2">
               <ul className="space-y-1.5 text-sm"> {/* Base font size for list items now text-sm */}
                 {assignedTasksDetails.map(task => (
                   <li key={task.id} className="p-1.5 rounded-md bg-muted/50">
                     <div className="flex justify-between items-center">
                       <span className="flex items-center text-foreground font-semibold"> {/* Department name made semibold */}
-                        <Building2 className="mr-1.5 h-3 w-3 text-muted-foreground" /> {task.departmentName}
+                        <Building2 className="mr-1.5 h-4 w-4 text-muted-foreground" /> {task.departmentName}
                       </span>
                       <div className="flex items-center gap-1">
                         {task.departmentPriority === 'high' && (
-                          <Badge variant="destructive" className="bg-accent text-accent-foreground text-[10px] px-1.5 py-0.5 h-auto">Prioritario</Badge>
+                          <Badge variant="destructive" className="bg-orange-400/20 text-orange-600 dark:text-orange-400 text-[10px] px-1.5 py-0.5 h-auto">Prioritario</Badge>
                         )}
                         <Badge
                           variant="default"
@@ -119,12 +119,13 @@ export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeC
                       </div>
                     </div>
                     {task.departmentAddress && (
-                      <p className="text-muted-foreground ml-5 flex items-center"> {/* Inherits text-sm */}
+                      <p className="text-muted-foreground text-xs mt-2 ml-5 flex items-center"> {/* Inherits text-sm */}
                         <MapPin className="mr-1 h-3 w-3 shrink-0" /> {task.departmentAddress}
                       </p>
                     )}
-                    <p className="text-muted-foreground ml-5"> {/* Inherits text-sm */}
-                      Asignada: {new Date(task.assignedAt).toLocaleDateString('es-CL')}
+                    <p className="text-muted-foreground text-xs mt-2 ml-5"> {/* Inherits text-sm */}
+                      Asignada: 
+                      <span className="text-xs font-bold ml-1">{new Date(task.assignedAt).toLocaleDateString('es-CL')}</span>
                     </p>
                   </li>
                 ))}

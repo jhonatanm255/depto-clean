@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Share, Heart, Star, MapPin, Award, Bed, Bath, Users } from "lucide-react";
 import { PropertyGallery } from "@/components/guest/property-gallery";
@@ -25,13 +22,13 @@ async function getProperty(id: string) {
   return {
     id: prop.id,
     title: prop.name,
-    company: prop.companies?.name || "Anfitrión Particular",
+    company: ((prop as any).companies?.name || (prop as any).companies?.[0]?.name) || "Anfitrión Particular",
     price: prop.rental_price_per_night || 0,
     rating: 5.0,
     reviews: 0,
     location: prop.address || "Dirección no especificada",
     host: {
-      name: prop.companies?.name || "Anfitrión",
+      name: ((prop as any).companies?.name || (prop as any).companies?.[0]?.name) || "Anfitrión",
       image: "https://i.pravatar.cc/150?u=host",
       joined: "2024",
     },

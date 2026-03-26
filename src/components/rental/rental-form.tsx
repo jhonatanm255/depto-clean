@@ -181,9 +181,8 @@ export function RentalForm({ onSuccess, rental }: RentalFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <ScrollArea className="max-h-[60vh] pr-4">
-          <div className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 flex flex-col max-h-[85vh]">
+        <div className="flex-grow overflow-y-auto pr-4 space-y-4 min-h-0">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -500,8 +499,7 @@ export function RentalForm({ onSuccess, rental }: RentalFormProps) {
                 </FormItem>
               )}
             />
-          </div>
-        </ScrollArea>
+        </div>
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="submit" disabled={isSubmitting}>

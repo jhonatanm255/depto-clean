@@ -11,7 +11,7 @@ async function getProperties() {
   const { data: properties, error } = await supabase
     .from('departments')
     .select(`
-        id, name, address, max_guests, rental_price_per_night, images, description,
+        id, name, address, max_guests, rental_price_per_night, images, description, beds_count,
         companies:company_id (name)
       `)
     .eq('is_rentable', true)
@@ -26,7 +26,7 @@ async function getProperties() {
   return (properties || []).map((prop: any) => ({
     id: prop.id,
     title: prop.name,
-    company: prop.companies?.name || "Anfitrión Particular",
+    company: (Array.isArray(prop.companies) ? prop.companies[0]?.name : prop.companies?.name) || "Anfitrión Particular",
     price: prop.rental_price_per_night || 0,
     rating: 5.0,
     reviews: 0,

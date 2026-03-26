@@ -6,6 +6,7 @@ import { ChevronDown, CheckCircle2, Loader2 } from "lucide-react";
 
 interface BookingWidgetProps {
   property: {
+    id: string;
     price: number;
     rating: number;
     reviews: number;
@@ -29,7 +30,7 @@ export function BookingWidget({ property }: BookingWidgetProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          propertyId: "1", // Mock ID
+          propertyId: property.id,
           checkIn: "2026-03-20",
           checkOut: "2026-03-23",
           guests: 2,

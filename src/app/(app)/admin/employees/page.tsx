@@ -131,7 +131,6 @@ export default function EmployeesPage() {
 
       <Alert className="mb-6 text-sm bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-200">
         <ShieldAlert className="h-4 w-4" />
-        <AlertTitle className="font-semibold">Cuentas en Supabase</AlertTitle>
         <AlertDescription>
           La contraseña inicial se define al crear la cuenta; comunícala de forma segura.
         </AlertDescription>
@@ -281,7 +280,7 @@ export default function EmployeesPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {filteredEmployees.map((emp) => (
             <EmployeeCard
               key={emp.id}

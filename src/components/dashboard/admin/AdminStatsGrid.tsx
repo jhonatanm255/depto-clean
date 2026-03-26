@@ -32,6 +32,8 @@ export function AdminStatsGrid({
     icon: Icon,
     accentBg,
     accentText,
+    bold,
+    stripeBg,
     tag,
     subtitle,
     subtitleClassName,
@@ -44,6 +46,8 @@ export function AdminStatsGrid({
     icon: React.ElementType;
     accentBg: string;
     accentText: string;
+    bold?: string;
+    stripeBg?: string; // Nuevo prop para el color del borde lateral
     tag?: string;
     subtitle?: string;
     subtitleClassName?: string;
@@ -52,17 +56,17 @@ export function AdminStatsGrid({
     className?: string;
   }) => (
     <Card className={`overflow-hidden relative ${overallBg ?? 'bg-card'} border border-border shadow-sm ${className ?? ''}`}>
-      <div className={`absolute left-0 top-0 bottom-0 w-1 ${accentBg}`} />
+      <div className={`absolute left-0 top-0 bottom-0 w-1 ${stripeBg ?? accentBg}`} />
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pl-5 pr-4 pt-4">
         <div className="space-y-1">
           <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
           {tag && (
-            <span className={`inline-block text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${accentBg} ${accentText}`}>
+            <span className={`inline-block text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${accentBg} ${accentText}`}>
               {tag}
             </span>
           )}
         </div>
-        <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${accentBg} ${accentText}`}>
+        <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${accentBg} ${accentText} ${bold}`}>
           <Icon className="h-4 w-4" />
         </div>
       </CardHeader>
@@ -83,9 +87,10 @@ export function AdminStatsGrid({
           title="Tareas Pendientes"
           value={pendingCount}
           icon={AlertTriangle}
-          accentBg="bg-amber-500"
-          accentText="text-white"
-          overallBg="bg-amber-100/100"
+          accentBg="bg-amber-400/20"
+          bold="font-bold"
+          accentText="text-amber-500"
+          stripeBg="bg-amber-500"
           tag={unassignedCount > 0 ? `Atrasadas: ${unassignedCount}` : undefined}
           subtitle={pendingCount > 0 ? "Requieren asignación" : undefined}
           isLoading={dataLoading && !initialDataLoaded}
@@ -95,9 +100,9 @@ export function AdminStatsGrid({
           title="En Progreso"
           value={inProgressCount}
           icon={Activity}
-          accentBg="bg-blue-500"
-          accentText="text-white"
-          overallBg="bg-blue-100/100"
+          accentBg="bg-blue-400/20"
+          accentText="text-blue-500"
+          stripeBg="bg-blue-500"
           tag={inProgressCount > 0 ? `${inProgressCount} activos` : undefined}
           subtitle="Al día"
           isLoading={dataLoading && !initialDataLoaded}
@@ -107,9 +112,9 @@ export function AdminStatsGrid({
           title="Completadas Hoy"
           value={completedTodayCount}
           icon={Clock}
-          accentBg="bg-emerald-500"
-          accentText="text-white"
-          overallBg="bg-emerald-100/100"
+          accentBg="bg-emerald-400/20"
+          accentText="text-emerald-500"
+          stripeBg="bg-emerald-500"
           tag={`Meta: ${targetDaily}`}
           subtitle={completedTodayCount >= targetDaily ? "Meta alcanzada" : undefined}
           subtitleClassName={completedTodayCount >= targetDaily ? "text-emerald-600 dark:text-emerald-400" : undefined}
@@ -121,16 +126,18 @@ export function AdminStatsGrid({
           title="Total Departamentos"
           value={departmentsCount}
           icon={Building2}
-          accentBg="bg-slate-400"
-          accentText="text-white"
+          accentBg="bg-slate-400/20"
+          accentText="text-slate-500"
+          stripeBg="bg-slate-500"
           isLoading={dataLoading && !initialDataLoaded}
         />
         <StatCard
           title="Total Empleadas"
           value={employeesCount}
           icon={Users}
-          accentBg="bg-slate-400"
-          accentText="text-white"
+          accentBg="bg-slate-400/20"
+          accentText="text-slate-500"
+          stripeBg="bg-slate-500"
           isLoading={dataLoading && !initialDataLoaded}
         />
       </div>
