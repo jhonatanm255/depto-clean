@@ -575,8 +575,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         supabase
           .from('profiles')
           .select('*')
-          .eq('company_id', currentUser.companyId)
-          .in('role', ['manager', 'employee'])
+          .or(`company_id.eq.${currentUser.companyId},role.eq.superadmin`)
+          .in('role', ['owner', 'admin', 'manager', 'employee', 'superadmin'])
           .order('full_name', { ascending: true }),
         supabase
           .from('tasks')

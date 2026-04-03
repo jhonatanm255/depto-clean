@@ -21,6 +21,9 @@ interface ChatContextType {
     setActiveContactId: (id: string | null) => void;
     sendMessage: (content: string) => Promise<void>;
     markAsRead: (senderId: string) => Promise<void>;
+    deleteConversation: (contactId: string) => Promise<void>;
+    typingUsers: Record<string, string>;
+    sendTypingStatus: (targetId: string) => void;
     unreadTotal: number;
     loading: boolean;
 }
@@ -33,6 +36,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [activeContactId, setActiveContactId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [typingUsers, setTypingUsers] = useState<Record<string, { name: string, timestamp: number }>>({});
+    const channelRef = React.useRef<any>(null);
 
     const isEmployee = currentUser?.role === 'employee' || currentUser?.role === 'manager';
 
@@ -81,6 +86,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         if (!currentUser) return;
 
+        // Filtro de tiempo real: superadmins ven todo, usuarios normales solo su empresa
+        const realtimeFilter = currentUser.role === 'superadmin' 
+            ? undefined 
+            : `company_id=eq.${currentUser.companyId}`;
+
         const channel = supabase.channel('chat_messages_changes')
             .on(
                 'postgres_changes',
@@ -88,7 +98,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     event: 'INSERT',
                     schema: 'public',
                     table: 'chat_messages',
-                    filter: `company_id=eq.${currentUser.companyId}`
+                    filter: realtimeFilter
                 },
                 (payload) => {
                     const newMsg = payload.new;
@@ -127,7 +137,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     event: 'UPDATE',
                     schema: 'public',
                     table: 'chat_messages',
-                    filter: `company_id=eq.${currentUser.companyId}`
+                    filter: realtimeFilter
                 },
                 (payload) => {
                     const updatedMsg = payload.new;
@@ -138,27 +148,107 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     ));
                 }
             )
+            .on(
+                'broadcast',
+                { event: 'typing' },
+                (payload) => {
+                    const { userId, userName, targetId } = payload.payload;
+                    if (targetId === currentUser.id) {
+                        setTypingUsers(prev => ({
+                            ...prev,
+                            [userId]: { name: userName, timestamp: Date.now() }
+                        }));
+                    }
+                }
+            )
             .subscribe();
+
+        channelRef.current = channel;
 
         return () => {
             supabase.removeChannel(channel);
+            channelRef.current = null;
         };
+    }, [currentUser]);
+
+    // Cleanup typing status
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = Date.now();
+            setTypingUsers(prev => {
+                const next = { ...prev };
+                let changed = false;
+                Object.keys(next).forEach(id => {
+                    if (now - next[id].timestamp > 3000) {
+                        delete next[id];
+                        changed = true;
+                    }
+                });
+                return changed ? next : prev;
+            });
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const sendTypingStatus = useCallback((targetId: string) => {
+        if (!currentUser || !channelRef.current) return;
+        
+        channelRef.current.send({
+            type: 'broadcast',
+            event: 'typing',
+            payload: { 
+                userId: currentUser.id, 
+                userName: currentUser.fullName || currentUser.email || 'Alguien',
+                targetId 
+            }
+        });
     }, [currentUser]);
 
     // Build contacts list
     const contacts: Contact[] = React.useMemo(() => {
         if (!currentUser) return [];
 
-        let availableProfiles = employees.filter(e => e.id !== currentUser.id);
-
-        // If employee, maybe only show admins/owners, 
-        // If admin, show everyone.
-        // The request says "hablar el administrador con los empleados", so:
-        if (isEmployee) {
-            availableProfiles = availableProfiles.filter(e => e.role === 'admin' || e.role === 'owner');
+        // 1. Obtener perfiles base (compañeros de trabajo)
+        let baseProfiles = [...employees];
+        
+        // Si es un empleado básico, solo puede ver cargos superiores por defecto
+        if (currentUser.role === 'employee') {
+            baseProfiles = baseProfiles.filter(e => 
+                e.role === 'admin' || e.role === 'owner' || e.role === 'manager' || e.role === 'superadmin'
+            );
         }
+        
+        // Quitarse a uno mismo
+        let availableProfiles = baseProfiles.filter(e => e.id !== currentUser.id);
 
-        return availableProfiles.map(profile => {
+        // 2. Identificar "perfiles fantasma" (personas que nos han escrito pero no están en la lista filtrada)
+        const messageUserIds = new Set<string>();
+        messages.forEach(m => {
+            if (m.senderId !== currentUser.id) messageUserIds.add(m.senderId);
+            if (m.receiverId !== currentUser.id) messageUserIds.add(m.receiverId);
+        });
+
+        const ghostUserIds = Array.from(messageUserIds).filter(
+            id => id !== currentUser.id && !availableProfiles.some(p => p.id === id)
+        );
+
+        // Combinar perfiles disponibles con perfiles de mensajes (fantasmas)
+        const ghostProfiles = ghostUserIds.map(id => {
+            // Intentar encontrarlo en la lista completa de empleados (sin filtrar)
+            const emp = employees.find(e => e.id === id);
+            if (emp) return emp;
+            // Si no existe, crear perfil mínimo (esto pasaría con superadmins globales)
+            return { 
+                id, 
+                role: 'contact', 
+                name: 'Usuario',
+                fullName: 'Usuario'
+            } as any;
+        });
+
+        const allVisibleProfiles = [...availableProfiles, ...ghostProfiles];
+
+        return allVisibleProfiles.map(profile => {
             const contactMessages = messages.filter(
                 m => (m.senderId === profile.id && m.receiverId === currentUser.id) ||
                      (m.senderId === currentUser.id && m.receiverId === profile.id)
@@ -185,18 +275,29 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             const timeB = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0;
             return timeB - timeA;
         });
-    }, [currentUser, employees, messages, isEmployee]);
+    }, [currentUser, employees, messages]);
 
     const unreadTotal = contacts.reduce((sum, contact) => sum + contact.unreadCount, 0);
 
     const sendMessage = async (content: string) => {
         if (!currentUser || !activeContactId || !content.trim()) return;
 
+        // Buscar el contacto para obtener su companyId si el remitente no tiene uno (superadmin)
+        const contact = contacts.find(c => c.id === activeContactId);
+        // Si el usuario es superadmin y no tiene companyId, usamos el del contacto
+        // En DataContext, corregimos para que los empleados SIEMPRE tengan companyId
+        const targetCompanyId = currentUser.companyId || (contact as any)?.companyId || employees.find(e => e.id === activeContactId)?.companyId;
+
+        if (!targetCompanyId) {
+            console.error("No se pudo determinar el company_id para el mensaje");
+            return;
+        }
+
         try {
             const tempId = `temp-${Date.now()}`;
             const tempMsg: ChatMessage = {
                 id: tempId,
-                companyId: currentUser.companyId,
+                companyId: targetCompanyId,
                 senderId: currentUser.id,
                 receiverId: activeContactId,
                 content: content.trim(),
@@ -211,7 +312,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             const { error } = await supabase
                 .from('chat_messages')
                 .insert({
-                    company_id: currentUser.companyId,
+                    company_id: targetCompanyId,
                     sender_id: currentUser.id,
                     receiver_id: activeContactId,
                     content: content.trim(),
@@ -250,6 +351,32 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    const deleteConversation = async (contactId: string) => {
+        if (!currentUser || !contactId) return;
+
+        // Optimistic update
+        setMessages(prev => prev.filter(m => 
+            !(m.senderId === contactId && m.receiverId === currentUser.id) &&
+            !(m.senderId === currentUser.id && m.receiverId === contactId)
+        ));
+
+        try {
+            const { error } = await supabase
+                .from('chat_messages')
+                .delete()
+                .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${currentUser.id})`);
+            
+            if (error) throw error;
+            
+            if (activeContactId === contactId) {
+                setActiveContactId(null);
+            }
+        } catch (error) {
+            console.error("Error deleting conversation:", error);
+            loadMessages();
+        }
+    };
+
     const value = {
         messages,
         contacts,
@@ -257,6 +384,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setActiveContactId,
         sendMessage,
         markAsRead,
+        deleteConversation,
+        typingUsers: Object.fromEntries(
+            Object.entries(typingUsers).map(([id, data]) => [id, data.name])
+        ),
+        sendTypingStatus,
         unreadTotal,
         loading
     };
