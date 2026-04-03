@@ -14,6 +14,8 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { BottomNavigationBar } from '@/components/core/bottom-navigation-bar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { ChatProvider } from '@/contexts/chat-context';
+import { FloatingChat } from '@/components/chat/floating-chat';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { currentUser, loading: authLoading } = useAuth();
@@ -112,7 +114,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
       <DataProvider>
         <NotificationsProvider>
-          <SidebarProvider> {/* SidebarProvider todavía puede ser útil para el estado del sidebar de escritorio si se usa useSidebar() allí */}
+          <ChatProvider>
+            <SidebarProvider> {/* SidebarProvider todavía puede ser útil para el estado del sidebar de escritorio si se usa useSidebar() allí */}
             <div className="flex min-h-screen w-full">
               {!isMobile && <AppSidebar />} {/* AppSidebar solo para escritorio */}
               <div className="flex flex-1 flex-col">
@@ -124,9 +127,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                   {children}
                 </main>
                 {isMobile && <BottomNavigationBar />} {/* BottomNavigationBar solo para móvil */}
+                <FloatingChat />
               </div>
             </div>
           </SidebarProvider>
+          </ChatProvider>
         </NotificationsProvider>
       </DataProvider>
     </NextThemesProvider>

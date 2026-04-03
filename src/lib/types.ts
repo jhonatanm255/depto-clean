@@ -232,3 +232,15 @@ export interface Notification {
   metadata?: Record<string, unknown>;
   createdAt: string;
 }
+
+// Chat Message
+export interface ChatMessage {
+  id: string;
+  companyId: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
