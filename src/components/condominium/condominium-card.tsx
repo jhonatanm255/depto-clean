@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 import type { Condominium } from '@/lib/types';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building, Building2, MapPin, MoreHorizontal, Pencil, Trash2, ArrowRight } from 'lucide-react';
 import {
@@ -47,24 +47,45 @@ export function CondominiumCard({ condominium, onEdit, departmentCount, complete
         }
     };
 
+    const progressPercent = departmentCount > 0
+        ? Math.round((completedCount / departmentCount) * 100)
+        : 0;
+
     return (
         <>
-            <Card className="hover:shadow-md transition-shadow group relative">
-                <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                        <CardTitle className="flex items-center text-xl font-bold truncate pr-8" title={condominium.name}>
-                            <Building className="h-5 w-5 mr-2 text-primary" />
-                            {condominium.name}
-                            {hasActiveWork && (
-                                <span className="relative flex h-4 w-4 ml-2 items-center justify-center">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+            <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 group relative rounded-2xl border-border/50">
+                {/* Image Section */}
+                <div className="relative h-72 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+                    {condominium.imageUrl ? (
+                        <img
+                            src={condominium.imageUrl}
+                            alt={condominium.name}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800">
+                            <Building2 className="w-16 h-16 text-slate-400 dark:text-slate-600" />
+                        </div>
+                    )}
+
+                    {/* Overlay badges on image */}
+                    <div className="absolute top-3 left-3 flex items-center gap-2">
+                        {hasActiveWork && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-500/90 text-white text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm shadow-sm">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
                                 </span>
-                            )}
-                        </CardTitle>
+                                En Progreso
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Menu button */}
+                    <div className="absolute top-3 right-3">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 absolute top-4 right-4">
+                                <Button variant="secondary" size="icon" className="h-8 w-8 bg-white/80 dark:bg-black/50 backdrop-blur-sm shadow-sm hover:bg-white dark:hover:bg-black/70 border-0">
                                     <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
@@ -78,34 +99,40 @@ export function CondominiumCard({ condominium, onEdit, departmentCount, complete
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-                </CardHeader>
+                </div>
 
-                <CardContent className="pb-4 space-y-3">
-                    {condominium.address && (
-                        <div className="flex items-start text-sm text-muted-foreground">
-                            <MapPin className="h-4 w-4 mr-2 shrink-0 mt-0.5" />
-                            <span className="line-clamp-2">{condominium.address}</span>
-                        </div>
-                    )}
-                    <div className="flex items-center text-sm font-medium text-muted-foreground bg-muted/30 p-2 rounded-lg">
-                        <Building2 className="h-4 w-4 mr-2 text-primary" />
-                        {departmentCount} {departmentCount === 1 ? 'Departamento' : 'Departamentos'}
+                {/* Content Section */}
+                <CardContent className="p-5 space-y-3">
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate" title={condominium.name}>
+                            {condominium.name}
+                        </h3>
+                        {condominium.address && (
+                            <div className="flex items-start text-sm text-muted-foreground mt-1">
+                                <MapPin className="h-3.5 w-3.5 mr-1.5 shrink-0 mt-0.5" />
+                                <span className="line-clamp-1">{condominium.address}</span>
+                            </div>
+                        )}
                     </div>
+
+                    {/* Progress */}
                     {departmentCount > 0 && (
                         <div className="space-y-1.5">
-                            <div className="flex justify-between text-xs text-muted-foreground">
-                                <span>Progreso de limpieza</span>
-                                <span>{Math.round((completedCount / departmentCount) * 100)}%</span>
+                            <div className="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                                <span>Progreso de Limpieza</span>
+                                <span className={cn(
+                                    progressPercent === 100 ? "text-emerald-600" : "text-primary"
+                                )}>{progressPercent}%</span>
                             </div>
-                            <div className="h-2 rounded-full bg-muted overflow-hidden">
+                            <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                                 <div
                                     className={cn(
-                                        "h-full rounded-full transition-all",
-                                        completedCount === departmentCount ? "bg-green-500" :
-                                        (completedCount > 0 || hasActiveWork) ? "bg-blue-500" :
-                                        "bg-yellow-500"
+                                        "h-full rounded-full transition-all duration-500",
+                                        completedCount === departmentCount ? "bg-emerald-500" :
+                                        (completedCount > 0 || hasActiveWork) ? "bg-primary" :
+                                        "bg-amber-500"
                                     )}
-                                    style={{ width: `${Math.min(100, (completedCount / departmentCount) * 100)}%` }}
+                                    style={{ width: `${Math.min(100, progressPercent)}%` }}
                                 />
                             </div>
                             <p className="text-xs text-muted-foreground">
@@ -113,9 +140,17 @@ export function CondominiumCard({ condominium, onEdit, departmentCount, complete
                             </p>
                         </div>
                     )}
+
+                    {departmentCount === 0 && (
+                        <div className="flex items-center text-sm font-medium text-muted-foreground bg-muted/30 p-2 rounded-lg">
+                            <Building2 className="h-4 w-4 mr-2 text-primary" />
+                            Sin departamentos asignados
+                        </div>
+                    )}
                 </CardContent>
-                <CardFooter className="pt-0">
-                    <Button asChild className="w-full hover:bg-primary hover:text-primary-foreground transition-colors" variant="outline">
+
+                <CardFooter className="px-5 pb-4 pt-0">
+                    <Button asChild className="w-full hover:bg-primary hover:text-primary-foreground transition-colors rounded-xl" variant="outline">
                         <Link href={`/admin/condominiums/${condominium.id}`}>
                             Ver Departamentos <ArrowRight className="ml-2 h-4 w-4" />
                         </Link>

@@ -69,7 +69,7 @@ interface DataContextType {
   getAllDepartments: () => Promise<Department[]>;
 
   // Condominiums
-  addCondominium: (input: { name: string; address?: string | null }) => Promise<void>;
+  addCondominium: (input: { name: string; address?: string | null; imageUrl?: string | null }) => Promise<void>;
   updateCondominium: (condo: Condominium) => Promise<void>;
   deleteCondominium: (id: string) => Promise<void>;
 
@@ -513,6 +513,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           companyId: c.company_id,
           name: c.name,
           address: c.address,
+          imageUrl: c.image_url ?? null,
           createdAt: c.created_at,
           updatedAt: c.updated_at
         })));
@@ -633,6 +634,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         companyId: c.company_id,
         name: c.name,
         address: c.address,
+        imageUrl: c.image_url ?? null,
         createdAt: c.created_at,
         updatedAt: c.updated_at
       })));
@@ -1150,6 +1152,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           company_id: currentUser.companyId,
           name: input.name.trim(),
           address: input.address?.trim() || null,
+          image_url: input.imageUrl ?? null,
         })
         .select('*')
         .single();
@@ -1161,6 +1164,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         companyId: data.company_id,
         name: data.name,
         address: data.address,
+        imageUrl: data.image_url ?? null,
         createdAt: data.created_at,
         updatedAt: data.updated_at,
       };
@@ -1187,6 +1191,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         .update({
           name: condo.name,
           address: condo.address,
+          image_url: condo.imageUrl ?? null,
         })
         .eq('id', condo.id)
         .eq('company_id', currentUser.companyId)
@@ -1200,6 +1205,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         companyId: data.company_id,
         name: data.name,
         address: data.address,
+        imageUrl: data.image_url ?? null,
         createdAt: data.created_at,
         updatedAt: data.updated_at,
       };

@@ -52,6 +52,7 @@ export interface Condominium {
   companyId: string;
   name: string;
   address?: string | null;
+  imageUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }
