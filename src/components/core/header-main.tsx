@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Moon, Sun, CreditCard, Search, HelpCircle, ClipboardList } from "lucide-react";
+import { LogOut, Moon, Sun, CreditCard, Search, HelpCircle, ClipboardList, Building2 } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useTheme } from "next-themes";
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -48,40 +48,38 @@ export function HeaderMain() {
   const { currentUser, logout } = useAuth();
   const { company } = useData();
   const isMobileView = useIsMobile();
-  const [searchQuery, setSearchQuery] = useState('');
 
   const getInitials = (name?: string | null) => {
     if (!name) return "CS";
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const displayName = company?.displayName ?? currentUser?.name ?? currentUser?.email ?? 'Usuario';
+  const displayName = currentUser?.fullName || currentUser?.name || currentUser?.email || 'Usuario';
+  const companyName = company?.displayName || company?.name || 'Mi Empresa';
   const canAssign = currentUser?.role === 'owner' || currentUser?.role === 'admin' || currentUser?.role === 'manager';
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) router.push(`/admin/assignments?q=${encodeURIComponent(searchQuery.trim())}`);
-  };
-
   return (
-    <header className="sticky top-0 z-30 flex justify-between h-14 sm:h-16 items-center gap-2 sm:gap-3 border-b border-border/40 hover:border-border/60 transition-colors bg-card text-foreground pl-3 pr-3 sm:pl-2 sm:pr-6">
-      <div className="flex items-center gap-2">
-      <SidebarTrigger className="hidden md:flex shrink-0 h-8 w-8" aria-label="Contraer o expandir menú" />
-      <form onSubmit={handleSearch} className="flex-1 w-full max-w-2xl lg:max-w-4xl xl:max-w-5xl hidden sm:block ml-2 lg:ml-6">
-        <div className="relative flex items-center w-full">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Buscar tareas, propiedades o personal..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-11 h-[42px] w-full bg-muted/40 border-transparent hover:bg-muted/60 focus:bg-background focus:border-border/60 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none transition-all rounded-full text-[15px]"
-          />
+    <header className="sticky top-0 z-30 flex justify-between h-[70px] sm:h-16 items-center gap-2 sm:gap-3 border-b border-border/40 hover:border-border/60 transition-colors bg-card text-foreground pl-3 pr-3 sm:pl-2 sm:pr-6">
+      <div className="flex items-center gap-4 flex-1">
+        <SidebarTrigger className="hidden md:flex shrink-0 h-8 w-8" aria-label="Contraer o expandir menú" />
+        
+        {/* Nombre de la empresa */}
+        <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-1.5 sm:py-2 bg-muted/20 sm:rounded-2xl max-w-[140px] sm:max-w-[400px] overflow-hidden group hover:bg-muted/30 transition-all">
+          <div className="flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 shrink-0 group-hover:scale-105 transition-transform overflow-hidden">
+            {company?.logoUrl ? (
+              <img src={company.logoUrl} alt={companyName} className="h-full w-full object-contain" />
+            ) : (
+              <Building2 className="h-6 w-6 text-primary" />
+            )}
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-[8px] sm:text-[10px] font-extrabold text-primary/80 uppercase tracking-widest leading-none mb-0.5 sm:mb-1 truncate">Empresa</span>
+            <span className="font-bold text-xs sm:text-sm truncate leading-tight text-foreground">{companyName}</span>
+          </div>
         </div>
-      </form>
       </div>
-      
-      
+
+
 
       <div className="flex items-center gap-1 sm:gap-2 shrink-0">
         {currentUser && <NotificationsBell />}

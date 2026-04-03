@@ -83,6 +83,7 @@ interface DataContextType {
   getRentalPayments: (rentalId: string) => Promise<RentalPayment[]>;
   getRentalGuests: (rentalId: string) => Promise<RentalGuest[]>;
   getAllRentals: () => Promise<Rental[]>;
+  updateCompany: (input: { displayName?: string; logoUrl?: string | null }) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -245,6 +246,7 @@ type CompanyRow = {
   timezone: string | null;
   plan_code: string | null;
   metadata: Record<string, unknown> | null;
+  logo_url: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -408,6 +410,7 @@ const mapCompany = (row: CompanyRow): Company => ({
   timezone: row.timezone ?? undefined,
   planCode: row.plan_code ?? 'starter',
   metadata: row.metadata ?? undefined,
+  logoUrl: row.logo_url,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -447,7 +450,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const [companiesResp, departmentsResp, employeesResp, tasksResp, condosResp, rentalsResp] = await Promise.all([
           supabase
             .from('companies')
-            .select('id, name, slug, legal_name, tax_id, timezone, plan_code, metadata, display_name, created_at, updated_at')
+            .select('id, name, slug, legal_name, tax_id, timezone, plan_code, metadata, display_name, logo_url, created_at, updated_at')
             .order('created_at', { ascending: false }),
           supabase
             .from('departments')
@@ -564,7 +567,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const [companyResp, departmentsResp, employeesResp, tasksResp, condosResp, rentalsResp] = await Promise.all([
         supabase
           .from('companies')
-          .select('id, name, slug, legal_name, tax_id, timezone, plan_code, metadata, display_name, created_at, updated_at')
+          .select('id, name, slug, legal_name, tax_id, timezone, plan_code, metadata, display_name, logo_url, created_at, updated_at')
           .eq('id', currentUser.companyId)
           .maybeSingle<CompanyRow>(),
         supabase
@@ -660,6 +663,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           timezone: companyData.timezone ?? undefined,
           planCode: companyData.plan_code ?? 'starter',
           metadata: companyData.metadata ?? undefined,
+          logoUrl: companyData.logo_url ?? null,
           createdAt: companyData.created_at,
           updatedAt: companyData.updated_at,
         };
@@ -2105,7 +2109,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
     const { data, error } = await supabase
       .from('companies')
-      .select('id, name, slug, legal_name, tax_id, timezone, plan_code, metadata, display_name, created_at, updated_at')
+      .select('id, name, slug, legal_name, tax_id, timezone, plan_code, metadata, display_name, logo_url, created_at, updated_at')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -2151,6 +2155,41 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return (data as DepartmentRow[]).map(mapDepartment);
   }, [isSuperadmin]);
 
+  const updateCompany = useCallback<DataContextType['updateCompany']>(async (input) => {
+    if (!currentUser?.companyId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('companies')
+        .update({
+          display_name: input.displayName,
+          logo_url: input.logoUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentUser.companyId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setCompany(mapCompany(data as CompanyRow));
+      }
+      
+      toast({
+        title: "Éxito",
+        description: "Configuración de la empresa actualizada correctamente.",
+      });
+    } catch (error: any) {
+      console.error('[DataContext] Error al actualizar empresa:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'No se pudo actualizar la configuración.',
+      });
+    }
+  }, [currentUser, supabase]);
+
   const value = useMemo<DataContextType>(() => ({
     company,
     condominiums,
@@ -2188,6 +2227,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     getRentalPayments,
     getRentalGuests,
     getAllRentals,
+    updateCompany,
   }), [
     company, condominiums, departments, employees, tasks, rentals, dataLoading,
     addDepartment, updateDepartment, deleteDepartment,
@@ -2197,7 +2237,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     getTasksForEmployee, getDepartmentById, getEmployeeProfileById,
     allCompanies, getAllCompanies, getAllEmployees, getAllTasks, getAllDepartments,
     addCondominium, updateCondominium, deleteCondominium,
-    addRental, updateRental, updateRentalStatus, deleteRental, addRentalPayment, getRentalPayments, getRentalGuests, getAllRentals,
+    addRental, updateRental, updateRentalStatus, deleteRental, addRentalPayment, getRentalPayments, getRentalGuests, getAllRentals, updateCompany
   ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

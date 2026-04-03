@@ -147,7 +147,7 @@ export function AppSidebar() {
           tooltip="Configuración"
           className="w-full justify-start rounded-lg hover:bg-sidebar-accent text-sidebar-foreground/80 hover:text-sidebar-foreground font-normal group-data-[collapsible=icon]:!size-auto group-data-[collapsible=icon]:!h-10 group-data-[collapsible=icon]:!w-full group-data-[collapsible=icon]:!px-2 group-data-[collapsible=icon]:!justify-center"
         >
-          <Link href="/subscription" className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full">
+          <Link href={currentUser.role === 'owner' || currentUser.role === 'admin' ? "/admin/settings" : "/subscription"} className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full">
             <Settings className="h-5 w-5 shrink-0" strokeWidth={1.5} />
             <span className="group-data-[collapsible=icon]:hidden">Configuración</span>
           </Link>

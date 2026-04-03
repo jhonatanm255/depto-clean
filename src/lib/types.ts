@@ -44,6 +44,7 @@ export interface Company {
   metadata?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+  logoUrl?: string | null;
 }
 
 // Departamento

@@ -28,7 +28,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     // Timeout de seguridad: 35 segundos (más que el timeout de auth-context de 30s)
     // para dar tiempo a que auth-context complete su carga
     let timeoutId: NodeJS.Timeout | null = null;
-    
+
     if (authLoading) {
       const timeoutDuration = 35000; // 35 segundos, más que el timeout de auth-context
       timeoutId = setTimeout(() => {
@@ -100,7 +100,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </NextThemesProvider>
       );
     }
-    
+
     // Si no estamos en login y no hay usuario, mostrar loading mientras redirige
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -109,28 +109,28 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  
+
   return (
     <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
       <DataProvider>
         <NotificationsProvider>
           <ChatProvider>
             <SidebarProvider> {/* SidebarProvider todavía puede ser útil para el estado del sidebar de escritorio si se usa useSidebar() allí */}
-            <div className="flex min-h-screen w-full">
-              {!isMobile && <AppSidebar />} {/* AppSidebar solo para escritorio */}
-              <div className="flex flex-1 flex-col">
-                <HeaderMain />
-                <main className={cn(
-                  "flex-1 overflow-y-auto bg-background p-4 sm:p-6 lg:p-8 min-h-[calc(100vh-4rem)]",
-                  isMobile && "pb-20"
-                )}>
-                  {children}
-                </main>
-                {isMobile && <BottomNavigationBar />} {/* BottomNavigationBar solo para móvil */}
-                <FloatingChat />
+              <div className="flex min-h-screen w-full">
+                {!isMobile && <AppSidebar />} {/* AppSidebar solo para escritorio */}
+                <div className="flex flex-1 flex-col">
+                  <HeaderMain />
+                  <main className={cn(
+                    "flex-1 overflow-y-auto bg-background p-4 sm:p-6 lg:p-8 min-h-[calc(100vh-4rem)]",
+                    isMobile && "pb-20"
+                  )}>
+                    {children}
+                  </main>
+                  {isMobile && <BottomNavigationBar />} {/* BottomNavigationBar solo para móvil */}
+                  <FloatingChat />
+                </div>
               </div>
-            </div>
-          </SidebarProvider>
+            </SidebarProvider>
           </ChatProvider>
         </NotificationsProvider>
       </DataProvider>
