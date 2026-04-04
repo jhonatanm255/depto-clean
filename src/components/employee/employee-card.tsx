@@ -3,7 +3,7 @@
 import type { EmployeeProfile, CleaningTask, Department } from '@/lib/types'; // Usar EmployeeProfile
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { UserCircle, Mail, Edit3, Trash2, Briefcase, Building2, CheckCircle2, AlertTriangle, Loader2, MapPin } from 'lucide-react';
+import { UserCircle, Mail, Edit3, Trash2, Briefcase, Building2, CheckCircle2, AlertTriangle, Loader2, MapPin, ShieldCheck, User as UserIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -55,6 +55,20 @@ const getStatusIcon = (status: Department['status'] | CleaningTask['status']) =>
 };
 
 
+const ROLE_LABEL: Record<string, string> = {
+  owner: 'Propietario',
+  admin: 'Administrador',
+  employee: 'Empleado',
+};
+
+const MAX_TASKS_AT_CAPACITY = 5;
+
+function getWorkloadStatus(taskCount: number, inProgressCount: number) {
+  if (taskCount >= MAX_TASKS_AT_CAPACITY) return 'at_capacity';
+  if (inProgressCount > 0) return 'on_site';
+  return 'available';
+}
+
 export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeCardProps) {
   const { deleteEmployee } = useData();
 
@@ -77,14 +91,49 @@ export function EmployeeCard({ employee, onEdit, tasks, departments }: EmployeeC
 
   return (
     <Card className="flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-200">
-      <CardHeader>
-        <CardTitle className="font-headline text-xl flex items-center">
-          <UserCircle className="mr-2 h-6 w-6 text-primary" />
-          {employee.name}
-        </CardTitle>
-        {/* <CardDescription className="flex items-center pt-1 text-xs text-muted-foreground">
-          ID Perfil: {employee.id}
-        </CardDescription> */}
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
+          <CardTitle className="font-headline text-xl flex items-center">
+            <UserCircle className="mr-2 h-6 w-6 text-primary" />
+            {employee.name}
+          </CardTitle>
+        </div>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {/* Role Badge */}
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-[10px] h-5 gap-1",
+              employee.role === 'admin'
+                ? 'border-emerald-500/50 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10'
+                : 'border-slate-400/50 text-slate-600 dark:text-slate-400 bg-slate-500/10'
+            )}
+          >
+            {employee.role === 'admin' ? <ShieldCheck className="h-3 w-3" /> : <UserIcon className="h-3 w-3" />}
+            {ROLE_LABEL[employee.role] ?? employee.role}
+          </Badge>
+
+          {/* Workload Status Badge */}
+          {(() => {
+            const tasksCount = tasks.length;
+            const inProgressCount = tasks.filter(t => t.status === 'in_progress').length;
+            const status = getWorkloadStatus(tasksCount, inProgressCount);
+            return (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-[10px] h-5",
+                  status === 'available' && 'border-emerald-500/50 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10',
+                  status === 'on_site' && 'border-amber-500/50 text-amber-700 dark:text-amber-400 bg-amber-500/10',
+                  status === 'at_capacity' && 'border-red-500/50 text-red-700 dark:text-red-400 bg-red-500/10'
+                )}
+              >
+                <span className={cn('mr-1 inline-block h-1.5 w-1.5 rounded-full', status === 'available' && 'bg-emerald-500', status === 'on_site' && 'bg-amber-500', status === 'at_capacity' && 'bg-red-500')} />
+                {status === 'available' ? 'Disponible' : status === 'on_site' ? 'En sitio' : 'Al límite'}
+              </Badge>
+            );
+          })()}
+        </div>
       </CardHeader>
       <CardContent className="flex-grow space-y-2">
         <div className="flex items-center text-sm text-muted-foreground">

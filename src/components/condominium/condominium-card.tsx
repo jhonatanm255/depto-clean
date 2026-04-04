@@ -70,15 +70,7 @@ export function CondominiumCard({ condominium, onEdit, departmentCount, complete
 
                     {/* Overlay badges on image */}
                     <div className="absolute top-3 left-3 flex items-center gap-2">
-                        {hasActiveWork && (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-500/90 text-white text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm shadow-sm">
-                                <span className="relative flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
-                                </span>
-                                En Progreso
-                            </span>
-                        )}
+                        {/* El indicador ahora está en el área de contenido (punto rojo al lado del nombre) */}
                     </div>
 
                     {/* Menu button */}
@@ -103,17 +95,23 @@ export function CondominiumCard({ condominium, onEdit, departmentCount, complete
 
                 {/* Content Section */}
                 <CardContent className="p-5 space-y-3">
-                    <div>
+                    <div className="flex items-center justify-between gap-2 overflow-hidden">
                         <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate" title={condominium.name}>
                             {condominium.name}
                         </h3>
-                        {condominium.address && (
-                            <div className="flex items-start text-sm text-muted-foreground mt-1">
-                                <MapPin className="h-3.5 w-3.5 mr-1.5 shrink-0 mt-0.5" />
-                                <span className="line-clamp-1">{condominium.address}</span>
+                        {hasActiveWork && (
+                            <div className="relative flex items-center mr-2 justify-center h-4 w-4 shrink-0" title="Trabajo en progreso">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-60"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border border-white dark:border-slate-900 shadow-sm"></span>
                             </div>
                         )}
                     </div>
+                    {condominium.address && (
+                        <div className="flex items-start text-sm text-muted-foreground mt-1">
+                            <MapPin className="h-3.5 w-3.5 mr-1.5 shrink-0 mt-0.5" />
+                            <span className="line-clamp-1">{condominium.address}</span>
+                        </div>
+                    )}
 
                     {/* Progress */}
                     {departmentCount > 0 && (
