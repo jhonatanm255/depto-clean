@@ -3,6 +3,7 @@
 import React from 'react';
 import type { EmployeeProfile } from '@/lib/types';
 import { useData } from '@/contexts/data-context';
+import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
@@ -10,14 +11,15 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingSpinner } from '@/components/core/loading-spinner';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { KeyRound, ShieldCheck } from 'lucide-react';
+import { ShieldCheck, UserCog } from 'lucide-react';
 
 const employeeSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
   email: z.string().email("Debe ser un correo electrónico válido"),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+  role: z.enum(['admin', 'employee']).default('employee'),
 });
 
 type EmployeeFormData = z.infer<typeof employeeSchema>;
@@ -25,45 +27,45 @@ type EmployeeFormData = z.infer<typeof employeeSchema>;
 interface EmployeeFormProps {
   isOpen: boolean;
   onClose: () => void;
-  employee?: EmployeeProfile | null; 
+  employee?: EmployeeProfile | null;
 }
 
 export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
-  const { addEmployeeWithAuth } = useData(); 
-  
+  const { addEmployeeWithAuth } = useData();
+  const { currentUser } = useAuth();
+  const isOwner = currentUser?.role === 'owner';
+
   const form = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeSchema),
-    defaultValues: employee 
-      ? { name: employee.name, email: employee.email ?? '', password: '' } 
-      : { name: '', email: '', password: '' },
+    defaultValues: employee
+      ? { name: employee.name, email: employee.email ?? '', password: '', role: 'employee' }
+      : { name: '', email: '', password: '', role: 'employee' },
   });
 
   React.useEffect(() => {
     if (isOpen) {
-        form.reset(employee 
-          ? { name: employee.name, email: employee.email ?? '', password: '' } 
-          : { name: '', email: '', password: '' }
-        );
+      form.reset(employee
+        ? { name: employee.name, email: employee.email ?? '', password: '', role: 'employee' }
+        : { name: '', email: '', password: '', role: 'employee' }
+      );
     }
   }, [employee, form, isOpen]);
 
-
   const onSubmit: SubmitHandler<EmployeeFormData> = async (data) => {
     if (employee) {
-      alert("La funcionalidad de editar empleado (incluyendo contraseña) aún no está implementada completamente y requiere un flujo de seguridad diferente.");
       onClose();
       return;
     }
     try {
-      await addEmployeeWithAuth(data.name, data.email, data.password);
-      onClose(); 
+      await addEmployeeWithAuth(data.name, data.email, data.password, data.role);
+      onClose();
     } catch (error) {
-      console.error("Submit error en EmployeeForm (addEmployeeWithAuth):", error);
+      console.error("Submit error en EmployeeForm:", error);
     }
   };
-  
+
   const handleCloseDialog = () => {
-    form.reset(); 
+    form.reset();
     onClose();
   };
 
@@ -71,30 +73,22 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { handleCloseDialog(); } }}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[440px]">
         <DialogHeader>
-          <DialogTitle>{employee ? 'Editar Perfil de Empleada (Básico)' : 'Agregar Nueva Empleada'}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <UserCog className="h-5 w-5 text-primary" />
+            {employee ? 'Ver Perfil' : 'Agregar Nuevo Perfil'}
+          </DialogTitle>
           {!employee && (
             <DialogDescription className="text-xs pt-1">
-              Se creará un usuario en Supabase Auth vinculado a tu empresa.
-              <br/><strong>Importante:</strong> Comunica la contraseña inicial a la empleada, ya que <strong>no podrás verla nuevamente</strong> por motivos de seguridad.
-              <br/>Puedes volver a generar invitaciones o restablecer contraseñas desde el panel de Supabase cuando esté habilitado en la aplicación.
+              Se creará una cuenta de acceso a la aplicación vinculada a tu empresa.
+              <br /><strong>Importante:</strong> Comunica la contraseña inicial de forma segura ya que <strong>no podrás verla nuevamente</strong>.
             </DialogDescription>
           )}
         </DialogHeader>
-        
-        {employee && (
-          <Alert variant="default" className="bg-yellow-50 border-yellow-200 text-yellow-700 mt-2">
-            <KeyRound className="h-5 w-5 text-yellow-500" />
-            <AlertTitle className="font-semibold">Edición Limitada</AlertTitle>
-            <AlertDescription>
-              Actualmente solo se puede editar el nombre y email. La gestión de contraseñas de usuarios existentes se realizará en una futura actualización.
-            </AlertDescription>
-          </Alert>
-        )}
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
             <FormField
               control={form.control}
               name="name"
@@ -113,40 +107,82 @@ export function EmployeeForm({ isOpen, onClose, employee }: EmployeeFormProps) {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Correo Electrónico (Será el usuario)</FormLabel>
+                  <FormLabel>Correo Electrónico</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="Ej: ana.perez@ejemplo.com" {...field} disabled={form.formState.isSubmitting || !!employee}/>
+                    <Input type="email" placeholder="Ej: ana.perez@ejemplo.com" {...field} disabled={form.formState.isSubmitting || !!employee} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {!employee && ( 
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contraseña (Mínimo 6 caracteres)</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} disabled={form.formState.isSubmitting} />
-                    </FormControl>
-                    <FormMessage />
-                    <p className="text-xs text-muted-foreground pt-1">Esta contraseña es para la creación inicial de la cuenta. Comunícasela a la empleada.</p>
-                  </FormItem>
+            {!employee && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contraseña (Mínimo 6 caracteres)</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="••••••••" {...field} disabled={form.formState.isSubmitting} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Selector de Rol — solo visible para el Propietario */}
+                {isOwner && (
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Rol del Perfil</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={form.formState.isSubmitting}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecciona un rol" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="employee">
+                              <div className="flex items-center gap-2">
+                                <span className="h-2 w-2 rounded-full bg-slate-400 inline-block" />
+                                Empleado
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="admin">
+                              <div className="flex items-center gap-2">
+                                <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                                Administrador
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        <p className="text-xs text-muted-foreground">
+                          El administrador tiene acceso completo excepto crear o eliminar otros administradores.
+                        </p>
+                      </FormItem>
+                    )}
+                  />
                 )}
-              />
+              </>
             )}
-            <DialogFooter className="flex-wrap gap-2 sm:gap-0">
+
+            <DialogFooter className="flex-wrap gap-2 sm:gap-0 pt-2">
               <DialogClose asChild>
-                <Button type="button" variant="outline" onClick={handleCloseDialog} disabled={form.formState.isSubmitting}>Cancelar</Button>
+                <Button type="button" variant="outline" onClick={handleCloseDialog} disabled={form.formState.isSubmitting}>
+                  Cancelar
+                </Button>
               </DialogClose>
-              <Button type="submit" disabled={form.formState.isSubmitting || (!!employee && !form.formState.isDirty)}>
-                 {form.formState.isSubmitting && <LoadingSpinner size={16} className="mr-2" />}
-                 {employee 
-                    ? (form.formState.isSubmitting ? 'Guardando...' : 'Guardar Cambios (Próx.)') 
-                    : (form.formState.isSubmitting ? 'Agregando...' : 'Agregar Empleada y Crear Cuenta')}
-              </Button>
+              {!employee && (
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting && <LoadingSpinner size={16} className="mr-2" />}
+                  {form.formState.isSubmitting ? 'Creando...' : 'Crear Perfil y Cuenta'}
+                </Button>
+              )}
             </DialogFooter>
           </form>
         </Form>

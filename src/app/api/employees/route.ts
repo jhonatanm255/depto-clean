@@ -27,6 +27,7 @@ interface CreateEmployeePayload {
   name: string;
   email: string;
   password: string;
+  role?: 'admin' | 'employee';
 }
 
 export async function POST(request: Request) {
@@ -98,7 +99,7 @@ export async function POST(request: Request) {
 
     // Obtener los datos del cuerpo de la petición
     const body: CreateEmployeePayload = await request.json();
-    const { name, email, password } = body;
+    const { name, email, password, role: requestedRole } = body;
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -112,6 +113,20 @@ export async function POST(request: Request) {
         { error: 'La contraseña debe tener al menos 6 caracteres.' },
         { status: 400 }
       );
+    }
+
+    // Determinar el rol final permitido según quien hace la solicitud
+    let finalRole: 'admin' | 'employee' = 'employee';
+
+    if (requestedRole === 'admin') {
+      // Solo el propietario puede crear administradores
+      if (currentProfile.role !== 'owner') {
+        return NextResponse.json(
+          { error: 'Solo el Propietario puede crear perfiles de Administrador.' },
+          { status: 403 }
+        );
+      }
+      finalRole = 'admin';
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -208,7 +223,7 @@ export async function POST(request: Request) {
       .insert({
         id: newUserId,
         company_id: currentProfile.company_id,
-        role: 'employee',
+        role: finalRole,
         full_name: name,
         email: normalizedEmail,
       })

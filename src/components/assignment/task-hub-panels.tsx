@@ -41,6 +41,8 @@ export function TaskHubPanels({ departments, employees, dataLoading }: TaskHubPa
   const filteredStaff = useMemo(() => {
     return employees
       .filter((e) => {
+        // Solo empleados de limpieza
+        if (e.role !== 'employee' && e.role !== 'manager') return false;
         const name = (e.name ?? "").toLowerCase();
         const email = (e.email ?? "").toLowerCase();
         const q = staffSearch.toLowerCase().trim();

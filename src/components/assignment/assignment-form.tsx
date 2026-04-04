@@ -33,6 +33,9 @@ function translateDepartmentStatus(status: Department['status']): string {
 export function AssignmentForm() {
   const { departments, employees, assignTask, dataLoading } = useData();
 
+  // Solo empleados de limpieza (no propietarios ni administradores)
+  const cleaningEmployees = employees.filter(emp => emp.role === 'employee' || emp.role === 'manager');
+
   const form = useForm<AssignmentFormData>({
     resolver: zodResolver(assignmentSchema),
     defaultValues: { departmentId: '', employeeId: '', isUrgent: false },
@@ -88,7 +91,7 @@ export function AssignmentForm() {
                   <Select
                     onValueChange={field.onChange}
                     value={field.value || ""}
-                    disabled={allDepartments.length === 0 || employees.length === 0 || form.formState.isSubmitting}
+                    disabled={allDepartments.length === 0 || cleaningEmployees.length === 0 || form.formState.isSubmitting}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -136,7 +139,7 @@ export function AssignmentForm() {
                   <Select
                     onValueChange={field.onChange}
                     value={field.value || ""}
-                    disabled={employees.length === 0 || form.formState.isSubmitting}
+                    disabled={cleaningEmployees.length === 0 || form.formState.isSubmitting}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -146,14 +149,14 @@ export function AssignmentForm() {
                     <SelectContent>
                       <SelectGroup>
                         <SelectLabel>Empleadas</SelectLabel>
-                        {employees.length > 0 ? (
-                          employees.map((emp) => (
+                        {cleaningEmployees.length > 0 ? (
+                          cleaningEmployees.map((emp) => (
                             <SelectItem key={emp.id} value={emp.id}>
                               {emp.name} ({emp.email})
                             </SelectItem>
                           ))
                         ) : (
-                          <SelectItem value="no-emp" disabled>No hay empleadas disponibles</SelectItem>
+                          <SelectItem value="no-emp" disabled>No hay empleados de limpieza disponibles</SelectItem>
                         )}
                       </SelectGroup>
                     </SelectContent>
@@ -187,7 +190,7 @@ export function AssignmentForm() {
             <Button
               type="submit"
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-              disabled={allDepartments.length === 0 || employees.length === 0 || form.formState.isSubmitting}
+              disabled={allDepartments.length === 0 || cleaningEmployees.length === 0 || form.formState.isSubmitting}
             >
               {form.formState.isSubmitting && <LoadingSpinner size={16} className="mr-2" />}
               {form.formState.isSubmitting ? "Procesando..." : "Asignar / Reasignar Tarea"}

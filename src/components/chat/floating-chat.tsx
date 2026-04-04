@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquareMore, X, Send, ChevronLeft, User as UserIcon, Trash2 } from 'lucide-react';
+import { MessageSquareMore, X, Send, ChevronLeft, User as UserIcon, Trash2, Crown, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -80,13 +80,24 @@ export function FloatingChat() {
 
     const activeContact = contacts.find(c => c.id === activeContactId);
 
-    // Mapeo de roles a español
-    const roleLabels: Record<string, string> = {
-        'owner': 'Propietario',
-        'admin': 'Administrador',
-        'manager': 'Gerente',
-        'employee': 'Empleado',
-        'superadmin': 'Soporte Global'
+    // Configuración visual de roles (igual que vista ejecutiva)
+    const ROLE_CONFIG: Record<string, { label: string; icon: React.ElementType; className: string }> = {
+        owner:      { label: 'Propietario',   icon: Crown,       className: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30' },
+        admin:      { label: 'Administrador', icon: ShieldCheck,  className: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30' },
+        manager:    { label: 'Supervisor',    icon: ShieldCheck,  className: 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/30' },
+        employee:   { label: 'Empleado',      icon: UserIcon,    className: 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border border-slate-500/30' },
+        superadmin: { label: 'Soporte',       icon: ShieldCheck,  className: 'bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/30' },
+    };
+
+    const getRoleBadge = (role: string) => {
+        const cfg = ROLE_CONFIG[role] ?? { label: role, icon: UserIcon, className: 'bg-muted text-muted-foreground border border-border' };
+        const Icon = cfg.icon;
+        return (
+            <span className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full w-fit ${cfg.className}`}>
+                <Icon className="h-2.5 w-2.5" />
+                {cfg.label}
+            </span>
+        );
     };
     
     // Calculate which messages belong to the active conversation
@@ -123,15 +134,8 @@ export function FloatingChat() {
                                             </AvatarFallback>
                                         </Avatar>
                                         <div className="flex flex-col min-w-0">
-                                            <span className={cn(
-                                                "text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded w-fit mb-0.5",
-                                                (activeContact.role === 'admin' || activeContact.role === 'owner' || activeContact.role === 'superadmin')
-                                                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                                                    : "bg-muted text-muted-foreground"
-                                            )}>
-                                                {roleLabels[activeContact.role] || activeContact.role}
-                                            </span>
-                                            <span className="font-semibold text-sm truncate leading-tight">{activeContact.name}</span>
+                                            {getRoleBadge(activeContact.role)}
+                                            <span className="font-semibold text-sm truncate leading-tight mt-0.5">{activeContact.name}</span>
                                         </div>
                                     </>
                                 ) : (
@@ -195,15 +199,8 @@ export function FloatingChat() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex justify-between items-start mb-0.5">
-                                                        <div className="flex flex-col gap-1">
-                                                            <span className={cn(
-                                                                "text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full w-fit",
-                                                                (contact.role === 'admin' || contact.role === 'owner' || contact.role === 'superadmin')
-                                                                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                                                                    : "bg-muted text-muted-foreground"
-                                                            )}>
-                                                                {roleLabels[contact.role] || contact.role}
-                                                            </span>
+                                                        <div className="flex flex-col gap-0.5">
+                                                            {getRoleBadge(contact.role)}
                                                             <span className="font-semibold text-sm text-foreground truncate max-w-[150px]">
                                                                 {contact.name}
                                                             </span>

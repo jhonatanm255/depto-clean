@@ -19,15 +19,24 @@ import { CompletedTasksListCard } from '@/components/dashboard/admin/CompletedTa
 import { EmployeeStatsGrid } from '@/components/dashboard/employee/EmployeeStatsGrid';
 import { EmployeeNextTaskCard } from '@/components/dashboard/employee/EmployeeNextTaskCard';
 
-// Función helper para obtener el nombre del rol en español
-function getRoleName(role: string): string {
-  const roleNames: Record<string, string> = {
-    'owner': 'Administrador/ra',
-    'admin': 'Administrador/ra',
-    'manager': 'Gerente',
-    'employee': 'Empleado/a'
-  };
-  return roleNames[role] || role;
+import { Crown, ShieldCheck, User } from 'lucide-react';
+
+const ROLE_CONFIG: Record<string, { label: string; icon: React.ElementType; className: string }> = {
+  owner:    { label: 'Propietario', icon: Crown,       className: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' },
+  admin:    { label: 'Administrador', icon: ShieldCheck, className: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' },
+  manager:  { label: 'Supervisor', icon: ShieldCheck,   className: 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30' },
+  employee: { label: 'Empleado', icon: User,           className: 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30' },
+};
+
+function RoleBadge({ role }: { role: string }) {
+  const config = ROLE_CONFIG[role] ?? { label: role, icon: User, className: 'bg-muted text-muted-foreground' };
+  const Icon = config.icon;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${config.className}`}>
+      <Icon className="h-3 w-3" />
+      {config.label}
+    </span>
+  );
 }
 
 function AdminDashboard() {
@@ -165,7 +174,6 @@ function AdminDashboard() {
   }, [departments]);
 
   const userName = currentUser?.fullName || currentUser?.name || currentUser?.email || 'Usuario';
-  const roleName = currentUser ? getRoleName(currentUser.role) : '';
 
   if (dataLoading && departments.length === 0 && employees.length === 0 && tasks.length === 0) {
     return (
@@ -186,8 +194,10 @@ function AdminDashboard() {
           Resumen operativo del día para {company?.displayName ?? 'tu empresa'}.
         </p>
         {currentUser && (
-          <p className="text-muted-foreground mt-1 text-xs">
-            {roleName} · {userName}
+          <p className="flex items-center gap-2 mt-2">
+            <RoleBadge role={currentUser.role} />
+            <span className="text-sm text-muted-foreground">·</span>
+            <span className="text-sm text-muted-foreground">{userName}</span>
           </p>
         )}
       </div>
@@ -281,7 +291,6 @@ function EmployeeDashboard({ user }: { user: AppUser }) {
   const initialDataLoaded = !dataLoading;
 
   const userName = user.fullName || user.name || user.email || 'Usuario';
-  const roleName = getRoleName(user.role);
 
   if (dataLoading && allUserTasks.length === 0) {
     return (
@@ -298,12 +307,10 @@ function EmployeeDashboard({ user }: { user: AppUser }) {
         <h2 className="text-3xl font-bold font-headline text-foreground">
           ¡Bienvenido/a, {company?.displayName ?? 'tu empresa'}!
         </h2>
-        <p className="text-muted-foreground mt-2 flex items-center gap-2">
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
-            {roleName}
-          </span>
-          <span>•</span>
-          <span>{userName}</span>
+        <p className="mt-2 flex items-center gap-2">
+          <RoleBadge role={user.role} />
+          <span className="text-sm text-muted-foreground">·</span>
+          <span className="text-sm text-muted-foreground">{userName}</span>
         </p>
       </div>
       <p className="text-muted-foreground">Aquí están las tareas asignadas a tu equipo.</p>

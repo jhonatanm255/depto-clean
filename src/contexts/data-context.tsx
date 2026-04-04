@@ -37,7 +37,7 @@ interface DataContextType {
   deleteDepartment: (id: string) => Promise<void>;
 
   employees: EmployeeProfile[];
-  addEmployeeWithAuth: (name: string, email: string, password: string) => Promise<void>;
+  addEmployeeWithAuth: (name: string, email: string, password: string, role?: 'admin' | 'employee') => Promise<void>;
   deleteEmployee: (id: string) => Promise<void>;
 
   tasks: CleaningTask[];
@@ -1568,7 +1568,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return (data as RentalRow[]).map(mapRental);
   }, [isSuperadmin]);
 
-  const addEmployeeWithAuth = useCallback<DataContextType['addEmployeeWithAuth']>(async (name, email, password) => {
+  const addEmployeeWithAuth = useCallback<DataContextType['addEmployeeWithAuth']>(async (name, email, password, role = 'employee') => {
     if (!currentUser) {
       throw new Error('Usuario no autenticado');
     }
@@ -1594,6 +1594,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           name: name.trim(),
           email: normalizedEmail,
           password,
+          role,
         }),
       });
 

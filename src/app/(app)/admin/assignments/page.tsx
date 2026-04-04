@@ -11,6 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export default function AssignmentsPage() {
   const { tasks, departments, employees, dataLoading } = useData();
 
+  // Solo empleados de limpieza para los paneles de asignación
+  const cleaningEmployees = employees.filter(emp => emp.role === 'employee' || emp.role === 'manager');
+
   if (dataLoading && tasks.length === 0 && departments.length === 0 && employees.length === 0) {
     return (
       <div className="container mx-auto py-8 px-4 md:px-6 flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
@@ -51,7 +54,7 @@ export default function AssignmentsPage() {
         </p>
         <TaskHubPanels
           departments={departments}
-          employees={employees}
+          employees={cleaningEmployees}
           dataLoading={dataLoading}
         />
       </section>
@@ -72,7 +75,7 @@ export default function AssignmentsPage() {
               <p className="text-muted-foreground">Cargando asignaciones...</p>
             </div>
           ) : (
-            <AssignmentList tasks={tasks} departments={departments} employees={employees} />
+            <AssignmentList tasks={tasks} departments={departments} employees={cleaningEmployees} />
           )}
         </TabsContent>
         <TabsContent value="quick" className="mt-4">
